@@ -6,7 +6,7 @@ from fastapi.responses import RedirectResponse
 import os
 
 from app.database import init_db
-from app.api import track, installer, sms, orders, customers, products, employees, dashboard, purchase, warehouse, finance, reports
+from app.api import track, installer, sms, orders, customers, products, employees, dashboard, purchase, warehouse, finance, reports, auth
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -39,6 +39,7 @@ app.include_router(purchase.router)
 app.include_router(warehouse.router)
 app.include_router(finance.router)
 app.include_router(reports.router)
+app.include_router(auth.router)
 
 
 @app.on_event("startup")

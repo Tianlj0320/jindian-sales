@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>金典软装销售管理系统 V2.1</title>
+<title>金典软装销售管理系统 V2.2</title>
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://unpkg.com/element-plus@1.1.0/dist/index.full.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/element-plus@1.1.0/theme-chalk/index.css">
@@ -89,6 +89,39 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
 .wh-item{display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px dashed #f0f0f0}
 .wh-item:last-child{border:none}
 .wh-qty{font-weight:bold;color:#67c23a}
+
+/* ── PHASE3: Mobile Responsive ── */
+@media (max-width: 768px){
+  .aside{display:none}
+  .main-layout{display:block}
+  .top-bar{padding:0 12px}
+  .top-bar-title{font-size:14px}
+  .top-bar-info{display:none}
+  .main-content{padding:10px}
+  .card{padding:12px;margin-bottom:10px}
+  .stat-row{gap:8px}
+  .stat-card{min-width:45%;padding:12px}
+  .stat-num{font-size:22px}
+  .page-title{font-size:15px}
+  .order-layout{grid-template-columns:1fr!important;display:block}
+  .order-left{margin-bottom:10px}
+  .dict-layout{grid-template-columns:1fr!important;display:block}
+  .dict-cats{margin-bottom:10px}
+  .el-dialog{width:92%!important;margin:0 auto!important}
+  .el-table{font-size:12px}
+  .el-form-item--label-top .el-form-item__label{font-size:12px}
+  .form-grid{grid-template-columns:1fr!important;display:block}
+  .form-grid>*{margin-bottom:8px}
+  .stat-row{flex-direction:row}
+  .hide-mobile{display:none!important}
+}
+@media (max-width:480px){
+  .stat-card{min-width:48%}
+  .stat-num{font-size:20px}
+  .card{padding:10px}
+  .page-title{font-size:14px}
+}
+
 </style>
 </head>
 <body>
@@ -122,13 +155,39 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
     </el-menu>
   </aside>
 
+  <!-- Mobile Drawer -->
+  <el-drawer v-model="drawerVisible" direction="ltr" size="200px" :show-close="false">
+    <template #title>
+      <div style="color:#fff;font-size:15px;font-weight:bold">金典软装</div>
+    </template>
+    <el-menu :default-active="activeMenu" background-color="#1a3a5c" text-color="#bcc8d8" active-text-color="#fff" @select="(k)=>{activeMenu=k;drawerVisible=false}">
+      <el-menu-item index="home"><el-icon><house-fill/></el-icon>&nbsp;首页概览</el-menu-item>
+      <el-sub-menu index="basic2">
+        <template #title><el-icon><folder/></el-icon>&nbsp;基础资料</template>
+        <el-menu-item index="product">产品资料</el-menu-item>
+        <el-menu-item index="customer">客户资料</el-menu-item>
+        <el-menu-item index="employee">员工资料</el-menu-item>
+        <el-menu-item index="dict">码表管理</el-menu-item>
+      </el-sub-menu>
+      <el-menu-item index="order"><el-icon><document/></el-icon>&nbsp;销售订单</el-menu-item>
+      <el-menu-item index="purchase"><el-icon><truck/></el-icon>&nbsp;采购管理</el-menu-item>
+      <el-menu-item index="warehouse"><el-icon><box/></el-icon>&nbsp;仓库管理</el-menu-item>
+      <el-menu-item index="production"><el-icon><setting/></el-icon>&nbsp;生产管理</el-menu-item>
+      <el-menu-item index="install"><el-icon><tools/></el-icon>&nbsp;安装管理</el-menu-item>
+      <el-menu-item index="finance"><el-icon><money/></el-icon>&nbsp;财务结算</el-menu-item>
+      <el-menu-item index="report"><el-icon><data-analysis/></el-icon>&nbsp;统计报表</el-menu-item>
+    </el-menu>
+  </el-drawer>
+
   <!-- 右侧 -->
   <div class="right-area">
     <div class="top-bar">
       <div class="top-bar-title">{{ pageTitle }}</div>
-      <div class="top-bar-info">
-        <span style="color:#67c23a">●</span> 在线 &nbsp;|&nbsp;
-        <el-icon><user/></el-icon> 韩霜（老板）
+      <div style="display:flex;align-items:center;gap:10px">
+        <el-button size="small" class="hide-mobile" style="background:#1a3a5c;color:#fff;border:none" @click="showLogin=true">
+          <el-icon><user/></el-icon>&nbsp;<span class="hide-mobile">{{ currentUser.name||'登录' }}</span>
+        </el-button>
+        <el-button size="small" style="border:none;font-size:16px" @click="drawerVisible=true" class="mobile-hamburger">☰</el-button>
       </div>
     </div>
 
@@ -574,40 +633,107 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
 
       <!-- ============ 统计报表 ============ -->
       <div v-if="page==='report'">
-        <div class="page-title">统计报表</div>
-        <div class="card">
-          <div class="card-title">本月销售趋势</div>
-          <div style="height:200px;display:flex;align-items:flex-end;gap:8px;padding:10px 0">
-            <div v-for="(d,i) in salesTrend" :key="i" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
-              <div :style="'width:100%;background:#1a3a5c;border-radius:4px 4px 0 0;height:'+(d/500*180)+'px;transition:height .3s'" :title="'¥'+d"></div>
-              <div style="font-size:10px;color:#999">{{i+1}}日</div>
-            </div>
-          </div>
-          <div style="display:flex;justify-content:space-between;margin-top:8px">
-            <span style="font-size:12px;color:#888">日均：¥{{(salesTrend.reduce((a,b)=>a+b,0)/salesTrend.length).toFixed(0)}}</span>
-            <span style="font-size:12px;color:#1a3a5c;font-weight:bold">月累计：¥{{salesTrend.reduce((a,b)=>a+b,0).toLocaleString()}}</span>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+          <div class="page-title" style="margin-bottom:0">统计报表</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <el-select v-model="rptYear" size="small" style="width:90px" @change="loadReportData">
+              <el-option v-for="y in [2025,2026,2027]" :key="y" :label="y+'年'" :value="y"/>
+            </el-select>
+            <el-select v-model="rptMonth" size="small" style="width:80px" @change="loadReportData">
+              <el-option v-for="m in Array.from({length:12},(_,i)=>i+1)" :key="m" :label="m+'月'" :value="m"/>
+            </el-select>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:0">
-          <div class="card">
-            <div class="card-title">员工业绩排行</div>
-            <div v-for="(e,i) in staffRank" :key="e.name" style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed #f0f0f0">
-              <span style="width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold" :style="i===0?'background:#ffd700;color:#fff':i===1?'background:#c0c0c0;color:#fff':i===2?'background:#cd7f32;color:#fff':'background:#e8e8e8;color:#999'">{{i+1}}</span>
-              <span style="flex:1;font-size:13px">{{e.name}}</span>
-              <span style="font-size:13px;color:#1a3a5c;font-weight:bold">{{e.amount.toLocaleString()}}</span>
-              <span style="font-size:11px;color:#999">{{e.orders}}单</span>
+        <el-tabs v-model="rptTab" @tab-change="rptTab==='orders'&&loadReportData()">
+          <el-tab-pane label="月报总览" name="overview">
+            <div class="card">
+              <div class="card-title">{{rptYear}}年{{rptMonth}}月 销售趋势</div>
+              <div style="height:200px;display:flex;align-items:flex-end;gap:8px;padding:10px 0;overflow-x:auto">
+                <div v-for="(d,i) in salesTrend" :key="i" style="flex:1;min-width:20px;display:flex;flex-direction:column;align-items:center;gap:4px">
+                  <div :style="'width:100%;max-width:40px;background:#1a3a5c;border-radius:4px 4px 0 0;height:'+(d/500*180+10)+'px;transition:height .3s'" :title="'¥'+d"></div>
+                  <div style="font-size:10px;color:#999">{{i+1}}日</div>
+                </div>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-top:8px;flex-wrap:wrap;gap:4px">
+                <span style="font-size:12px;color:#888">日均：¥{{salesTrend.length?(salesTrend.reduce((a,b)=>a+b,0)/salesTrend.length).toFixed(0):0}}</span>
+                <span style="font-size:12px;color:#1a3a5c;font-weight:bold">月累计：¥{{salesTrend.reduce((a,b)=>a+b,0).toLocaleString()}}</span>
+              </div>
             </div>
-          </div>
-          <div class="card">
-            <div class="card-title">爆款面料 TOP5</div>
-            <div v-for="(p,i) in topProducts" :key="p.name" style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed #f0f0f0">
-              <span style="width:18px;height:18px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;background:#409eff;color:#fff">{{i+1}}</span>
-              <span style="flex:1;font-size:13px">{{p.name}}</span>
-              <span style="font-size:11px;color:#999">{{p.times}}次</span>
-              <span style="font-size:13px;color:#67c23a;font-weight:bold">¥{{p.amount.toLocaleString()}}</span>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:0" class="hide-mobile">
+              <div class="card">
+                <div class="card-title">员工业绩排行</div>
+                <div v-for="(e,i) in staffRank" :key="e.name" style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed #f0f0f0">
+                  <span style="width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold" :style="i===0?'background:#ffd700;color:#fff':i===1?'background:#c0c0c0;color:#fff':i===2?'background:#cd7f32;color:#fff':'background:#e8e8e8;color:#999'">{{i+1}}</span>
+                  <span style="flex:1;font-size:13px">{{e.name}}</span>
+                  <span style="font-size:13px;color:#1a3a5c;font-weight:bold">{{e.amount.toLocaleString()}}</span>
+                  <span style="font-size:11px;color:#999">{{e.orders}}单</span>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-title">爆款面料 TOP5</div>
+                <div v-for="(p,i) in topProducts" :key="p.name" style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed #f0f0f0">
+                  <span style="width:18px;height:18px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;background:#409eff;color:#fff">{{i+1}}</span>
+                  <span style="flex:1;font-size:13px">{{p.name}}</span>
+                  <span style="font-size:11px;color:#999">{{p.times}}米</span>
+                  <span style="font-size:13px;color:#67c23a;font-weight:bold">¥{{p.amount.toLocaleString()}}</span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          </el-tab-pane>
+          <el-tab-pane label="员工业绩" name="employee">
+            <div class="card">
+              <div class="card-title">员工业绩明细 — {{rptYear}}年{{rptMonth}}月</div>
+              <el-table :data="staffRank" stripe size="small">
+                <el-table-column prop="name" label="员工" width="100"/>
+                <el-table-column prop="orders" label="签单数" width="80" align="center"/>
+                <el-table-column prop="amount" label="销售总额" align="right">
+                  <template #default="{row}"><b style="color:#1a3a5c">¥{{row.amount.toLocaleString()}}</b></template>
+                </el-table-column>
+                <el-table-column label="占总额比" width="100" align="center">
+                  <template #default="{row}">{{salesTrend.reduce((a,b)=>a+b,0)?(row.amount/salesTrend.reduce((a,b)=>a+b,0)*100).toFixed(1)+'%':'—'}}</template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </el-tab-pane>
+          <el-tab-pane label="产品排行" name="product">
+            <div class="card">
+              <div class="card-title">产品销售排行 — {{rptYear}}年{{rptMonth}}月</div>
+              <el-table :data="topProducts" stripe size="small">
+                <el-table-column type="index" label="排名" width="60" align="center"/>
+                <el-table-column prop="name" label="产品名称" min-width="140"/>
+                <el-table-column prop="times" label="销售数量(米)" width="110" align="right"/>
+                <el-table-column prop="amount" label="销售额" align="right">
+                  <template #default="{row}"><b style="color:#67c23a">¥{{row.amount.toLocaleString()}}</b></template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </el-tab-pane>
+          <el-tab-pane label="订单明细" name="orders">
+            <div class="card">
+              <div class="card-title">订单明细 — {{rptYear}}年{{rptMonth}}月</div>
+              <el-table :data="reportOrders" stripe size="small">
+                <el-table-column prop="orderNo" label="订单号" width="130"/>
+                <el-table-column prop="customerName" label="客户" width="100"/>
+                <el-table-column prop="orderType" label="类型" width="80"/>
+                <el-table-column prop="amount" label="金额" width="90" align="right">
+                  <template #default="{row}"><b style="color:#1a3a5c">¥{{row.amount.toLocaleString()}}</b></template>
+                </el-table-column>
+                <el-table-column prop="received" label="已收" width="80" align="right">
+                  <template #default="{row}"><span style="color:#67c23a">¥{{row.received.toLocaleString()}}</span></template>
+                </el-table-column>
+                <el-table-column prop="debt" label="欠款" width="80" align="right">
+                  <template #default="{row}"><span :style="row.debt>0?'color:#f56c6c':'color:#67c23a'">¥{{row.debt.toLocaleString()}}</span></template>
+                </el-table-column>
+                <el-table-column prop="status" label="状态" width="90">
+                  <template #default="{row}">
+                    <span :class="'status-dot s-'+row.statusColor.replace('#','')"></span>{{row.status}}
+                  </template>
+                </el-table-column>
+                <el-table-column prop="orderDate" label="日期" width="100"/>
+              </el-table>
+            </div>
+          </el-tab-pane>
+        </el-tabs>
       </div>
 
     </div><!-- end main-content -->
@@ -829,7 +955,17 @@ const LS=key=>{try{return JSON.parse(localStorage.getItem(key))}catch{return nul
 const SLS=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 
 const API='http://localhost:8000';
-const api=async(u,m='GET',b=null)=>{const r=await fetch(API+u,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):null});if(!r.ok)throw new Error(u+r.status);const d=await r.json();if(!d.success)throw new Error(d.error||'api error');return d.data??d};
+const AUTH_TOKEN_KEY='authToken';
+let AUTH_TOKEN=localStorage.getItem(AUTH_TOKEN_KEY)||'';
+const api=async(u,m='GET',b=null)=>{
+  const headers={'Content-Type':'application/json'};
+  if(AUTH_TOKEN)headers['Authorization']='Bearer '+AUTH_TOKEN;
+  const r=await fetch(API+u,{method:m,headers,body:b?JSON.stringify(b):null});
+  if(!r.ok)throw new Error(u+r.status);
+  const d=await r.json();
+  if(!d.success)throw new Error(d.error||'api error');
+  return d.data??d;
+};
 const isLoading=ref(false);
 
 const app=createApp({
@@ -848,6 +984,54 @@ const app=createApp({
     /* =================== DATA =================== */
 
     /* ── API初始化 ── */
+    /* Auth */
+    const showLogin=ref(false);
+    const loginLoading=ref(false);
+    const currentUser=ref(JSON.parse(LS('currentUser')||'null'));
+    const loginForm=ref({phone:'',password:''});
+    const drawerVisible=ref(false);
+    const authToken=ref(LS('authToken')||'');
+
+    const doLogin=async()=>{
+      if(!loginForm.value.phone){ElMessage.warning('请输入手机号');return;}
+      try{
+        loginLoading.value=true;
+        const res=await api('/api/auth/login','POST',{phone:loginForm.value.phone,password:loginForm.value.password||''});
+        if(res.token){
+          AUTH_TOKEN=res.token;
+          authToken.value=res.token;
+          LS('authToken',res.token);
+          const u={id:res.user_id,name:res.name||'员工',role:res.role||'staff'};
+          currentUser.value=u;LS('currentUser',JSON.stringify(u));
+          showLogin.value=false;ElMessage.success('登录成功');
+        }else{ElMessage.error(res.message||'登录失败');}
+      }catch(e){ElMessage.error(typeof e==='string'?e:(e.message||'登录失败'));
+      finally{loginLoading.value=false;}
+    };
+    const logout=()=>{AUTH_TOKEN='';currentUser.value=null;authToken.value='';LS('authToken','');LS('currentUser','');ElMessage.success('已退出');};
+
+    /* Report date range */
+    const rptYear=ref(new Date().getFullYear());
+    const rptMonth=ref(new Date().getMonth()+1);
+    const rptTab=ref('overview');
+    const loadReportData=async()=>{
+      const y=rptYear.value,m=rptMonth.value;
+      const [trend,empRpt,prodRpt,ordRpt]=await Promise.all([
+        api(`/api/reports/trend?year=${y}&month=${m}`).catch(()=>({items:[]})),
+        api(`/api/reports/employee-performance?year=${y}&month=${m}`).catch(()=>({items:[]})),
+        api(`/api/reports/product-rank?year=${y}&month=${m}`).catch(()=>({items:[]})),
+        api(`/api/orders?page=1&page_size=100&year=${y}&month=${m}`).catch(()=>({items:[],total:0})),
+      ]);
+      salesTrend.value=(trend.items||[]).map(t=>t.amount||0);
+      staffRank.value=(empRpt.items||[]).map(e=>({name:e.salesperson||'',amount:e.total_amount||0,orders:e.order_count||0}));
+      topProducts.value=(prodRpt.items||[]).map(p=>({name:p.product||'',times:p.qty||0,amount:p.amount||0}));
+      reportOrders.value=(ordRpt.items||[]).map(o=>({
+        orderNo:o.order_no,customerName:o.customer_name||'',orderType:o.order_type||'',
+        amount:o.amount||0,status:o.status_label||'',statusColor:o.status_color||'#999',
+        received:o.received||0,debt:o.debt||0,orderDate:o.order_date||''
+      }));
+    };
+
     const initAll=async()=>{
       try{isLoading.value=true;
         const [dash,sups,cats,prods,custs,emps,fin,ordData]=await Promise.all([
@@ -884,8 +1068,10 @@ const app=createApp({
         ]).catch(()=>[{},{},{},{}]);
         salesTrend.value=(trend.items||[]).map(t=>t.amount||0);
         staffRank.value=(empRpt.items||[]).map(e=>({name:e.salesperson||'',amount:e.total_amount||0,orders:e.order_count||0}));
-        topProducts.value=(prodRpt.items||[]).map(p=>({name:p.product||'',times:0,amount:p.amount||0}));
+        topProducts.value=(prodRpt.items||[]).map(p=>({name:p.product||'',times:p.qty||0,amount:p.amount||0}));
         purchases.value=(purchData.items||[]).map(p=>({id:p.id,purchaseNo:p.po_no||'',supplierId:'s'+p.supplier_id,supplierName:p.supplier_name||'',items:Array.isArray(p.items)?p.items.map(i=>i.product||'').join(' '):p.items||'',status:p.status||'待采购',amount:p.amount||0,date:p.order_date||''}));
+        // load report data for current month
+        await loadReportData();
         // dictMap orderStatus - initialize from API or use defaults
         dictMap.orderStatus=[
           {k:'created',v:'待确认',c:'#909399'},{k:'confirmed',v:'已核单',c:'#409eff'},
@@ -1031,6 +1217,7 @@ const app=createApp({
 
     /* 报表 */
     const salesTrend=ref([]);
+    const reportOrders=ref([]);
     const staffRank=ref([
       {name:'小王',amount:85600,orders:12},{name:'小李',amount:42800,orders:6},{name:'张师傅',amount:0,orders:8},
     ]);
@@ -1257,6 +1444,8 @@ const app=createApp({
       dlgDictItem,diForm,editingDictItem,openDictItemDlg,saveDictItem,delDictItem,
       showNewOrder,orderF,autoDelivery,onProdSelect,calcItem,calcTotals,saveNewOrder,
       getSupplierName,getCatName,
+      currentUser,loginForm,loginLoading,doLogin,logout,showLogin,drawerVisible,
+      rptYear,rptMonth,rptTab,loadReportData,reportOrders,
     };
   }
 });

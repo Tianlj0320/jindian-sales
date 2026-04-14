@@ -49,10 +49,12 @@ async def list_orders(
     status_key: Optional[str] = Query(None, description="状态key筛选"),
     order_type: Optional[str] = Query(None, description="订单类型"),
     keyword: Optional[str] = Query(None, description="搜索：订单号/客户名"),
+    year: Optional[int] = Query(None, description="年筛选"),
+    month: Optional[int] = Query(None, description="月筛选"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100)
 ):
-    """订单列表（支持筛选+分页）"""
+    """订单列表（支持筛选+分页+年月）"""
     async with async_session() as session:
         query = select(Order)
         conditions = []
@@ -67,6 +69,17 @@ async def list_orders(
                 (Order.order_no.ilike(kw)) |
                 (Order.customer_name.ilike(kw))
             )
+        if year:
+            from datetime import date
+            conditions.append(func.date(Order.created_at) >= date(year, 1, 1))
+            conditions.append(func.date(Order.created_at) < date(year + 1, 1, 1))
+        if month and year:
+            from datetime import date
+            m_start = date(year, month, 1)
+            import calendar
+            m_end = date(year, month, calendar.monthrange(year, month)[1])
+            conditions.append(func.date(Order.created_at) >= m_start)
+            conditions.append(func.date(Order.created_at) <= m_end)
 
         if conditions:
             query = query.where(and_(*conditions))
