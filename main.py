@@ -2,10 +2,10 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
 import os
 
 from app.database import init_db
+from app.middleware import AuthMiddleware
 from app.api import track, installer, sms, orders, customers, products, employees, dashboard, purchase, warehouse, finance, reports, auth
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -17,7 +17,7 @@ app = FastAPI(
     description="V2.2 客户进度查询 + 安装工手机端 API"
 )
 
-# CORS：允许所有来源（本地开发）
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -25,6 +25,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Auth 中间件（保护所有 /api/ 路径，公开路径除外）
+app.add_middleware(AuthMiddleware)
 
 # 注册路由
 app.include_router(track.router)
@@ -44,13 +47,11 @@ app.include_router(auth.router)
 
 @app.on_event("startup")
 async def startup():
-    """启动时初始化数据库"""
     await init_db()
 
 
 @app.get("/")
 async def root():
-    """API 根路径，重定向到文档"""
     return {
         "name": "金典软装销售系统 API",
         "version": "2.2.0",
@@ -61,11 +62,9 @@ async def root():
 
 @app.get("/health")
 async def health():
-    """健康检查"""
     return {"status": "ok"}
 
 
-# 挂载静态文件（前端页面）
 if os.path.exists(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
