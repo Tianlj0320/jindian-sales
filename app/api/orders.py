@@ -247,7 +247,7 @@ async def create_order(req: dict = Body(...)):
             history=history,
             items=items,
             install_address=req.get("install_address", ""),
-            install_date=req.get("install_date"),
+            install_date=req.get("install_date") or None,
             install_time_slot=req.get("install_time_slot", ""),
         )
 
