@@ -378,7 +378,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
             </el-table-column>
             <el-table-column prop="dept" label="部门" width="90"/>
             <el-table-column label="最大折扣" width="90">
-              <template #default="{row}"><span style="color:#e6a23c;font-weight:bold">{{(row.maxDiscount*10).toFixed(1)}}折</span></template>
+              <template #default="{row}"><span style="color:#e6a23c;font-weight:bold">{{((row.maxDiscount||0)*10).toFixed(1)}}折</span></template>
             </el-table-column>
             <el-table-column label="抹零限制" width="90">
               <template #default="{row}">¥{{row.roundLimit}}</template>
@@ -502,7 +502,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
                 <el-table-column label="幅数" width="60" align="center" prop="qty"/>
                 <el-table-column label="单价" width="80" align="right" prop="price"/>
                 <el-table-column label="折扣" width="70" align="center">
-                  <template #default="{row}">{{(row.discount||1)*10.toFixed(1)}}折</template>
+                  <template #default="{row}">{{((row.discount||1)*10).toFixed(1)}}折</template>
                 </el-table-column>
                 <el-table-column label="金额" width="90" align="right">
                   <template #default="{row}"><b>¥{{row.amount.toLocaleString()}}</b></template>
