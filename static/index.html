@@ -915,14 +915,14 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
       <el-table :data="orderF.items" size="small">
         <el-table-column label="产品（面料）" min-width="180">
           <template #default="{row,$index}">
-            <el-select v-model="row.productId" style="width:100%" @change="onProdSelect(row)">
+            <el-select v-model="row.productId" style="width:100%" @change="(val)=>{const r=row;onProdSelect(r);}">
               <el-option v-for="p in products" :key="p.id" :label="p.name+'('+p.code+')'" :value="p.id"/>
             </el-select>
           </template>
         </el-table-column>
-        <el-table-column label="幅数" width="65"><el-input-number v-model="row.qty" :min="1" size="small" @change="calcItem(row)"/></el-table-column>
+        <el-table-column label="幅数" width="65"><el-input-number v-model="row.qty" :min="1" size="small" @change="calcTotals()"/></el-table-column>
         <el-table-column label="单价" width="75"><template #default="{row}">{{row.price||'-'}}</template></el-table-column>
-        <el-table-column label="折扣" width="75"><el-input-number v-model="row.discount" :min="0.1" :max="1" :step="0.05" :precision="2" size="small" @change="calcItem(row)"/></el-table-column>
+        <el-table-column label="折扣" width="75"><el-input-number v-model="row.discount" :min="0.1" :max="1" :step="0.05" :precision="2" size="small" @change="calcTotals()"/></el-table-column>
         <el-table-column label="金额" width="90"><template #default="{row}">{{row.amount?'¥'+row.amount.toLocaleString():'-'}}</template></el-table-column>
         <el-table-column width="40"><template #default="{row,$index}"><el-button size="small" type="danger" @click="orderF.items.splice($index,1)">×</el-button></template></el-table-column>
       </el-table>
@@ -1392,19 +1392,22 @@ const app=createApp({
       const d=new Date(orderF.value.orderDate);d.setDate(d.getDate()+14);
       orderF.value.deliveryDate=d.toISOString().slice(0,10);
     };
-    const onProdSelect=row=>{const p=products.value.find(x=>x.id===row.productId);if(p){row.price=p.price;calcItem(row);}};
-    const calcItem=row=>{if(row&&row.price&&row.qty)row.amount=Math.round(row.price*row.qty*(row.discount||1)*100)/100;calcTotals();};
+    const onProdSelect=(row)=>{const p=products.value.find(x=>x.id===row.productId);if(p){row.price=p.price;calcItem(row);}calcTotals();};
+    const calcItem=row=>{try{if(row&&row.price&&row.qty)row.amount=Math.round(row.price*row.qty*(row.discount||1)*100)/100;calcTotals();}catch(e){console.error('calcItem error',e);}};
     const calcTotals=()=>{
-      const itemsTotal=orderF.value.items.reduce((s,r)=>s+(r.amount||0),0);
+      try{
+      const items=orderF.value.items||[];
+      const itemsTotal=items.reduce((s,r)=>s+((r&&r.amount)||0),0);
       orderF.value.quoteAmount=itemsTotal;
       orderF.value.amount=Math.max(0,orderF.value.quoteAmount-(orderF.value.discountAmount||0)-(orderF.value.roundAmount||0));
+      }catch(e){console.error('calcTotals error',e);}
     };
     const saveNewOrder=async()=>{
       if(!orderF.value.customerId){ElMessage.warning('请选择客户');return;}
       const customer=customers.value.find(c=>c.id===orderF.value.customerId);
       const emp=employees.value.find(e=>e.id===orderF.value.salespersonId);
       const today=new Date().toISOString().slice(0,10);
-      const amount=Math.max(0,orderF.value.items.reduce((s,r)=>s+(r.amount||0),0)-orderF.value.discountAmount-orderF.value.roundAmount);
+      const amount=Math.max(0,(orderF.value.items||[]).reduce((s,r)=>s+((r&&r.amount)||0),0)-(orderF.value.discountAmount||0)-(orderF.value.roundAmount||0));
       const payload={
         customer_id:orderF.value.customerId,
         customer_name:customer?.name||'',
