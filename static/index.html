@@ -1281,7 +1281,7 @@ const app=createApp({
     const editingCategory=ref(null);
     const saveCategory=async()=>{
       if(!cForm.value.name||!cForm.value.supplierId){ElMessage.warning('请填写完整');return;}
-      const supId=parseInt(cForm.value.supplierId.replace('s',''));
+      const supId=parseInt(String(cForm.value.supplierId).replace('s',''));
       try{
         if(editingCategory.value){
           categories.value.find(c=>c.id===editingCategory.value.id) && Object.assign(categories.value.find(c=>c.id===editingCategory.value.id),cForm.value);
@@ -1300,8 +1300,8 @@ const app=createApp({
     const supCategories=computed(()=>{if(!pForm.value.supplierId)return categories.value;return categories.value.filter(c=>c.supplierId===pForm.value.supplierId);});
     const addProduct=async()=>{
       if(!pForm.value.name||!pForm.value.supplierId||!pForm.value.categoryId){ElMessage.warning('请填写名称、供应商和布版');return;}
-      const supId=parseInt(pForm.value.supplierId.replace('s',''));
-      const catId=parseInt(pForm.value.categoryId.replace('c',''));
+      const supId=parseInt(String(pForm.value.supplierId).replace('s',''));
+      const catId=parseInt(String(pForm.value.categoryId).replace('c',''));
       try{
         const d=await api('/api/products','POST',{name:pForm.value.name,supplier_id:supId,category_id:catId,product_type:pForm.value.type||'面料',classification:pForm.value.classification||'定高',model:pForm.value.model||'',material:pForm.value.mat||'',width:pForm.value.width||280,weight:pForm.value.weight||0,unit_price:pForm.value.price||0,unit:'米',stock:pForm.value.stock||0});
         products.value.push({id:d.id,code:d.code,name:pForm.value.name,supplierId:pForm.value.supplierId,categoryId:pForm.value.categoryId,type:pForm.value.type||'面料',classification:pForm.value.classification||'定高',model:pForm.value.model||'',mat:pForm.value.mat||'',width:pForm.value.width||280,weight:pForm.value.weight||0,cf:0,price:pForm.value.price||0,stock:pForm.value.stock||0,unit:'米',remark:''});
