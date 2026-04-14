@@ -665,18 +665,18 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
                 <div class="card-title">员工业绩排行</div>
                 <div v-for="(e,i) in staffRank" :key="e.name" style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed #f0f0f0">
                   <span style="width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold" :style="i===0?'background:#ffd700;color:#fff':i===1?'background:#c0c0c0;color:#fff':i===2?'background:#cd7f32;color:#fff':'background:#e8e8e8;color:#999'">{{i+1}}</span>
-                  <span style="flex:1;font-size:13px">{{e.name}}</span>
-                  <span style="font-size:13px;color:#1a3a5c;font-weight:bold">{{e.amount.toLocaleString()}}</span>
-                  <span style="font-size:11px;color:#999">{{e.orders}}单</span>
+                  <span style="flex:1;font-size:13px">{{e?.name||"-"}}</span>
+                  <span style="font-size:13px;color:#1a3a5c;font-weight:bold">{{(e?.amount||0).toLocaleString()}}</span>
+                  <span style="font-size:11px;color:#999">{{e?.orders||0}}单</span>
                 </div>
               </div>
               <div class="card">
                 <div class="card-title">爆款面料 TOP5</div>
                 <div v-for="(p,i) in topProducts" :key="p.name" style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed #f0f0f0">
                   <span style="width:18px;height:18px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;background:#409eff;color:#fff">{{i+1}}</span>
-                  <span style="flex:1;font-size:13px">{{p.name}}</span>
+                  <span style="flex:1;font-size:13px">{{p?.name||"-"}}</span>
                   <span style="font-size:11px;color:#999">{{p.times}}米</span>
-                  <span style="font-size:13px;color:#67c23a;font-weight:bold">¥{{p.amount.toLocaleString()}}</span>
+                  <span style="font-size:13px;color:#67c23a;font-weight:bold">¥{{(p?.amount||0).toLocaleString()}}</span>
                 </div>
               </div>
             </div>
@@ -1393,7 +1393,7 @@ const app=createApp({
       orderF.value.deliveryDate=d.toISOString().slice(0,10);
     };
     const onProdSelect=row=>{const p=products.value.find(x=>x.id===row.productId);if(p){row.price=p.price;calcItem(row);}};
-    const calcItem=row=>{if(row.price&&row.qty)row.amount=Math.round(row.price*row.qty*(row.discount||1)*100)/100;calcTotals();};
+    const calcItem=row=>{if(row&&row.price&&row.qty)row.amount=Math.round(row.price*row.qty*(row.discount||1)*100)/100;calcTotals();};
     const calcTotals=()=>{
       const itemsTotal=orderF.value.items.reduce((s,r)=>s+(r.amount||0),0);
       orderF.value.quoteAmount=itemsTotal;
