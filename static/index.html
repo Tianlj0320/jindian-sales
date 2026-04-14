@@ -186,7 +186,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
       <div class="top-bar-title">{{ pageTitle }}</div>
       <div style="display:flex;align-items:center;gap:10px">
         <el-button size="small" class="hide-mobile" style="background:#1a3a5c;color:#fff;border:none" @click="showLogin=true">
-          <el-icon><user/></el-icon>&nbsp;<span class="hide-mobile">{{ currentUser.name||'登录' }}</span>
+          <el-icon><user/></el-icon>&nbsp;<span class="hide-mobile">{{ currentUser?.name||'登录' }}</span>
         </el-button>
         <el-button size="small" style="border:none;font-size:16px" @click="drawerVisible=true" class="mobile-hamburger">☰</el-button>
       </div>
@@ -304,15 +304,15 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
             <div v-if="prodDetail" class="product-detail">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
                 <div>
-                  <b style="font-size:15px;color:#1a3a5c">{{prodDetail.name}}</b>
-                  <span style="margin-left:10px;font-size:12px;background:#e8f0ff;padding:2px 8px;border-radius:3px;color:#409eff">{{prodDetail.code}}</span>
+                  <b style="font-size:15px;color:#1a3a5c">{{prodDetail?.name}}</b>
+                  <span style="margin-left:10px;font-size:12px;background:#e8f0ff;padding:2px 8px;border-radius:3px;color:#409eff">{{prodDetail?.code}}</span>
                 </div>
                 <el-button size="small" @click="prodDetail=null">关闭</el-button>
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-                <div><div style="font-size:11px;color:#999">供应商</div><div style="font-size:13px">{{getSupplierName(prodDetail.sId)}}</div></div>
-                <div><div style="font-size:11px;color:#999">布版系列</div><div style="font-size:13px">{{getCatName(prodDetail.cId)}}</div></div>
-                <div><div style="font-size:11px;color:#999">分类</div><div style="font-size:13px"><span class="num-tag" :class="prodDetail.type==='面料'?'num-blue':'num-gray'">{{prodDetail.type}}</span></div></div>
+                <div><div style="font-size:11px;color:#999">供应商</div><div style="font-size:13px">{{getSupplierName(prodDetail?.sId)}}</div></div>
+                <div><div style="font-size:11px;color:#999">布版系列</div><div style="font-size:13px">{{getCatName(prodDetail?.cId)}}</div></div>
+                <div><div style="font-size:11px;color:#999">分类</div><div style="font-size:13px"><span class="num-tag" :class="prodDetail?.type==='面料'?'num-blue':'num-gray'">{{prodDetail?.type}}</span></div></div>
                 <div><div style="font-size:11px;color:#999">产品分类</div><div style="font-size:13px">{{prodDetail.class||'-'}}</div></div>
                 <div><div style="font-size:11px;color:#999">型号</div><div style="font-size:13px">{{prodDetail.model||'-'}}</div></div>
                 <div><div style="font-size:11px;color:#999">材质</div><div style="font-size:13px">{{prodDetail.mat||'-'}}</div></div>
