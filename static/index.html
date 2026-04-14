@@ -6,7 +6,7 @@
 <title>金典软装销售管理系统 V2.2</title>
 <script src="https://cdn.bootcdn.net/ajax/libs/vue/3.4.0/vue.global.js"></script>
 <script src="https://cdn.bootcdn.net/ajax/libs/element-plus/2.4.0/index.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@element-plus/icons-vue@2.3.0/dist/index.iife.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/element-plus-icons-vue/2.3.0/index.iife.min.js"></script>
 <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/element-plus/2.4.0/index.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -1115,7 +1115,19 @@ const app=createApp({
     const products=ref([]);
 
     /* 产品树 */
-    const productTree=computed(()=>suppliers.value.map(s=>({id:'s'+s.id,label:s.name,lv:1,children:categories.value.filter(c=>c.supplierId===s.id).map(c=>({id:'c'+c.id,label:c.name,lv:2,children:products.value.filter(p=>p.categoryId===c.id).map(p=>({id:p.id,label:p.name,code:p.code,lv:3}))}))}))));
+    const productTree=computed(()=>{
+      return suppliers.value.map(s=>{
+        const scats=categories.value.filter(c=>String(c.supplierId)===String(s.id));
+        return {id:'s'+s.id,label:s.name,lv:1,
+          children:scats.map(c=>{
+            const cprods=products.value.filter(p=>String(p.categoryId)===String(c.id));
+            return {id:'c'+c.id,label:c.name,lv:2,
+              children:cprods.map(p=>({id:p.id,label:p.name,code:p.code||'',lv:3}))
+            };
+          })
+        };
+      });
+    });
 
     const prodDetail=ref(null);
     const prodSearch=ref('');
@@ -1451,10 +1463,7 @@ const app=createApp({
   }
 });
 
-// register Element Plus icons from CDN
-const eicons=window.ElementPlusIconsVue;
-if(eicons){for(const[k,v]of Object.entries(eicons)){app.component(k,v);}}
-app.use(ElementPlus);
+const eicons=window.ElementPlusIconsVue;if(eicons){for(const[k,v]of Object.entries(eicons)){app.component(k,v);}} app.use(ElementPlus);
 initAll();
 app.mount('#app');
 </script>
