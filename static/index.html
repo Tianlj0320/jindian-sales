@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>金典软装销售管理系统 V2.1</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/element-plus@1.1.0/dist/index.full.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/element-plus@1.1.0/theme-chalk/index.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;color:#333}
+#app{min-height:100vh}
+.el-table th{background:#f5f7fa!important;color:#1a3a5c!important;font-weight:600!important}
+.el-table--striped .el-table__body tr.el-table__row--striped td{background:#fafbff}
+/* layout */
+.main-layout{display:flex;min-height:100vh}
+.aside{width:210px;background:#1a3a5c;flex-shrink:0;display:flex;flex-direction:column}
+.aside-logo{height:58px;background:#0f2a47;display:flex;align-items:center;justify-content:center;border-bottom:1px solid #2a4a6c}
+.aside-logo-title{color:#fff;font-size:15px;font-weight:bold;letter-spacing:2px}
+.aside-logo-sub{color:#8ab4d8;font-size:10px;margin-top:2px;text-align:center}
+.nav-menu{flex:1;overflow-y:auto}
+.nav-menu::-webkit-scrollbar{width:3px}
+.nav-menu::-webkit-scrollbar-thumb{background:#3a5a7c}
+.el-menu-item,.el-sub-menu__title{font-size:13px!important}
+.el-menu-item.is-active{background:#2552a0!important}
+.el-menu-item:hover,.el-sub-menu__title:hover{background:#2a4a6c!important}
+.right-area{flex:1;display:flex;flex-direction:column;min-width:0}
+.top-bar{height:58px;background:#fff;border-bottom:1px solid #e0e0e0;display:flex;align-items:center;justify-content:space-between;padding:0 20px;flex-shrink:0}
+.top-bar-title{font-size:16px;color:#1a3a5c;font-weight:bold}
+.top-bar-info{font-size:13px;color:#888}
+.main-content{flex:1;overflow-y:auto;padding:16px}
+.main-content::-webkit-scrollbar{width:5px}
+.main-content::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
+/* card */
+.card{background:#fff;border-radius:8px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:14px}
+.card-title{font-size:14px;font-weight:bold;color:#1a3a5c;border-left:3px solid #1a3a5c;padding-left:8px;margin-bottom:14px}
+/* stat */
+.stat-row{display:flex;gap:14px;flex-wrap:wrap}
+.stat-card{flex:1;min-width:160px;background:#fff;border-radius:8px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.06);cursor:pointer;transition:box-shadow .2s}
+.stat-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.1)}
+.stat-num{font-size:28px;font-weight:bold;line-height:1}
+.stat-label{font-size:12px;color:#888;margin-top:6px}
+/* tree */
+.tree-card{background:#fafbfc;border-radius:6px;padding:10px}
+.el-tree{background:transparent!important;color:#ddd}
+.el-tree-node__content{color:#ccc!important;border-radius:4px;margin-bottom:2px}
+.el-tree-node__content:hover{background:#2a4a6c!important}
+.el-tree-node.is-current > .el-tree__node__content{background:#2a4a6c!important;color:#fff!important}
+/* status */
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;flex-shrink:0}
+.s-pending{background:#909399}.s-created{background:#909399}.s-confirmed{background:#409eff}.s-measure{background:#409eff}.s-measured{background:#67c23a}.s-stock{background:#f56c6c}.s-stocked{background:#e6a23c}.s-processing{background:#f56c6c}.s-install{background:#9c27b0}.s-installed{background:#1a3a5c}.s-done{background:#1a3a5c}.s-partial{background:#e6a23c}.s-complete{background:#222}.s-completed{background:#222}.s-cancelled{background:#d9d9d9}
+/* form section */
+.section{padding:14px}
+.section-title{font-size:14px;font-weight:bold;color:#1a3a5c;padding-bottom:10px;border-bottom:1px solid #eee;margin-bottom:14px}
+/* badge red */
+.badge-red{background:#f56c6c;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px}
+/* page title */
+.page-title{font-size:16px;font-weight:bold;color:#1a3a5c;margin-bottom:16px}
+.page-title span{font-size:12px;color:#999;font-weight:normal;margin-left:8px}
+/* order layout */
+.order-layout{display:grid;grid-template-columns:280px 1fr;gap:14px;min-height:500px}
+.order-left{background:#fff;border-radius:8px;padding:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.order-right{flex:1;background:#fff;border-radius:8px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.order-list-item{padding:8px 10px;border-radius:6px;cursor:pointer;margin-bottom:6px;transition:background .15s}
+.order-list-item:hover{background:#f0f4ff}
+.order-list-item.active{background:#e8f0ff;border:1px solid #b0c8ff}
+.order-list-item-name{font-size:13px;font-weight:500;color:#333}
+.order-list-item-meta{font-size:11px;color:#999;margin-top:2px}
+/* dict layout */
+.dict-layout{display:grid;grid-template-columns:200px 1fr;gap:14px;min-height:450px}
+.dict-cats{background:#fafbfc;border-radius:8px;padding:8px}
+.dict-items{background:#fff;border-radius:8px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+/* product detail */
+.product-detail{background:#fff;border-radius:8px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+/* number format */
+.num-tag{display:inline-block;padding:1px 8px;border-radius:4px;font-size:12px;font-weight:500}
+.num-red{background:#fff0f0;color:#f56c6c}.num-green{background:#f0fff0;color:#67c23a}.num-blue{background:#f0f7ff;color:#409eff}.num-gray{background:#f5f5f5;color:#666}
+/* dialog */
+.el-dialog__header{background:#1a3a5c!important;color:#fff!important;padding:14px 20px!important}
+.el-dialog__title{color:#fff!important;font-size:14px!important}
+.el-dialog__headerbtn .el-dialog__close{color:#fff!important}
+/* el input small */
+.el-form-item--label-top .el-form-item__label{font-size:12px;color:#666}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* warehouse card */
+.wh-card{background:#fff;border-radius:8px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.wh-card-title{font-weight:bold;color:#1a3a5c;font-size:13px;padding-bottom:8px;border-bottom:1px solid #eee;margin-bottom:8px}
+.wh-item{display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px dashed #f0f0f0}
+.wh-item:last-child{border:none}
+.wh-qty{font-weight:bold;color:#67c23a}
+</style>
+</head>
+<body>
+<div id="app">
+<div class="main-layout">
+
+  <!-- 左侧导航 -->
+  <aside class="aside">
+    <div class="aside-logo">
+      <div>
+        <div class="aside-logo-title">金典软装</div>
+        <div class="aside-logo-sub">销售管理系统 V2.1</div>
+      </div>
+    </div>
+    <el-menu :default-active="activeMenu" background-color="#1a3a5c" text-color="#bcc8d8" active-text-color="#fff" class="nav-menu" @select="handleNav">
+      <el-menu-item index="home"><el-icon><house-fill/></el-icon>&nbsp;首页概览</el-menu-item>
+      <el-sub-menu index="basic">
+        <template #title><el-icon><folder/></el-icon>&nbsp;基础资料</template>
+        <el-menu-item index="product">产品资料</el-menu-item>
+        <el-menu-item index="customer">客户资料</el-menu-item>
+        <el-menu-item index="employee">员工资料</el-menu-item>
+        <el-menu-item index="dict">码表管理</el-menu-item>
+      </el-sub-menu>
+      <el-menu-item index="order"><el-icon><document/></el-icon>&nbsp;销售订单</el-menu-item>
+      <el-menu-item index="purchase"><el-icon><truck/></el-icon>&nbsp;采购管理</el-menu-item>
+      <el-menu-item index="warehouse"><el-icon><box/></el-icon>&nbsp;仓库管理</el-menu-item>
+      <el-menu-item index="production"><el-icon><setting/></el-icon>&nbsp;生产管理</el-menu-item>
+      <el-menu-item index="install"><el-icon><tools/></el-icon>&nbsp;安装管理</el-menu-item>
+      <el-menu-item index="finance"><el-icon><money/></el-icon>&nbsp;财务结算</el-menu-item>
+      <el-menu-item index="report"><el-icon><data-analysis/></el-icon>&nbsp;统计报表</el-menu-item>
+    </el-menu>
+  </aside>
+
+  <!-- 右侧 -->
+  <div class="right-area">
+    <div class="top-bar">
+      <div class="top-bar-title">{{ pageTitle }}</div>
+      <div class="top-bar-info">
+        <span style="color:#67c23a">●</span> 在线 &nbsp;|&nbsp;
+        <el-icon><user/></el-icon> 韩霜（老板）
+      </div>
+    </div>
+
+    <div class="main-content">
+
+      <!-- ============ 首页 ============ -->
+      <div v-if="page==='home'">
+        <div class="stat-row">
+          <div class="stat-card" @click="switchPage('order')">
+            <div class="stat-num" style="color:#409eff">{{stats.todayOrders}}</div>
+            <div class="stat-label">今日新增订单</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" style="color:#67c23a">¥{{stats.monthSales.toLocaleString()}}</div>
+            <div class="stat-label">本月销售额</div>
+          </div>
+          <div class="stat-card" @click="switchPage('order')">
+            <div class="stat-num" style="color:#9c27b0">{{stats.pendingInstall}}</div>
+            <div class="stat-label">待安装订单</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" style="color:#f56c6c">{{stats.overdueOrders}}</div>
+            <div class="stat-label">逾期订单</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" style="color:#e6a23c">{{stats.pendingPayment}}</div>
+            <div class="stat-label">待收款(笔)</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" style="color:#1a3a5c">{{stats.totalCustomers}}</div>
+            <div class="stat-label">客户总数</div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:14px">
+          <div class="card-title">最近订单</div>
+          <el-table :data="orders.slice(0,8)" size="small" stripe>
+            <el-table-column prop="orderNo" label="订单号" width="130"/>
+            <el-table-column prop="customerName" label="客户" width="110"/>
+            <el-table-column prop="orderType" label="类型" width="80">
+              <template #default="{row}"><span class="num-tag num-blue">{{row.orderType}}</span></template>
+            </el-table-column>
+            <el-table-column prop="content" label="内容" min-width="160" show-overflow-tooltip/>
+            <el-table-column prop="amount" label="订单金额" width="100" align="right">
+              <template #default="{row}"><b style="color:#1a3a5c">¥{{row.amount.toLocaleString()}}</b></template>
+            </el-table-column>
+            <el-table-column prop="received" label="已收" width="90" align="right">
+              <template #default="{row}"><span style="color:#67c23a">¥{{row.received.toLocaleString()}}</span></template>
+            </el-table-column>
+            <el-table-column prop="debt" label="欠款" width="90" align="right">
+              <template #default="{row}"><span :style="row.debt>0?'color:#f56c6c':'color:#67c23a'">¥{{row.debt.toLocaleString()}}</span></template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="105">
+              <template #default="{row}">
+                <span :class="'status-dot s-'+row.statusColor"></span>{{row.status}}
+              </template>
+            </el-table-column>
+            <el-table-column prop="date" label="日期" width="105"/>
+            <el-table-column prop="salesperson" label="导购" width="80"/>
+          </el-table>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:0">
+          <div class="card">
+            <div class="card-title">快捷操作</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <el-button type="primary" size="small" @click="switchPage('order');showNewOrder=true">新建订单</el-button>
+              <el-button size="small" @click="switchPage('product')">产品资料</el-button>
+              <el-button size="small" @click="switchPage('customer')">客户管理</el-button>
+              <el-button size="small" @click="switchPage('purchase')">采购管理</el-button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">系统提醒</div>
+            <div v-for="a in alerts" :key="a.msg" style="padding:5px 0;font-size:12px;color:#666;border-bottom:1px dashed #f0f0f0">
+              <span :style="'color:'+a.color">{{a.icon}}</span> {{a.msg}}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 产品资料 ============ -->
+      <div v-if="page==='product'">
+        <div class="page-title">产品资料</div>
+        <div class="card">
+          <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <el-button type="primary" size="small" @click="dlgSupplier=true">+ 供应商</el-button>
+            <el-button size="small" @click="dlgCategory=true">+ 布版</el-button>
+            <el-button type="primary" plain size="small" @click="dlgProduct=true">+ 产品</el-button>
+            <el-input v-model="prodSearch" placeholder="搜索产品名称/编码" size="small" style="width:200px" clearable>
+              <template #prefix><el-icon><search/></el-icon></template>
+            </el-input>
+          </div>
+          <div style="display:grid;grid-template-columns:280px 1fr;gap:14px">
+            <!-- 左侧树 -->
+            <div class="tree-card">
+              <div style="font-size:12px;color:#888;margin-bottom:8px;padding-left:4px">
+                三级层级：供应商 → 布版 → 产品 | 点击查看详情
+              </div>
+              <el-tree :data="productTree" node-key="id" :expand-on-click-node="false" :default-expand-all="true" @node-click="onProductNode" highlight-current style="background:transparent">
+                <template #default="{data}">
+                  <span style="display:flex;align-items:center;gap:6px;font-size:13px">
+                    <span v-if="data.lv===1" style="color:#8ab4d8">🏭</span>
+                    <span v-else-if="data.lv===2" style="color:#a0c4e0">📁</span>
+                    <span v-else style="color:#67c23a">🧵</span>
+                    <span>{{data.label}}</span>
+                    <span v-if="data.lv===3" style="font-size:10px;color:#999;margin-left:4px">{{data.code}}</span>
+                  </span>
+                </template>
+              </el-tree>
+            </div>
+            <!-- 右侧详情 -->
+            <div v-if="prodDetail" class="product-detail">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <div>
+                  <b style="font-size:15px;color:#1a3a5c">{{prodDetail.name}}</b>
+                  <span style="margin-left:10px;font-size:12px;background:#e8f0ff;padding:2px 8px;border-radius:3px;color:#409eff">{{prodDetail.code}}</span>
+                </div>
+                <el-button size="small" @click="prodDetail=null">关闭</el-button>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                <div><div style="font-size:11px;color:#999">供应商</div><div style="font-size:13px">{{getSupplierName(prodDetail.sId)}}</div></div>
+                <div><div style="font-size:11px;color:#999">布版系列</div><div style="font-size:13px">{{getCatName(prodDetail.cId)}}</div></div>
+                <div><div style="font-size:11px;color:#999">分类</div><div style="font-size:13px"><span class="num-tag" :class="prodDetail.type==='面料'?'num-blue':'num-gray'">{{prodDetail.type}}</span></div></div>
+                <div><div style="font-size:11px;color:#999">产品分类</div><div style="font-size:13px">{{prodDetail.class||'-'}}</div></div>
+                <div><div style="font-size:11px;color:#999">型号</div><div style="font-size:13px">{{prodDetail.model||'-'}}</div></div>
+                <div><div style="font-size:11px;color:#999">材质</div><div style="font-size:13px">{{prodDetail.mat||'-'}}</div></div>
+                <div><div style="font-size:11px;color:#999">门幅</div><div style="font-size:13px">{{prodDetail.width||0}} cm</div></div>
+                <div><div style="font-size:11px;color:#999">克重</div><div style="font-size:13px">{{prodDetail.weight||0}} g/㎡</div></div>
+                <div><div style="font-size:11px;color:#999">色牢度</div><div style="font-size:13px">{{prodDetail.cf||0}} 级</div></div>
+                <div><div style="font-size:11px;color:#999">单价</div><div style="font-size:15px;font-weight:bold;color:#67c23a">¥{{prodDetail.price||0}}/{{prodDetail.unit||'米'}}</div></div>
+                <div><div style="font-size:11px;color:#999">库存</div><div style="font-size:13px"><span :style="prodDetail.stock>0?'color:#67c23a':'color:#f56c6c'">{{prodDetail.stock||0}}</span> {{prodDetail.unit||'米'}}</div></div>
+              </div>
+              <div v-if="prodDetail.remark" style="margin-top:10px;font-size:12px;color:#888">备注：{{prodDetail.remark}}</div>
+            </div>
+            <div v-else class="product-detail" style="display:flex;align-items:center;justify-content:center;min-height:200px;color:#ccc;font-size:13px">
+              点击左侧产品节点查看详情
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 客户资料 ============ -->
+      <div v-if="page==='customer'">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div class="page-title" style="margin:0">客户资料 <span>（必须先录入客户，才能下订单）</span></div>
+          <el-button type="primary" size="small" @click="openCustomerDlg()">+ 新增客户</el-button>
+        </div>
+        <div class="card">
+          <el-table :data="filteredCustomers" stripe size="small">
+            <el-table-column prop="code" label="编号" width="130"/>
+            <el-table-column prop="name" label="客户名称" width="120"/>
+            <el-table-column prop="phone" label="电话" width="120"/>
+            <el-table-column prop="community" label="小区" min-width="130"/>
+            <el-table-column prop="type" label="类型" width="80">
+              <template #default="{row}"><span class="num-tag" :class="row.type==='零售'?'num-blue':row.type==='工程'?'num-red':'num-green'">{{row.type}}</span></template>
+            </el-table-column>
+            <el-table-column prop="salesperson" label="导购" width="80"/>
+            <el-table-column prop="source" label="来源" width="80"/>
+            <el-table-column label="欠款" width="100" align="right">
+              <template #default="{row}"><span :style="row.debt>0?'color:#f56c6c':'color:#67c23a'">¥{{(row.debt||0).toLocaleString()}}</span></template>
+            </el-table-column>
+            <el-table-column label="操作" width="130">
+              <template #default="{row, $index}">
+                <el-button size="small" @click="openCustomerDlg(row,$index)">编辑</el-button>
+                <el-button size="small" type="danger" @click="delCustomer(row,$index)">删</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
+
+      <!-- ============ 员工资料 ============ -->
+      <div v-if="page==='employee'">
+        <div style="display:flex;justify-content:space-between;margin-bottom:14px">
+          <div class="page-title" style="margin:0">员工资料</div>
+          <el-button type="primary" size="small" @click="openEmpDlg()">+ 新增员工</el-button>
+        </div>
+        <div class="card">
+          <el-table :data="employees" stripe size="small">
+            <el-table-column prop="code" label="工号" width="80"/>
+            <el-table-column prop="name" label="姓名" width="80"/>
+            <el-table-column prop="gender" label="性别" width="50"/>
+            <el-table-column prop="phone" label="电话" width="120"/>
+            <el-table-column prop="position" label="职务" width="80">
+              <template #default="{row}"><span class="num-tag num-blue">{{row.position}}</span></template>
+            </el-table-column>
+            <el-table-column prop="dept" label="部门" width="90"/>
+            <el-table-column label="最大折扣" width="90">
+              <template #default="{row}"><span style="color:#e6a23c;font-weight:bold">{{(row.maxDiscount*10).toFixed(1)}}折</span></template>
+            </el-table-column>
+            <el-table-column label="抹零限制" width="90">
+              <template #default="{row}">¥{{row.roundLimit}}</template>
+            </el-table-column>
+            <el-table-column label="状态" width="70">
+              <template #default="{row}"><span :class="row.status==='启用'?'num-tag num-green':'num-tag num-gray'">{{row.status}}</span></template>
+            </el-table-column>
+            <el-table-column label="操作" width="100">
+              <template #default="{row,$index}">
+                <el-button size="small" @click="openEmpDlg(row,$index)">编辑</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
+
+      <!-- ============ 码表管理 ============ -->
+      <div v-if="page==='dict'">
+        <div class="page-title">码表管理 <span>（两级架构：分类 → 条目，可按需增删）</span></div>
+        <div class="card">
+          <div class="dict-layout">
+            <div class="dict-cats">
+              <el-menu :default-active="dictCat" @select="dictCat=$event" background-color="transparent" text-color="#333" active-text-color="#1a3a5c">
+                <el-menu-item v-for="c in dictCats" :key="c.k" :index="c.k"><el-icon><document/></el-icon>&nbsp;{{c.l}}</el-menu-item>
+              </el-menu>
+            </div>
+            <div class="dict-items">
+              <div style="display:flex;justify-content:space-between;margin-bottom:12px">
+                <b style="color:#1a3a5c">{{dictCatLabel}} — 条目管理</b>
+                <el-button type="primary" size="small" @click="openDictItemDlg()">+ 新增条目</el-button>
+              </div>
+              <el-table :data="dictItems" stripe size="small">
+                <el-table-column label="键" prop="k" width="120"/>
+                <el-table-column label="值" prop="v" min-width="160"/>
+                <el-table-column v-if="dictCat==='orderStatus'" label="颜色" width="120">
+                  <template #default="{row}">
+                    <span style="display:flex;align-items:center;gap:6px">
+                      <span :style="'display:inline-block;width:14px;height:14px;border-radius:50%;background:'+(row.c||'#ccc')"></span>
+                      {{row.c||'无'}}
+                    </span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="120">
+                  <template #default="{row,$index}">
+                    <el-button size="small" @click="openDictItemDlg(row,$index)">编辑</el-button>
+                    <el-button size="small" type="danger" @click="delDictItem($index)">删</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 销售订单 ============ -->
+      <div v-if="page==='order'">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div class="page-title" style="margin:0">销售订单 <span>（7态：待确认→完成）</span></div>
+          <el-button type="primary" size="small" @click="showNewOrder=true">+ 新建订单</el-button>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+          <el-input v-model="orderSearch" placeholder="订单号/客户名" size="small" style="width:180px" clearable @input="filterOrders">
+            <template #prefix><el-icon><search/></el-icon></template>
+          </el-input>
+          <el-select v-model="orderStatusF" size="small" placeholder="筛选状态" clearable style="width:130px" @change="filterOrders">
+            <el-option v-for="s in orderStatusAll" :key="s.k" :label="s.l" :value="s.k"/>
+          </el-select>
+          <el-select v-model="orderTypeF" size="small" placeholder="订单类型" clearable style="width:120px" @change="filterOrders">
+            <el-option v-for="t in dictMap.orderType" :key="t.k" :label="t.v" :value="t.k"/>
+          </el-select>
+        </div>
+        <div class="order-layout">
+          <div class="order-left">
+            <div style="font-size:12px;color:#888;margin-bottom:8px;padding-left:2px">
+              {{filteredOrders.length}} 条订单
+            </div>
+            <div v-for="o in filteredOrders" :key="o.id" :class="'order-list-item'+(selOrder&&selOrder.id===o.id?' active':'')" @click="selOrder=o">
+              <div class="order-list-item-name">{{o.orderNo}}</div>
+              <div class="order-list-item-meta">{{o.customerName}} · {{o.orderType}}</div>
+              <div class="order-list-item-meta">
+                <span :class="'status-dot s-'+o.statusColor"></span>{{o.status}} ·
+                <span style="color:#1a3a5c;font-weight:500">¥{{o.amount.toLocaleString()}}</span>
+              </div>
+            </div>
+          </div>
+          <div v-if="selOrder" class="order-right">
+            <div style="display:flex;justify-content:space-between;margin-bottom:14px">
+              <div>
+                <b style="font-size:16px;color:#1a3a5c">{{selOrder.orderNo}}</b>
+                <span :class="'status-dot s-'+selOrder.statusColor+' '" style="margin-left:8px"></span>
+                <span style="font-size:13px">{{selOrder.status}}</span>
+              </div>
+              <el-select v-model="selOrder.statusColor" size="small" style="width:120px" @change="updateOrderStatus">
+                <el-option v-for="s in orderStatusAll" :key="s.k" :label="s.l" :value="s.k"/>
+              </el-select>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+              <div><div style="font-size:11px;color:#999">客户</div><div style="font-size:13px;font-weight:500">{{selOrder.customerName}}</div></div>
+              <div><div style="font-size:11px;color:#999">类型</div><div style="font-size:13px">{{selOrder.orderType}}</div></div>
+              <div><div style="font-size:11px;color:#999">导购</div><div style="font-size:13px">{{selOrder.salesperson}}</div></div>
+              <div><div style="font-size:11px;color:#999">接单日期</div><div style="font-size:13px">{{selOrder.orderDate}}</div></div>
+              <div><div style="font-size:11px;color:#999">交期</div><div style="font-size:13px;color:#e6a23c;font-weight:bold">{{selOrder.deliveryDate}}</div></div>
+              <div><div style="font-size:11px;color:#999">提货方式</div><div style="font-size:13px">{{selOrder.deliveryMethod||'-'}}</div></div>
+            </div>
+            <!-- 金额 -->
+            <div style="background:#f8f9fc;border-radius:8px;padding:12px;margin-bottom:14px">
+              <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;text-align:center">
+                <div><div style="font-size:10px;color:#999">标价</div><div style="font-size:14px;color:#666">¥{{selOrder.quoteAmount.toLocaleString()}}</div></div>
+                <div><div style="font-size:10px;color:#999">优惠</div><div style="font-size:14px;color:#f56c6c">-¥{{selOrder.discountAmount.toLocaleString()}}</div></div>
+                <div><div style="font-size:10px;color:#999">抹零</div><div style="font-size:14px;color:#999">-¥{{selOrder.roundAmount||0}}</div></div>
+                <div><div style="font-size:10px;color:#999">应收</div><div style="font-size:16px;font-weight:bold;color:#1a3a5c">¥{{selOrder.amount.toLocaleString()}}</div></div>
+                <div><div style="font-size:10px;color:#999">已收</div><div style="font-size:14px;color:#67c23a">¥{{selOrder.received.toLocaleString()}}</div></div>
+                <div><div style="font-size:10px;color:#999">欠款</div><div style="font-size:14px;font-weight:bold" :style="selOrder.debt>0?'color:#f56c6c':'color:#67c23a'">¥{{selOrder.debt.toLocaleString()}}</div></div>
+              </div>
+            </div>
+            <!-- 产品明细 -->
+            <div v-if="selOrder.items&&selOrder.items.length>0">
+              <div style="font-size:13px;font-weight:bold;color:#1a3a5c;margin-bottom:8px">产品明细</div>
+              <el-table :data="selOrder.items" size="small" stripe>
+                <el-table-column prop="name" label="产品" min-width="150"/>
+                <el-table-column label="幅数" width="60" align="center" prop="qty"/>
+                <el-table-column label="单价" width="80" align="right" prop="price"/>
+                <el-table-column label="折扣" width="70" align="center">
+                  <template #default="{row}">{{(row.discount||1)*10.toFixed(1)}}折</template>
+                </el-table-column>
+                <el-table-column label="金额" width="90" align="right">
+                  <template #default="{row}"><b>¥{{row.amount.toLocaleString()}}</b></template>
+                </el-table-column>
+              </el-table>
+            </div>
+            <!-- 状态历史 -->
+            <div style="margin-top:14px">
+              <div style="font-size:13px;font-weight:bold;color:#1a3a5c;margin-bottom:8px">状态变更记录</div>
+              <div v-for="h in (selOrder.history||[]).slice().reverse()" :key="h.time" style="font-size:11px;color:#888;padding:3px 0;border-bottom:1px dashed #f0f0f0">
+                <span :class="'status-dot s-'+h.c"></span>{{h.s}} → <b>{{h.s2}}</b>
+                <span style="float:right">{{h.time}}</span>
+              </div>
+              <div v-if="!selOrder.history||selOrder.history.length===0" style="font-size:12px;color:#ccc;text-align:center;padding:10px">暂无记录</div>
+            </div>
+          </div>
+          <div v-else class="order-right" style="display:flex;align-items:center;justify-content:center;color:#ccc;font-size:13px">
+            点击左侧订单查看详情
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 采购管理 ============ -->
+      <div v-if="page==='purchase'">
+        <div class="page-title">采购管理 <span>（订单确认后自动按供应商拆分）</span></div>
+        <div class="card">
+          <el-table :data="purchases" stripe size="small">
+            <el-table-column prop="purchaseNo" label="采购单号" width="140"/>
+            <el-table-column prop="supplierName" label="供应商" width="150"/>
+            <el-table-column prop="orderNo" label="关联订单" width="130"/>
+            <el-table-column prop="items" label="采购物料" min-width="200" show-overflow-tooltip/>
+            <el-table-column prop="status" label="状态" width="100">
+              <template #default="{row}"><span class="num-tag" :class="row.status==='已完成'?'num-green':row.status==='已发货'?'num-blue':row.status==='待分发'?'num-red':'num-gray'">{{row.status}}</span></template>
+            </el-table-column>
+            <el-table-column label="金额" width="100" align="right">
+              <template #default="{row}"><b>¥{{row.amount.toLocaleString()}}</b></template>
+            </el-table-column>
+            <el-table-column prop="date" label="日期" width="105"/>
+          </el-table>
+        </div>
+      </div>
+
+      <!-- ============ 仓库管理 ============ -->
+      <div v-if="page==='warehouse'">
+        <div class="page-title">仓库管理 <span>（成品库/辅料库/在途库）</span></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+          <div v-for="wh in warehouses" :key="wh.name" class="wh-card">
+            <div class="wh-card-title">{{wh.name}} <span style="font-weight:normal;font-size:11px;color:#999">({{wh.items.length}}种物料)</span></div>
+            <div v-for="item in wh.items" :key="item.name" class="wh-item">
+              <span>{{item.name}}</span>
+              <span class="wh-qty">{{item.stock}}</span>
+            </div>
+            <div v-if="wh.items.length===0" style="font-size:12px;color:#ccc;text-align:center;padding:10px">暂无物料</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 生产管理 ============ -->
+      <div v-if="page==='production'">
+        <div class="page-title">生产管理 <span>（6步流程）</span></div>
+        <div style="display:flex;gap:4px;align-items:center;margin-bottom:16px;background:#f5f7fa;border-radius:8px;padding:14px;flex-wrap:wrap">
+          <div v-for="(step,i) in productionSteps" :key="step" style="flex:1;min-width:120px;text-align:center;padding:8px;border-radius:6px" :style="prodStep>=i+1?'background:#1a3a5c;color:#fff':'background:#e8e8e8;color:#999'">
+            <div style="font-size:11px">{{i+1}}/6</div>
+            <div style="font-size:12px;font-weight:bold">{{step}}</div>
+          </div>
+          <div v-if="prodStep>6" style="background:#67c23a;color:#fff;padding:8px 16px;border-radius:6px;font-size:13px">✅ 已完成</div>
+        </div>
+        <div class="card">
+          <el-table :data="productionOrders" stripe size="small">
+            <el-table-column prop="orderNo" label="订单号" width="130"/>
+            <el-table-column prop="customerName" label="客户" width="100"/>
+            <el-table-column prop="step" label="当前阶段" width="120">
+              <template #default="{row}"><span class="num-tag num-blue">{{productionSteps[row.step-1]||'未知'}}</span></template>
+            </el-table-column>
+            <el-table-column prop="content" label="内容" min-width="160"/>
+            <el-table-column label="操作" width="160">
+              <template #default="{row}">
+                <el-button size="small" type="primary" v-if="row.step<6" @click="prodStepNext(row)">推进 →</el-button>
+                <el-button size="small" v-if="row.step<6" @click="prodStep--">重置</el-button>
+                <span v-if="row.step>=6" style="color:#67c23a;font-size:12px">✅ 完成</span>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
+
+      <!-- ============ 安装管理 ============ -->
+      <div v-if="page==='install'">
+        <div class="page-title">安装管理</div>
+        <div class="card">
+          <el-table :data="installOrders" stripe size="small">
+            <el-table-column prop="orderNo" label="订单号" width="130"/>
+            <el-table-column prop="customerName" label="客户" width="100"/>
+            <el-table-column prop="address" label="地址" min-width="180"/>
+            <el-table-column prop="installStaff" label="安装师傅" width="90"/>
+            <el-table-column prop="installDate" label="预约日期" width="110"/>
+            <el-table-column label="状态" width="90">
+              <template #default="{row}"><span class="num-tag" :class="row.status==='已完成'?'num-green':'num-gray'">{{row.status}}</span></template>
+            </el-table-column>
+            <el-table-column label="操作" width="100">
+              <template #default="{row}">
+                <el-button size="small" type="primary" v-if="row.status==='待安装'" @click="confirmInstall(row)">确认完成</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
+
+      <!-- ============ 财务结算 ============ -->
+      <div v-if="page==='finance'">
+        <div class="page-title">财务结算</div>
+        <div class="stat-row" style="margin-bottom:14px">
+          <div class="stat-card"><div class="stat-num" style="color:#67c23a">¥{{financeData.monthRevenue.toLocaleString()}}</div><div class="stat-label">本月收入</div></div>
+          <div class="stat-card"><div class="stat-num" style="color:#f56c6c">¥{{financeData.monthCost.toLocaleString()}}</div><div class="stat-label">本月成本</div></div>
+          <div class="stat-card"><div class="stat-num" style="color:#1a3a5c">{{((financeData.monthProfit/financeData.monthRevenue)*100).toFixed(1)}}%</div><div class="stat-label">毛利率</div></div>
+          <div class="stat-card"><div class="stat-num" style="color:#e6a23c">¥{{financeData.totalDebt.toLocaleString()}}</div><div class="stat-label">总欠款</div></div>
+          <div class="stat-card"><div class="stat-num" style="color:#9c27b0">{{financeData.pendingCommission.toFixed(0)}}</div><div class="stat-label">待结提成(元)</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">成本构成（本月）</div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;text-align:center">
+            <div v-for="c in costBreakdown" :key="c.label">
+              <div style="font-size:11px;color:#999">{{c.label}}</div>
+              <div style="font-size:15px;font-weight:bold;color:#f56c6c">¥{{c.amount.toLocaleString()}}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 统计报表 ============ -->
+      <div v-if="page==='report'">
+        <div class="page-title">统计报表</div>
+        <div class="card">
+          <div class="card-title">本月销售趋势</div>
+          <div style="height:200px;display:flex;align-items:flex-end;gap:8px;padding:10px 0">
+            <div v-for="(d,i) in salesTrend" :key="i" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+              <div :style="'width:100%;background:#1a3a5c;border-radius:4px 4px 0 0;height:'+(d/500*180)+'px;transition:height .3s'" :title="'¥'+d"></div>
+              <div style="font-size:10px;color:#999">{{i+1}}日</div>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px">
+            <span style="font-size:12px;color:#888">日均：¥{{(salesTrend.reduce((a,b)=>a+b,0)/salesTrend.length).toFixed(0)}}</span>
+            <span style="font-size:12px;color:#1a3a5c;font-weight:bold">月累计：¥{{salesTrend.reduce((a,b)=>a+b,0).toLocaleString()}}</span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:0">
+          <div class="card">
+            <div class="card-title">员工业绩排行</div>
+            <div v-for="(e,i) in staffRank" :key="e.name" style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed #f0f0f0">
+              <span style="width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold" :style="i===0?'background:#ffd700;color:#fff':i===1?'background:#c0c0c0;color:#fff':i===2?'background:#cd7f32;color:#fff':'background:#e8e8e8;color:#999'">{{i+1}}</span>
+              <span style="flex:1;font-size:13px">{{e.name}}</span>
+              <span style="font-size:13px;color:#1a3a5c;font-weight:bold">{{e.amount.toLocaleString()}}</span>
+              <span style="font-size:11px;color:#999">{{e.orders}}单</span>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">爆款面料 TOP5</div>
+            <div v-for="(p,i) in topProducts" :key="p.name" style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed #f0f0f0">
+              <span style="width:18px;height:18px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;background:#409eff;color:#fff">{{i+1}}</span>
+              <span style="flex:1;font-size:13px">{{p.name}}</span>
+              <span style="font-size:11px;color:#999">{{p.times}}次</span>
+              <span style="font-size:13px;color:#67c23a;font-weight:bold">¥{{p.amount.toLocaleString()}}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end main-content -->
+  </div><!-- end right-area -->
+</div><!-- end main-layout -->
+
+<!-- ========== 弹窗 ========== -->
+
+<!-- 供应商弹窗 -->
+<el-dialog v-model="dlgSupplier" :title="editingSupplier?'编辑供应商':'新增供应商'" width="460px">
+  <el-form :model="sForm" label-width="100px" size="small">
+    <el-form-item label="供应商编号"><el-input v-model="sForm.code" :disabled="!!editingSupplier" placeholder="2位，如01"/></el-form-item>
+    <el-form-item label="名称"><el-input v-model="sForm.name" placeholder="如：杭州诺雅布业"/></el-form-item>
+    <el-form-item label="类型">
+      <el-select v-model="sForm.type" style="width:100%">
+        <el-option label="成品（窗帘）" value="成品"/><el-option label="布艺（布/纱）" value="布艺"/><el-option label="配件" value="配件"/>
+      </el-select>
+    </el-form-item>
+    <el-form-item label="联系人"><el-input v-model="sForm.contact"/></el-form-item>
+    <el-form-item label="电话"><el-input v-model="sForm.phone"/></el-form-item>
+    <el-form-item label="交货期(天)"><el-input-number v-model="sForm.deliveryDays" :min="1" style="width:100%"/></el-form-item>
+    <el-form-item label="地址"><el-input v-model="sForm.address"/></el-form-item>
+    <el-form-item label="收付款"><el-input v-model="sForm.payment" type="textarea" :rows="2"/></el-form-item>
+  </el-form>
+  <template #footer>
+    <el-button @click="dlgSupplier=false">取消</el-button>
+    <el-button type="primary" @click="saveSupplier">保存</el-button>
+  </template>
+</el-dialog>
+
+<!-- 布版弹窗 -->
+<el-dialog v-model="dlgCategory" :title="editingCategory?'编辑布版':'新增布版'" width="460px">
+  <el-form :model="cForm" label-width="100px" size="small">
+    <el-form-item label="布版编号"><el-input v-model="cForm.code" :disabled="!!editingCategory" placeholder="4位，如0101"/></el-form-item>
+    <el-form-item label="名称"><el-input v-model="cForm.name" placeholder="如：奶油风系列"/></el-form-item>
+    <el-form-item label="供应商">
+      <el-select v-model="cForm.supplierId" style="width:100%">
+        <el-option v-for="s in suppliers" :key="s.id" :label="s.name+'('+s.code+')'" :value="s.id"/>
+      </el-select>
+    </el-form-item>
+    <el-form-item label="描述"><el-input v-model="cForm.desc" type="textarea" :rows="2"/></el-form-item>
+  </el-form>
+  <template #footer>
+    <el-button @click="dlgCategory=false">取消</el-button>
+    <el-button type="primary" @click="saveCategory">保存</el-button>
+  </template>
+</el-dialog>
+
+<!-- 产品弹窗 -->
+<el-dialog v-model="dlgProduct" title="新增产品" width="520px">
+  <el-form :model="pForm" label-width="110px" size="small">
+    <el-form-item label="产品名称"><el-input v-model="pForm.name" placeholder="如：婴儿绒雪尼尔-奶白"/></el-form-item>
+    <el-form-item label="供应商">
+      <el-select v-model="pForm.supplierId" style="width:100%" @change="pForm.categoryId=''">
+        <el-option v-for="s in suppliers" :key="s.id" :label="s.name" :value="s.id"/>
+      </el-select>
+    </el-form-item>
+    <el-form-item label="布版系列">
+      <el-select v-model="pForm.categoryId" style="width:100%">
+        <el-option v-for="c in supCategories" :key="c.id" :label="c.name+'('+c.code+')'" :value="c.id"/>
+      </el-select>
+    </el-form-item>
+    <el-form-item label="分类"><el-radio-group v-model="pForm.type"><el-radio label="面料">面料</el-radio><el-radio label="辅料">辅料</el-radio></el-radio-group></el-form-item>
+    <el-form-item label="产品分类"><el-select v-model="pForm.classification" style="width:100%"><el-option label="定高" value="定高"/><el-option label="定宽" value="定宽"/><el-option label="配件" value="配件"/></el-select></el-form-item>
+    <el-form-item label="型号"><el-input v-model="pForm.model"/></el-form-item>
+    <el-form-item label="材质"><el-select v-model="pForm.mat" style="width:100%"><el-option v-for="m in ['雪尼尔','棉麻','绒布','高精密','丝绸']" :key="m" :label="m" :value="m"/></el-select></el-form-item>
+    <el-form-item label="门幅(cm)"><el-input-number v-model="pForm.width" :min="0" style="width:100%"/></el-form-item>
+    <el-form-item label="克重(g/㎡)"><el-input-number v-model="pForm.weight" :min="0" style="width:100%"/></el-form-item>
+    <el-form-item label="单价(元)"><el-input-number v-model="pForm.price" :min="0" :precision="2" style="width:100%"/></el-form-item>
+    <el-form-item label="库存"><el-input-number v-model="pForm.stock" :min="0" style="width:100%"/></el-form-item>
+  </el-form>
+  <template #footer>
+    <el-button @click="dlgProduct=false">取消</el-button>
+    <el-button type="primary" @click="addProduct">保存</el-button>
+  </template>
+</el-dialog>
+
+<!-- 客户弹窗 -->
+<el-dialog v-model="dlgCustomer" :title="editingCustomer?'编辑客户':'新增客户'" width="500px">
+  <el-form :model="cuForm" label-width="100px" size="small">
+    <el-form-item label="客户名称" required><el-input v-model="cuForm.name"/></el-form-item>
+    <el-form-item label="终端类型">
+      <el-radio-group v-model="cuForm.type"><el-radio label="零售">零售</el-radio><el-radio label="工程">工程</el-radio><el-radio label="设计师">设计师</el-radio></el-radio-group>
+    </el-form-item>
+    <el-form-item label="联系人"><el-input v-model="cuForm.contact"/></el-form-item>
+    <el-form-item label="电话" required><el-input v-model="cuForm.phone"/></el-form-item>
+    <el-form-item label="小区"><el-input v-model="cuForm.community"/></el-form-item>
+    <el-form-item label="地址"><el-input v-model="cuForm.address"/></el-form-item>
+    <el-form-item label="导购">
+      <el-select v-model="cuForm.salespersonId" style="width:100%">
+        <el-option v-for="e in employees" :key="e.id" :label="e.name" :value="e.id"/>
+      </el-select>
+    </el-form-item>
+    <el-form-item label="来源渠道">
+      <el-select v-model="cuForm.source" style="width:100%">
+        <el-option label="抖音" value="抖音"/><el-option label="店面" value="店面"/><el-option label="小区" value="小区"/><el-option label="推荐" value="推荐"/><el-option label="设计师" value="设计师"/>
+      </el-select>
+    </el-form-item>
+    <el-form-item label="欠款额度"><el-input-number v-model="cuForm.debtLimit" :min="0" style="width:100%"/></el-form-item>
+    <el-form-item label="备注"><el-input v-model="cuForm.remark" type="textarea" :rows="2"/></el-form-item>
+  </el-form>
+  <template #footer>
+    <el-button @click="dlgCustomer=false">取消</el-button>
+    <el-button type="primary" @click="saveCustomer">保存</el-button>
+  </template>
+</el-dialog>
+
+<!-- 员工弹窗 -->
+<el-dialog v-model="dlgEmployee" :title="editingEmp?'编辑员工':'新增员工'" width="500px">
+  <el-form :model="empForm" label-width="100px" size="small">
+    <el-form-item label="工号"><el-input v-model="empForm.code"/></el-form-item>
+    <el-form-item label="姓名"><el-input v-model="empForm.name"/></el-form-item>
+    <el-form-item label="性别"><el-radio-group v-model="empForm.gender"><el-radio label="男">男</el-radio><el-radio label="女">女</el-radio></el-radio-group></el-form-item>
+    <el-form-item label="电话"><el-input v-model="empForm.phone"/></el-form-item>
+    <el-form-item label="部门"><el-input v-model="empForm.dept"/></el-form-item>
+    <el-form-item label="职务">
+      <el-select v-model="empForm.position" style="width:100%">
+        <el-option label="导购" value="导购"/><el-option label="安装" value="安装"/><el-option label="财务" value="财务"/><el-option label="管理" value="管理"/>
+      </el-select>
+    </el-form-item>
+    <el-form-item label="入职时间"><el-date-picker v-model="empForm.hireDate" type="date" value-format="YYYY-MM-DD" style="width:100%"/></el-date-picker></el-form-item>
+    <el-form-item label="最大折扣"><el-input-number v-model="empForm.maxDiscount" :min="0.5" :max="1" :step="0.05" :precision="2" style="width:100%"/></el-form-item>
+    <el-form-item label="抹零限制(元)"><el-input-number v-model="empForm.roundLimit" :min="0" style="width:100%"/></el-form-item>
+    <el-form-item label="状态"><el-radio-group v-model="empForm.status"><el-radio label="启用">启用</el-radio><el-radio label="禁用">禁用</el-radio></el-radio-group></el-form-item>
+  </el-form>
+  <template #footer>
+    <el-button @click="dlgEmployee=false">取消</el-button>
+    <el-button type="primary" @click="saveEmployee">保存</el-button>
+  </template>
+</el-dialog>
+
+<!-- 码表条目弹窗 -->
+<el-dialog v-model="dlgDictItem" title="编辑码表条目" width="380px">
+  <el-form :model="diForm" label-width="60px" size="small">
+    <el-form-item label="键"><el-input v-model="diForm.k"/></el-form-item>
+    <el-form-item label="值"><el-input v-model="diForm.v"/></el-form-item>
+    <el-form-item label="颜色" v-if="dictCat==='orderStatus'"><el-color-picker v-model="diForm.c"/></el-form-item>
+  </el-form>
+  <template #footer>
+    <el-button @click="dlgDictItem=false">取消</el-button>
+    <el-button type="primary" @click="saveDictItem">保存</el-button>
+  </template>
+</el-dialog>
+
+<!-- 新建订单弹窗 -->
+<el-dialog v-model="showNewOrder" title="新建订单" width="620px">
+  <el-form :model="orderF" label-width="90px" size="small">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <el-form-item label="客户" required>
+        <el-select v-model="orderF.customerId" style="width:100%" filterable placeholder="先选已有客户">
+          <el-option v-for="c in customers" :key="c.id" :label="c.name+'('+c.phone+')'" :value="c.id"/>
+        </el-select>
+      </el-form-item>
+      <el-form-item label="订单类型">
+        <el-select v-model="orderF.orderType" style="width:100%">
+          <el-option label="窗帘" value="窗帘"/><el-option label="墙布" value="墙布"/><el-option label="硬包" value="硬包"/><el-option label="岩板" value="岩板"/><el-option label="全屋" value="全屋"/>
+        </el-select>
+      </el-form-item>
+      <el-form-item label="接单日期">
+        <el-date-picker v-model="orderF.orderDate" type="date" value-format="YYYY-MM-DD" style="width:100%" @change="autoDelivery"/>
+      </el-form-item>
+      <el-form-item label="交期">
+        <el-date-picker v-model="orderF.deliveryDate" type="date" value-format="YYYY-MM-DD" style="width:100%"/>
+      </el-form-item>
+      <el-form-item label="提货方式">
+        <el-select v-model="orderF.deliveryMethod" style="width:100%">
+          <el-option label="上门安装" value="上门安装"/><el-option label="自提" value="自提"/>
+        </el-select>
+      </el-form-item>
+      <el-form-item label="导购">
+        <el-select v-model="orderF.salespersonId" style="width:100%">
+          <el-option v-for="e in employees" :key="e.id" :label="e.name" :value="e.id"/>
+        </el-select>
+      </el-form-item>
+    </div>
+    <!-- 产品明细 -->
+    <el-form-item label="产品明细" style="margin-top:8px">
+      <el-table :data="orderF.items" size="small">
+        <el-table-column label="产品（面料）" min-width="180">
+          <template #default="{row,$index}">
+            <el-select v-model="row.productId" style="width:100%" @change="onProdSelect(row)">
+              <el-option v-for="p in products" :key="p.id" :label="p.name+'('+p.code+')'" :value="p.id"/>
+            </el-select>
+          </template>
+        </el-table-column>
+        <el-table-column label="幅数" width="65"><el-input-number v-model="row.qty" :min="1" size="small" @change="calcItem(row)"/></el-table-column>
+        <el-table-column label="单价" width="75"><template #default="{row}">{{row.price||'-'}}</template></el-table-column>
+        <el-table-column label="折扣" width="75"><el-input-number v-model="row.discount" :min="0.1" :max="1" :step="0.05" :precision="2" size="small" @change="calcItem(row)"/></el-table-column>
+        <el-table-column label="金额" width="90"><template #default="{row}">{{row.amount?'¥'+row.amount.toLocaleString():'-'}}</template></el-table-column>
+        <el-table-column width="40"><template #default="{row,$index}"><el-button size="small" type="danger" @click="orderF.items.splice($index,1)">×</el-button></template></el-table-column>
+      </el-table>
+      <el-button size="small" style="margin-top:6px" @click="orderF.items.push({productId:null,qty:1,discount:1,price:null,amount:null})">+ 添加产品</el-button>
+    </el-form-item>
+    <el-divider/>
+    <!-- 金额汇总 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:10px">
+      <el-form-item label="标价"><el-input-number v-model="orderF.quoteAmount" :min="0" :precision="2" style="width:100%" @change="calcTotals"/></el-form-item>
+      <el-form-item label="优惠"><el-input-number v-model="orderF.discountAmount" :min="0" :precision="2" style="width:100%" @change="calcTotals"/></el-form-item>
+      <el-form-item label="抹零"><el-input-number v-model="orderF.roundAmount" :min="0" :precision="2" style="width:100%" @change="calcTotals"/></el-form-item>
+      <el-form-item label="应收"><el-input v-model="orderF.amount" readonly style="width:100%"/></el-form-item>
+      <el-form-item label="已收"><el-input-number v-model="orderF.received" :min="0" :precision="2" style="width:100%"/></el-form-item>
+    </div>
+  </el-form>
+  <template #footer>
+    <el-button @click="showNewOrder=false">取消</el-button>
+    <el-button type="primary" @click="saveNewOrder">保存订单</el-button>
+  </template>
+</el-dialog>
+
+</div><!-- end #app -->
+</body>
+</html>
+
+<script>
+const {createApp,ref,computed,watch}=Vue;
+const {ElMessage}=ElementPlus;
+
+const LS=key=>{try{return JSON.parse(localStorage.getItem(key))}catch{return null}};
+const SLS=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+
+const API='http://localhost:8000';
+const api=async(u,m='GET',b=null)=>{const r=await fetch(API+u,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):null});if(!r.ok)throw new Error(u+r.status);const d=await r.json();if(!d.success)throw new Error(d.error||'api error');return d.data??d};
+const isLoading=ref(false);
+
+const app=createApp({
+  setup(){
+    /* page */
+    const page=ref('home');
+    const activeMenu=ref('home');
+    const pageTitle=computed(()=>({home:'首页概览',product:'产品资料',customer:'客户资料',employee:'员工资料',dict:'码表管理',order:'销售订单',purchase:'采购管理',warehouse:'仓库管理',production:'生产管理',install:'安装管理',finance:'财务结算',report:'统计报表'})[page.value]||'');
+    const switchPage=p=>{page.value=p;activeMenu.value=p==='basic'?'product':p};
+
+    /* nav */
+    const navMap={'home':'home','product':'basic','customer':'basic','employee':'basic','dict':'basic','order':'order','purchase':'purchase','warehouse':'warehouse','production':'production','install':'install','finance':'finance','report':'report'};
+    const handleNav=k=>{if(k!=='basic'){page.value=navMap[k]||k;activeMenu.value=k}else{page.value='product';activeMenu.value='product'}};
+    const switchPage2=p=>page.value=p;
+
+    /* =================== DATA =================== */
+
+    /* ── API初始化 ── */
+    const initAll=async()=>{
+      try{isLoading.value=true;
+        const [dash,sups,cats,prods,custs,emps,fin,ordData]=await Promise.all([
+          api('/api/dashboard').catch(()=>({})),
+          api('/api/products/suppliers').catch(()=>({items:[]})),
+          api('/api/products/categories').catch(()=>({items:[]})),
+          api('/api/products').catch(()=>({items:[]})),
+          api('/api/customers').catch(()=>({items:[]})),
+          api('/api/employees').catch(()=>({items:[]})),
+          api('/api/finance/summary').catch(()=>({})),
+          api('/api/orders?page=1&page_size=100').catch(()=>({items:[]})),
+        ]);
+        // stats
+        if(dash.today_orders!==undefined)stats.value={todayOrders:dash.today_orders||0,monthSales:dash.month_sales||0,pendingInstall:dash.pending_install||0,overdueOrders:dash.overdue_orders||0,pendingPayment:dash.pending_payment||0,totalCustomers:dash.total_customers||0};
+        // suppliers
+        suppliers.value=(sups.items||[]).map(s=>({id:s.id,code:s.code,name:s.name,type:s.type||'',contact:s.contact||'',phone:s.phone||'',deliveryDays:s.delivery_days||7,address:'',payment:''}));
+        // categories
+        categories.value=(cats.items||[]).map(c=>({id:c.id,code:c.code,name:c.name,supplierId:'s'+c.supplier_id,desc:c.description||''}));
+        // products
+        products.value=(prods.items||[]).map(p=>({id:p.id,code:p.code,name:p.name,supplierId:'s'+p.supplier_id,categoryId:'c'+p.category_id,type:p.product_type||'面料',classification:p.classification||'定高',model:p.model||'',mat:p.material||'',width:p.width||280,weight:p.weight||0,cf:0,price:p.unit_price||0,stock:p.stock||0,unit:p.unit||'米',remark:''}));
+        // customers
+        customers.value=(custs.items||[]).map(c=>({id:c.id,code:c.id,name:c.name,phone:c.phone,community:c.community||'',type:c.type||'零售',salesperson:c.salesperson||'',salespersonId:null,source:c.source||'',debt:c.debt||0,debtLimit:0,address:c.address||'',contact:'',remark:''}));
+        // employees
+        employees.value=(emps.items||[]).map(e=>({id:e.id,code:e.code,name:e.name,gender:e.gender||'男',phone:e.phone,position:e.position||'',dept:e.department||'',maxDiscount:e.max_discount||1,roundLimit:e.round_limit||0,status:e.status||'启用',hireDate:''}));
+        // finance
+        if(fin.data)financeData.value={monthRevenue:fin.data.month_receive||0,monthCost:fin.data.month_pay||0,monthProfit:(fin.data.month_receive||0)-(fin.data.month_pay||0),totalDebt:fin.data.total_debt||0,pendingCommission:0};
+        // reports
+        const today=new Date().toISOString().slice(0,10);
+        const [trend,empRpt,prodRpt,purchData]=await Promise.all([
+          api('/api/reports/trend').catch(()=>({items:[]})),
+          api('/api/reports/employee-performance').catch(()=>({items:[]})),
+          api('/api/reports/product-rank').catch(()=>({items:[]})),
+          api('/api/purchase').catch(()=>({items:[]})),
+        ]).catch(()=>[{},{},{},{}]);
+        salesTrend.value=(trend.items||[]).map(t=>t.amount||0);
+        staffRank.value=(empRpt.items||[]).map(e=>({name:e.salesperson||'',amount:e.total_amount||0,orders:e.order_count||0}));
+        topProducts.value=(prodRpt.items||[]).map(p=>({name:p.product||'',times:0,amount:p.amount||0}));
+        purchases.value=(purchData.items||[]).map(p=>({id:p.id,purchaseNo:p.po_no||'',supplierId:'s'+p.supplier_id,supplierName:p.supplier_name||'',items:Array.isArray(p.items)?p.items.map(i=>i.product||'').join(' '):p.items||'',status:p.status||'待采购',amount:p.amount||0,date:p.order_date||''}));
+        // dictMap orderStatus - initialize from API or use defaults
+        dictMap.orderStatus=[
+          {k:'created',v:'待确认',c:'#909399'},{k:'confirmed',v:'已核单',c:'#409eff'},
+          {k:'measured',v:'已测量',c:'#67c23a'},{k:'stocked',v:'已备货',c:'#e6a23c'},
+          {k:'processing',v:'加工中',c:'#f56c6c'},{k:'install',v:'待安装',c:'#9c27b0'},
+          {k:'installed',v:'已安装',c:'#1a3a5c'},{k:'completed',v:'已完成',c:'#222'},
+        ];
+        // orders
+        const STATUS_MAP={created:'待确认',confirmed:'已核单',measured:'已测量',stocked:'已备货',processing:'加工中',install:'待安装',installed:'已安装',completed:'已完成',cancelled:'已取消'};
+        orders.value=(ordData.items||[]).map(o=>({
+          id:o.id,orderNo:o.order_no,customerId:o.customer_id,customerName:o.customer_name||'',orderType:o.order_type||'窗帘',
+          content:o.content||'',amount:o.amount||0,quoteAmount:o.quote_amount||0,discountAmount:o.discount_amount||0,roundAmount:o.round_amount||0,
+          received:o.received||0,debt:o.debt||0,
+          status:o.status_label||STATUS_MAP[o.status_key]||'待确认',
+          statusColor:o.status_key||'created',
+          date:o.order_date||'',orderDate:o.order_date||'',deliveryDate:o.delivery_date||'',
+          deliveryMethod:o.delivery_method||'上门安装',salesperson:o.salesperson||'',salespersonId:null,
+          history:o.history||[],items:o.items||[]
+        }));
+        filteredOrders.value=[...orders.value];
+      }catch(e){console.error('initAll error:',e);}
+      finally{isLoading.value=false;}
+    };
+
+    /* 首页 */
+    const stats=ref({todayOrders:0,monthSales:0,pendingInstall:0,overdueOrders:0,pendingPayment:0,totalCustomers:0});
+    const alerts=ref([
+      {msg:'逾期订单 1 单，请尽快处理',icon:'⚠️',color:'#f56c6c'},
+      {msg:'本周到期交期 3 单',icon:'📅',color:'#e6a23c'},
+      {msg:'库存不足：婴儿绒雪尼尔 剩 5 米',icon:'📦',color:'#909399'},
+    ]);
+
+    /* 供应商 */
+    const suppliers=ref([]);
+
+    /* 布版 */
+    const categories=ref([]);
+
+    /* 产品 */
+    const products=ref([]);
+
+    /* 产品树 */
+    const productTree=computed(()=>suppliers.value.map(s=>({id:'s'+s.id,label:s.name,lv:1,children:categories.value.filter(c=>c.supplierId===s.id).map(c=>({id:'c'+c.id,label:c.name,lv:2,children:products.value.filter(p=>p.categoryId===c.id).map(p=>({id:p.id,label:p.name,code:p.code,lv:3}))}))}))));
+
+    const prodDetail=ref(null);
+    const prodSearch=ref('');
+    const onProductNode=data=>{if(data.lv===3){const p=products.value.find(x=>x.id===data.id);if(p)prodDetail.value={...p};}};
+
+    /* 客户 */
+    const customers=ref([]);
+    const filteredCustomers=computed(()=>{
+      if(!prodSearch.value)return customers.value;
+      const q=prodSearch.value.toLowerCase();
+      return customers.value.filter(c=>c.name.includes(prodSearch.value)||c.phone.includes(q)||(c.community||'').includes(prodSearch.value));
+    });
+
+    /* 员工 */
+    const employees=ref([]);
+
+    /* 码表 */
+    const dictCats=[
+      {k:'orderStatus',l:'订单状态'},{k:'orderType',l:'订单类型'},{k:'deliveryMethod',l:'提货方式'},
+      {k:'supplierType',l:'供应商类型'},{k:'productType',l:'产品分类'},{k:'customerType',l:'客户类型'},
+      {k:'installPosition',l:'安装位置'},{k:'finishType',l:'成品类型'},{k:'style',l:'款式'},
+      {k:'process',l:'工艺'},{k:'paymentType',l:'收款类型'},{k:'orderExpenseType',l:'订单费用类型'},
+      {k:'warehouseType',l:'仓库分类'},{k:'department',l:'部门'},{k:'position',l:'职务'},
+    ];
+    const dictMap=LS('dictMap')||{
+      orderStatus:[
+        {k:'pending',v:'待确认',c:'#909399'},{k:'measure',v:'待测量',c:'#409eff'},
+        {k:'stock',v:'待备货',c:'#f56c6c'},{k:'process',v:'待加工',c:'#67c23a'},
+        {k:'install',v:'待安装',c:'#9c27b0'},{k:'done',v:'已安装',c:'#1a3a5c'},
+        {k:'partial',v:'有尾款',c:'#e6a23c'},{k:'complete',v:'完成',c:'#222'},
+      ],
+      orderType:[{k:'curtain',v:'窗帘'},{k:'wallpaper',v:'墙布'},{k:'hardsheet',v:'硬包'},{k:'rockboard',v:'岩板'},{k:'wholehouse',v:'全屋'}],
+      deliveryMethod:[{k:'install',v:'上门安装'},{k:'pickup',v:'自提'}],
+    };
+// dictMap now from API, no localStorage sync
+
+    const dictCat=ref('orderStatus');
+    const dictCatLabel=computed(()=>dictCats.find(d=>d.k===dictCat.value)?.l||'');
+    const dictItems=computed(()=>dictMap[dictCat.value]||[]);
+    const orderStatusAll=computed(()=>dictMap.orderStatus||[]);
+
+    /* 订单 */
+    const orders=ref([]);
+    const selOrder=ref(null);
+    const orderSearch=ref('');
+    const orderStatusF=ref('');
+    const orderTypeF=ref('');
+    const filteredOrders=ref([...orders.value]);
+    const filterOrders=()=>{
+      let list=[...orders.value];
+      if(orderSearch.value){const q=orderSearch.value.toLowerCase();list=list.filter(o=>o.orderNo.includes(orderSearch.value)||o.customerName.includes(q));}
+      if(orderStatusF.value)list=list.filter(o=>o.statusColor===orderStatusF.value);
+      if(orderTypeF.value)list=list.filter(o=>o.orderType===orderTypeF.value);
+      filteredOrders.value=list;
+    };
+
+    const updateOrderStatus=async()=>{
+      if(!selOrder.value)return;
+      const newKey=selOrder.value.statusColor;
+      const st=orderStatusAll.value.find(x=>x.k===newKey);
+      if(!st)return;
+      const newLabel=st.v;
+      // update local
+      const old=orders.value.find(o=>o.id===selOrder.value.id);
+      if(old){old.status=newLabel;old.statusColor=newKey;if(!old.history)old.history=[];old.history.push({s:old.status,s2:newLabel,c:newKey,time:new Date().toLocaleString()});Object.assign(selOrder.value,old);}
+      // sync to API
+      try{await api(`/api/orders/${selOrder.value.id}/status`,'PUT',{new_status_key:newKey});}catch(e){console.error(e);}
+    };
+
+    /* 采购 */
+    const purchases=ref([]);
+
+    /* 仓库 */
+    const warehouses=ref([]);
+
+    /* 生产 */
+    const productionSteps=['订单接单审核','用料核定','报货','下料汇总','加工','完成审核'];
+    const prodStep=ref(3);
+    const productionOrders=ref([]);
+    const prodStepNext=row=>{if(row.step<6)row.step++;SLS('productionOrders',productionOrders.value);};
+
+    /* 安装 */
+    const installOrders=ref([]);
+    const confirmInstall=async row=>{
+      const o=orders.value.find(x=>x.id===row.id);
+      if(o){o.status='已完成';o.statusColor='installed';}
+      row.status='已完成';
+      try{
+        const installRes=await api('/api/installer/tasks','GET');
+        const t=(installRes.tasks||[]).find(t=>t.order_no===(o?.orderNo||''));
+        if(t)await api(`/api/installer/tasks/${t.id}/complete`,'POST',{completed_at:new Date().toISOString().slice(0,19).replace('T',' '),remark:''});
+        await api(`/api/orders/${row.id}/status`,'PUT',{new_status_key:'installed'});
+      }catch(e){console.error(e);}
+      ElMessage.success('已确认安装完成');
+    };
+
+    /* 财务 */
+    const financeData=ref({monthRevenue:0,monthCost:0,monthProfit:0,totalDebt:0,pendingCommission:0});
+    const costBreakdown=ref([]);
+
+    /* 报表 */
+    const salesTrend=ref([]);
+    const staffRank=ref([
+      {name:'小王',amount:85600,orders:12},{name:'小李',amount:42800,orders:6},{name:'张师傅',amount:0,orders:8},
+    ]);
+    const topProducts=ref([
+      {name:'婴儿绒雪尼尔-奶白',times:18,amount:38500},{name:'亚麻纱-自然白',times:15,amount:24600},{name:'缎面雪尼尔-浅咖',times:12,amount:18900},{name:'DUOY静音轨道',times:9,amount:14200},{name:'复古绿亚麻纱',times:7,amount:9800},
+    ]);
+
+    /* =================== DIALOGS =================== */
+
+    /* 供应商 */
+    const dlgSupplier=ref(false);
+    const sForm=ref({code:'',name:'',type:'布艺',contact:'',phone:'',deliveryDays:7,address:'',payment:''});
+    const editingSupplier=ref(null);
+    const saveSupplier=async()=>{
+      if(!sForm.value.name){ElMessage.warning('名称必填');return;}
+      try{
+        if(editingSupplier.value){
+          await api(`/api/products/suppliers`,'POST',{name:sForm.value.name,type:sForm.value.type||'布艺',contact:sForm.value.contact||'',phone:sForm.value.phone||'',delivery_days:sForm.value.deliveryDays||7,address:sForm.value.address||''});
+          Object.assign(suppliers.value.find(s=>s.id===editingSupplier.value.id),sForm.value);
+        }else{
+          const d=await api('/api/products/suppliers','POST',{name:sForm.value.name,type:sForm.value.type||'布艺',contact:sForm.value.contact||'',phone:sForm.value.phone||'',delivery_days:sForm.value.deliveryDays||7,address:sForm.value.address||''});
+          suppliers.value.push({id:d.id,code:d.code,name:sForm.value.name,type:sForm.value.type||'布艺',contact:sForm.value.contact||'',phone:sForm.value.phone||'',deliveryDays:sForm.value.deliveryDays||7,address:'',payment:''});
+        }
+        dlgSupplier.value=false;ElMessage.success('保存成功');
+      }catch(e){ElMessage.error('保存失败');}
+    };
+
+    /* 布版 */
+    const dlgCategory=ref(false);
+    const cForm=ref({code:'',name:'',supplierId:'',desc:''});
+    const editingCategory=ref(null);
+    const saveCategory=async()=>{
+      if(!cForm.value.name||!cForm.value.supplierId){ElMessage.warning('请填写完整');return;}
+      const supId=parseInt(cForm.value.supplierId.replace('s',''));
+      try{
+        if(editingCategory.value){
+          categories.value.find(c=>c.id===editingCategory.value.id) && Object.assign(categories.value.find(c=>c.id===editingCategory.value.id),cForm.value);
+        }else{
+          const d=await api('/api/products/categories','POST',{name:cForm.value.name,supplier_id:supId,description:cForm.value.desc||''});
+          categories.value.push({id:d.id,code:d.code,name:cForm.value.name,supplierId:cForm.value.supplierId,desc:cForm.value.desc||''});
+        }
+        dlgCategory.value=false;ElMessage.success('保存成功');
+      }catch(e){ElMessage.error('保存失败');}
+    };
+
+    /* 产品 */
+    const dlgProduct=ref(false);
+    const pForm=ref({name:'',supplierId:'',categoryId:'',type:'面料',classification:'定高',model:'',mat:'雪尼尔',width:280,weight:0,price:0,stock:0});
+    const editingProduct=ref(null);
+    const supCategories=computed(()=>{if(!pForm.value.supplierId)return categories.value;return categories.value.filter(c=>c.supplierId===pForm.value.supplierId);});
+    const addProduct=async()=>{
+      if(!pForm.value.name||!pForm.value.supplierId||!pForm.value.categoryId){ElMessage.warning('请填写名称、供应商和布版');return;}
+      const supId=parseInt(pForm.value.supplierId.replace('s',''));
+      const catId=parseInt(pForm.value.categoryId.replace('c',''));
+      try{
+        const d=await api('/api/products','POST',{name:pForm.value.name,supplier_id:supId,category_id:catId,product_type:pForm.value.type||'面料',classification:pForm.value.classification||'定高',model:pForm.value.model||'',material:pForm.value.mat||'',width:pForm.value.width||280,weight:pForm.value.weight||0,unit_price:pForm.value.price||0,unit:'米',stock:pForm.value.stock||0});
+        products.value.push({id:d.id,code:d.code,name:pForm.value.name,supplierId:pForm.value.supplierId,categoryId:pForm.value.categoryId,type:pForm.value.type||'面料',classification:pForm.value.classification||'定高',model:pForm.value.model||'',mat:pForm.value.mat||'',width:pForm.value.width||280,weight:pForm.value.weight||0,cf:0,price:pForm.value.price||0,stock:pForm.value.stock||0,unit:'米',remark:''});
+        dlgProduct.value=false;
+        ElMessage.success('产品已添加，编码：'+d.code);
+      }catch(e){ElMessage.error('保存失败');}
+    };
+
+    /* 客户 */
+    const dlgCustomer=ref(false);
+    const cuForm=ref({name:'',type:'零售',contact:'',phone:'',community:'',address:'',salespersonId:'',source:'',debtLimit:0,remark:''});
+    const editingCustomer=ref(null);
+    const openCustomerDlg=(row=null)=>{
+      if(row){editingCustomer.value=row;cuForm.value={...row};}
+      else{editingCustomer.value=null;cuForm.value={name:'',type:'零售',contact:'',phone:'',community:'',address:'',salespersonId:'',source:'',debtLimit:0,remark:''};}
+      dlgCustomer.value=true;
+    };
+    const saveCustomer=async()=>{
+      if(!cuForm.value.name||!cuForm.value.phone){ElMessage.warning('名称和电话必填');return;}
+      const emp=employees.value.find(e=>e.id===cuForm.value.salespersonId);
+      const payload={name:cuForm.value.name,phone:cuForm.value.phone,type:cuForm.value.type||'零售',address:cuForm.value.address||'',community:cuForm.value.community||'',source:cuForm.value.source||'',salesperson:emp?.name||''};
+      try{
+        if(editingCustomer.value){
+          await api(`/api/customers/${editingCustomer.value.id}`,'PUT',payload);
+          Object.assign(customers.value.find(c=>c.id===editingCustomer.value.id),{...cuForm.value,salesperson:emp?.name||''});
+        }else{
+          const d=await api('/api/customers','POST',payload);
+          const today=new Date().toISOString().slice(0,10).replace(/-/g,'');
+          customers.value.push({id:d.id,code:d.code,...cuForm.value,salesperson:emp?.name||'',debt:0});
+        }
+        dlgCustomer.value=false;ElMessage.success('客户已保存');
+      }catch(e){ElMessage.error('保存失败');}
+    };
+    const delCustomer=async(row,idx)=>{try{await api(`/api/customers/${row.id}`,'DELETE');customers.value.splice(idx,1);ElMessage.success('已删除');}catch(e){ElMessage.error('删除失败');}};
+
+    /* 员工 */
+    const dlgEmployee=ref(false);
+    const empForm=ref({code:'',name:'',gender:'男',phone:'',position:'导购',dept:'',maxDiscount:0.75,roundLimit:500,status:'启用',hireDate:''});
+    const editingEmp=ref(null);
+    const openEmpDlg=(row=null)=>{
+      if(row){editingEmp.value=row;empForm.value={...row};}
+      else{editingEmp.value=null;empForm.value={code:'',name:'',gender:'男',phone:'',position:'导购',dept:'',maxDiscount:0.75,roundLimit:500,status:'启用',hireDate:''};}
+      dlgEmployee.value=true;
+    };
+    const saveEmployee=async()=>{
+      if(!empForm.value.name){ElMessage.warning('姓名必填');return;}
+      const payload={name:empForm.value.name,gender:empForm.value.gender||'男',phone:empForm.value.phone||'',position:empForm.value.position||'导购',department:empForm.value.dept||'',max_discount:empForm.value.maxDiscount||1,round_limit:empForm.value.roundLimit||0,is_installer:empForm.value.position==='安装',status:empForm.value.status||'启用'};
+      try{
+        if(editingEmp.value){
+          await api(`/api/employees/${editingEmp.value.id}`,'PUT',payload);
+          Object.assign(employees.value.find(e=>e.id===editingEmp.value.id),empForm.value);
+        }else{
+          const d=await api('/api/employees','POST',payload);
+          employees.value.push({id:d.id,code:d.code,...empForm.value});
+        }
+        dlgEmployee.value=false;ElMessage.success('员工已保存');
+      }catch(e){ElMessage.error('保存失败');}
+    };
+
+    /* 码表 */
+    const dlgDictItem=ref(false);
+    const diForm=ref({k:'',v:'',c:''});
+    const editingDictItem=ref(null);
+    const openDictItemDlg=(row=null,idx=null)=>{
+      if(row){editingDictItem.value={...row,idx};diForm.value={k:row.k,v:row.v,c:row.c||''};}
+      else{editingDictItem.value=null;diForm.value={k:'',v:'',c:''};}
+      dlgDictItem.value=true;
+    };
+    const saveDictItem=()=>{
+      if(!diForm.value.k||!diForm.value.v){ElMessage.warning('键和值必填');return;}
+      if(!dictMap[dictCat.value])dictMap[dictCat.value]=[];
+      if(editingDictItem.value){
+        const arr=dictMap[dictCat.value];
+        const i=arr.findIndex(x=>x.k===editingDictItem.value.k);
+        if(i>=0)arr[i]={k:diForm.value.k,v:diForm.value.v,c:diForm.value.c||''};
+      }else{
+        dictMap[dictCat.value].push({k:diForm.value.k,v:diForm.value.v,c:diForm.value.c||''});
+      }
+      SLS('dictMap',dictMap);dlgDictItem.value=false;ElMessage.success('保存成功');
+    };
+    const delDictItem=idx=>{dictMap[dictCat.value].splice(idx,1);SLS('dictMap',dictMap);ElMessage.success('已删除');};
+
+    /* 新建订单 */
+    const showNewOrder=ref(false);
+    const orderF=ref({customerId:null,orderType:'窗帘',orderDate:'',deliveryDate:'',deliveryMethod:'上门安装',salespersonId:'',items:[],quoteAmount:0,discountAmount:0,roundAmount:0,amount:0,received:0});
+    const autoDelivery=()=>{
+      if(!orderF.value.orderDate)return;
+      const d=new Date(orderF.value.orderDate);d.setDate(d.getDate()+14);
+      orderF.value.deliveryDate=d.toISOString().slice(0,10);
+    };
+    const onProdSelect=row=>{const p=products.value.find(x=>x.id===row.productId);if(p){row.price=p.price;calcItem(row);}};
+    const calcItem=row=>{if(row.price&&row.qty)row.amount=Math.round(row.price*row.qty*(row.discount||1)*100)/100;calcTotals();};
+    const calcTotals=()=>{
+      const itemsTotal=orderF.value.items.reduce((s,r)=>s+(r.amount||0),0);
+      orderF.value.quoteAmount=itemsTotal;
+      orderF.value.amount=Math.max(0,orderF.value.quoteAmount-(orderF.value.discountAmount||0)-(orderF.value.roundAmount||0));
+    };
+    const saveNewOrder=async()=>{
+      if(!orderF.value.customerId){ElMessage.warning('请选择客户');return;}
+      const customer=customers.value.find(c=>c.id===orderF.value.customerId);
+      const emp=employees.value.find(e=>e.id===orderF.value.salespersonId);
+      const today=new Date().toISOString().slice(0,10);
+      const amount=Math.max(0,orderF.value.items.reduce((s,r)=>s+(r.amount||0),0)-orderF.value.discountAmount-orderF.value.roundAmount);
+      const payload={
+        customer_id:orderF.value.customerId,
+        customer_name:customer?.name||'',
+        customer_phone:customer?.phone||'',
+        order_type:orderF.value.orderType,
+        content:orderF.value.items.map(i=>products.value.find(p=>p.id===i.productId)?.name||'').filter(Boolean).join('+')||'窗帘',
+        quote_amount:orderF.value.quoteAmount,
+        discount_amount:orderF.value.discountAmount||0,
+        round_amount:orderF.value.roundAmount||0,
+        amount,
+        received:orderF.value.received||0,
+        order_date:orderF.value.orderDate||today,
+        delivery_date:orderF.value.deliveryDate||'',
+        delivery_method:orderF.value.deliveryMethod||'上门安装',
+        salesperson:emp?.name||'',
+        salesperson_id:orderF.value.salespersonId,
+        install_address:orderF.value.installAddress||'',
+        install_date:orderF.value.installDate||'',
+        install_time_slot:orderF.value.installTimeSlot||'',
+        items:orderF.value.items.map(i=>({product_id:i.productId,product:products.value.find(p=>p.id===i.productId)?.name||'',qty:i.qty,price:i.price,discount:i.discount||1,amount:i.amount||0})),
+      };
+      try{
+        const d=await api('/api/orders','POST',payload);
+        const STATUS_MAP={created:'待确认',confirmed:'已核单',measured:'已测量',stocked:'已备货',processing:'加工中',install:'待安装',installed:'已安装',completed:'已完成',cancelled:'已取消'};
+        const newOrder={
+          id:d.id,orderNo:d.order_no,customerId:payload.customer_id,customerName:payload.customer_name,
+          orderType:payload.order_type,content:payload.content,amount:payload.amount,
+          quoteAmount:payload.quote_amount,discountAmount:payload.discount_amount,roundAmount:payload.round_amount,
+          received:payload.received,debt:payload.amount-payload.received,
+          status:'待确认',statusColor:'created',
+          date:payload.order_date,orderDate:payload.order_date,deliveryDate:payload.delivery_date,
+          deliveryMethod:payload.delivery_method,salesperson:payload.salesperson,salespersonId:null,
+          history:[{s:'创建订单',s2:'待确认',c:'created',time:new Date().toLocaleString()}],
+          items:payload.items,
+        };
+        orders.value.unshift(newOrder);
+        filteredOrders.value=[...orders.value];
+        showNewOrder.value=false;
+        orderF.value={customerId:null,orderType:'窗帘',orderDate:'',deliveryDate:'',deliveryMethod:'上门安装',salespersonId:'',items:[],quoteAmount:0,discountAmount:0,roundAmount:0,amount:0,received:0};
+        ElMessage.success('订单已保存：'+d.order_no);
+      }catch(e){ElMessage.error('保存失败：'+(e.message||e));}
+    };
+
+    /* helpers */
+    const getSupplierName=id=>suppliers.value.find(s=>s.id===id)?.name||'';
+    const getCatName=id=>categories.value.find(c=>c.id===id)?.name||'';
+
+    return{
+      page,activeMenu,pageTitle,switchPage,handleNav,switchPage2,
+      stats,alerts,
+      suppliers,categories,products,productTree,prodDetail,prodSearch,onProductNode,
+      customers,filteredCustomers,
+      employees,
+      dictCats,dictCat,dictCatLabel,dictItems,dictMap,orderStatusAll,
+      orders,filteredOrders,selOrder,orderSearch,orderStatusF,orderTypeF,filterOrders,updateOrderStatus,
+      purchases,
+      warehouses,
+      productionSteps,prodStep,productionOrders,prodStepNext,
+      installOrders,confirmInstall,
+      financeData,costBreakdown,
+      salesTrend,staffRank,topProducts,
+      dlgSupplier,sForm,editingSupplier,saveSupplier,
+      dlgCategory,cForm,editingCategory,saveCategory,
+      dlgProduct,pForm,editingProduct,supCategories,addProduct,
+      dlgCustomer,cuForm,editingCustomer,openCustomerDlg,saveCustomer,delCustomer,
+      dlgEmployee,empForm,editingEmp,openEmpDlg,saveEmployee,
+      dlgDictItem,diForm,editingDictItem,openDictItemDlg,saveDictItem,delDictItem,
+      showNewOrder,orderF,autoDelivery,onProdSelect,calcItem,calcTotals,saveNewOrder,
+      getSupplierName,getCatName,
+    };
+  }
+});
+
+app.use(ElementPlus);
+initAll();
+app.mount('#app');
+</script>
+</html>

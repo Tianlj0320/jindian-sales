@@ -1,0 +1,250 @@
+# app/models.py
+from sqlalchemy import Column, Integer, String, Boolean, Date, DateTime, Text, ForeignKey, DECIMAL, JSON
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
+from datetime import datetime
+
+Base = declarative_base()
+
+# ─── 现有表（V2.1已有，此处简化建模） ─────────────────────────────────────────
+
+class Order(Base):
+    __tablename__ = "orders"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    order_no = Column(String(20), unique=True, nullable=False, index=True)
+    customer_id = Column(Integer, ForeignKey("customers.id"))
+    customer_name = Column(String(50))
+    customer_phone = Column(String(20))
+    order_type = Column(String(20))  # 窗帘/墙布/全屋
+    status = Column(String(20), default="待确认")
+    status_color = Column(String(20), default="pending")
+    status_key = Column(String(30), default="created")  # V2.2 新增：8态进度key
+    quote_amount = Column(DECIMAL(12, 2), default=0)  # 标价金额
+    discount_amount = Column(DECIMAL(12, 2), default=0)  # 优惠金额
+    round_amount = Column(DECIMAL(12, 2), default=0)  # 抹零金额
+    amount = Column(DECIMAL(12, 2), default=0)
+    received = Column(DECIMAL(12, 2), default=0)
+    debt = Column(DECIMAL(12, 2), default=0)
+    order_date = Column(String(20))
+    delivery_date = Column(String(20))
+    delivery_method = Column(String(20))
+    salesperson = Column(String(50))
+    history = Column(JSON, default=list)
+    items = Column(JSON, default=list)
+    content = Column(String(200))  # 订单内容概述
+
+    # V2.2 新增：安装相关
+    installer_id = Column(Integer, ForeignKey("installer_account.id"), nullable=True)
+    install_address = Column(String(300), nullable=True)
+    install_date = Column(Date, nullable=True)
+    install_time_slot = Column(String(20), nullable=True)
+
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class Customer(Base):
+    __tablename__ = "customers"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(50), nullable=False)
+    phone = Column(String(20), nullable=False)
+    type = Column(String(20), default="零售")
+    address = Column(String(300))
+    community = Column(String(100))
+    source = Column(String(50))
+    salesperson = Column(String(50))
+    debt = Column(DECIMAL(12, 2), default=0)
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class Product(Base):
+    __tablename__ = "products"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    code = Column(String(20), unique=True)
+    name = Column(String(100))
+    supplier_id = Column(Integer, ForeignKey("suppliers.id"))
+    category_id = Column(Integer, ForeignKey("fabric_categories.id"))
+    product_type = Column(String(20))  # 面料/辅料
+    classification = Column(String(20))  # 定高/定宽/配件
+    model = Column(String(50))
+    material = Column(String(50))
+    width = Column(Integer)  # 门幅 cm
+    weight = Column(Integer)  # 克重 g/㎡
+    unit_price = Column(DECIMAL(10, 2))
+    unit = Column(String(10), default="米")
+    stock = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class Supplier(Base):
+    __tablename__ = "suppliers"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    code = Column(String(10))
+    name = Column(String(100))
+    type = Column(String(20))  # 成品/布艺/配件
+    contact = Column(String(50))
+    phone = Column(String(20))
+    delivery_days = Column(Integer, default=7)
+    address = Column(String(300))
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class FabricCategory(Base):
+    __tablename__ = "fabric_categories"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    code = Column(String(10))
+    name = Column(String(100))
+    supplier_id = Column(Integer, ForeignKey("suppliers.id"))
+    description = Column(String(200))
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class Employee(Base):
+    __tablename__ = "employees"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    code = Column(String(20))
+    name = Column(String(50))
+    gender = Column(String(10), default="男")
+    phone = Column(String(20))
+    position = Column(String(20))  # 导购/安装/财务
+    department = Column(String(20))
+    max_discount = Column(DECIMAL(5, 2), default=1.0)  # 最大折扣，如 0.75
+    round_limit = Column(Integer, default=0)  # 抹零限制
+    is_installer = Column(Boolean, default=False)  # V2.2 新增：标记安装工
+    status = Column(String(20), default="启用")
+    created_at = Column(DateTime, default=datetime.now)
+
+
+# ─── V2.2 新增表 ─────────────────────────────────────────────────────────────
+
+class InstallerAccount(Base):
+    __tablename__ = "installer_account"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(50), nullable=False)
+    phone = Column(String(20), unique=True, nullable=False)
+    password_hash = Column(String(200), nullable=True)  # Demo阶段可为空
+    wechat = Column(String(100))
+    status = Column(String(20), default="active")
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+    tasks = relationship("InstallTask", back_populates="installer")
+
+
+class InstallTask(Base):
+    __tablename__ = "install_task"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
+    order_no = Column(String(20))  # 冗余存储，方便查询
+    installer_id = Column(Integer, ForeignKey("installer_account.id"), nullable=True)
+    install_date = Column(Date, nullable=False, index=True)
+    install_time_slot = Column(String(20))  # "09:00" / "14:00"
+    address = Column(String(300), nullable=False)
+    customer_name = Column(String(50), nullable=False)
+    customer_phone = Column(String(20), nullable=False)
+    raw_customer_phone = Column(String(20))  # 原始手机号，App端不展示
+    order_content = Column(String(500))  # "客厅+书房+次卧 窗帘"
+    priority = Column(String(20), default="normal")  # high/normal
+    status = Column(String(20), default="pending", index=True)  # pending/ongoing/completed/cancelled
+    completed_at = Column(DateTime, nullable=True)
+    completion_remark = Column(String(1000))
+    navigate_url = Column(String(500))
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+    installer = relationship("InstallerAccount", back_populates="tasks")
+    order = relationship("Order")
+
+
+class SmsCode(Base):
+    __tablename__ = "sms_code"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    phone = Column(String(20), nullable=False, index=True)
+    code = Column(String(10), nullable=False)
+    code_type = Column(String(30), default="installer_login")
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class CustomerProgressQueryLog(Base):
+    __tablename__ = "customer_progress_query_log"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    order_no = Column(String(20), nullable=False, index=True)
+    phone_hint = Column(String(10), nullable=False)
+    query_time = Column(DateTime, default=datetime.now)
+    ip_address = Column(String(50))
+    user_agent = Column(String(500))
+
+
+class StoreConfig(Base):
+    __tablename__ = "store_config"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    store_name = Column(String(100), default="金典软装")
+    store_phone = Column(String(30))
+    store_address = Column(String(300))
+    workday_start = Column(String(10), default="09:00")
+    workday_end = Column(String(10), default="18:00")
+    latitude = Column(DECIMAL(10, 6))
+    longitude = Column(DECIMAL(10, 6))
+    qrcode_base_url = Column(String(500))
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class Purchase(Base):
+    __tablename__ = "purchases"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    po_no = Column(String(30), unique=True)
+    supplier_id = Column(Integer)
+    supplier_name = Column(String(100))
+    contact = Column(String(50))
+    phone = Column(String(30))
+    amount = Column(DECIMAL(12, 2), default=0)
+    paid = Column(DECIMAL(12, 2), default=0)
+    debt = Column(DECIMAL(12, 2), default=0)
+    status = Column(String(30), default="待采购")
+    order_date = Column(Date)
+    expected_date = Column(Date)
+    items = Column(JSON, default=list)
+    remark = Column(String(500))
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class WarehouseRecord(Base):
+    __tablename__ = "warehouse_records"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    record_type = Column(String(10))  # in / out
+    product_id = Column(Integer)
+    product_name = Column(String(200))
+    qty = Column(DECIMAL(10, 2))
+    unit = Column(String(10), default="米")
+    remark = Column(String(300))
+    operator = Column(String(50))
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class FinanceRecord(Base):
+    __tablename__ = "finance_records"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    record_type = Column(String(20))  # receive / pay / expense
+    order_id = Column(Integer)
+    order_no = Column(String(30))
+    customer_name = Column(String(100))
+    amount = Column(DECIMAL(12, 2))
+    method = Column(String(30), default="转账")
+    operator = Column(String(50))
+    remark = Column(String(300))
+    created_at = Column(DateTime, default=datetime.now)

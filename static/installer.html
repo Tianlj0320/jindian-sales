@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>金典软装 · 安装工</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#f0f2f5;color:#333;min-height:100vh;padding-bottom:70px}
+h1{font-size:18px;font-weight:600}
+h2{font-size:15px;color:#666}
+
+/* ── 通用卡片 ── */
+.card{background:#fff;border-radius:12px;padding:16px;margin:12px 0;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.card-title{font-size:14px;font-weight:600;color:#1a3a5c;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #eee}
+
+/* ── 按钮 ── */
+.btn{padding:10px 20px;border:none;border-radius:8px;font-size:14px;cursor:pointer;width:100%}
+.btn-primary{background:#1a3a5c;color:#fff}
+.btn-primary:active{background:#0f2a47}
+.btn-success{background:#52c41a;color:#fff}
+.btn-ghost{background:#f5f5f5;color:#666}
+.btn-danger{background:#ff4d4f;color:#fff}
+
+.btn-sm{padding:8px 14px;font-size:13px;width:auto}
+.btn-group{display:flex;gap:8px}
+.btn-group .btn{flex:1}
+
+/* ── 输入 ── */
+.input-group{margin-bottom:12px}
+.input-group label{font-size:13px;color:#666;display:block;margin-bottom:6px}
+.input{width:100%;padding:10px 12px;border:1px solid #d9d9d9;border-radius:8px;font-size:15px;outline:none;transition:border-color .2s}
+.input:focus{border-color:#1a3a5c}
+.code-input-wrap{display:flex;gap:8px}
+.code-input-wrap .input{flex:1}
+.code-input-wrap .btn{width:auto;padding:10px 14px;white-space:nowrap}
+
+/* ── 任务卡片 ── */
+.task-card{background:#fff;border-radius:12px;margin:10px 12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.task-header{padding:12px 16px;background:#fafafa;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center}
+.task-priority{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500}
+.priority-high{background:#fff2e8;color:#fa8c16}
+.priority-normal{background:#f5f5f5;color:#999}
+.task-slot{font-size:13px;color:#1a3a5c;font-weight:600}
+.task-body{padding:14px 16px}
+.task-row{display:flex;align-items:flex-start;margin-bottom:8px;font-size:14px}
+.task-icon{font-size:16px;margin-right:8px;flex-shrink:0}
+.task-label{color:#999;font-size:12px;min-width:50px}
+.task-value{color:#333;flex:1;word-break:break-all}
+.task-value.phone{color:#1a3a5c;font-weight:500}
+.task-actions{padding:12px 16px;display:flex;gap:8px;border-top:1px solid #f0f0f0}
+.task-actions .btn{font-size:14px}
+
+/* ── 历史记录 ── */
+.history-item{display:flex;padding:12px 0;border-bottom:1px solid #f5f5f5;gap:12px}
+.history-item:last-child{border:none}
+.history-date{font-size:12px;color:#999;min-width:50px}
+.history-content{flex:1}
+.history-name{font-size:14px;font-weight:500;color:#333}
+.history-addr{font-size:12px;color:#999;margin-top:2px}
+.history-status{font-size:12px;color:#52c41a;white-space:nowrap}
+
+/* ── TabBar ── */
+.tab-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;display:flex;box-shadow:0 -1px 8px rgba(0,0,0,.08);z-index:100}
+.tab-item{flex:1;text-align:center;padding:10px 0;font-size:11px;color:#999;cursor:pointer;transition:color .2s}
+.tab-item.active{color:#1a3a5c}
+.tab-item .tab-icon{font-size:22px;display:block;margin-bottom:4px}
+
+/* ── 统计 ── */
+.stats-row{display:flex;gap:12px;padding:12px 12px 0}
+.stat-box{flex:1;background:#fff;border-radius:10px;padding:14px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.stat-num{font-size:24px;font-weight:700;color:#1a3a5c}
+.stat-label{font-size:11px;color:#999;margin-top:4px}
+
+/* ── 弹窗 ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-end;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:500px;padding:24px 20px 40px;animation:slideUp .25s ease}
+.modal-title{font-size:17px;font-weight:600;text-align:center;margin-bottom:20px}
+.modal-row{margin-bottom:14px}
+.modal-row label{font-size:13px;color:#666;display:block;margin-bottom:6px}
+.modal-actions{display:flex;gap:10px;margin-top:20px}
+.modal-actions .btn{flex:1}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+
+/* ── 日期选择 ── */
+.date-nav{display:flex;align-items:center;justify-content:center;gap:16px;padding:12px;background:#fff;margin:10px 12px 0;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.date-nav .arrow{font-size:18px;color:#1a3a5c;cursor:pointer;padding:4px 8px}
+.date-nav .arrow.disabled{color:#ccc;cursor:not-allowed}
+.date-display{font-size:15px;font-weight:600;color:#1a3a5c}
+
+/* ── Loading ── */
+.loading{padding:40px;text-align:center;color:#999;font-size:14px}
+.loading::after{content:"...";animation:dots 1.5s infinite}
+@keyframes dots{0%,20%{content:"."}40%{content:".."}60%,100%{content:"..."}}
+.empty{padding:40px;text-align:center;color:#999;font-size:14px}
+.empty-icon{font-size:48px;margin-bottom:12px}
+
+/* ── Toast ── */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.75);color:#fff;padding:10px 20px;border-radius:20px;font-size:14px;z-index:300;opacity:0;transition:opacity .3s}
+.toast.show{opacity:1}
+
+/* ── 顶部 ── */
+.header{padding:16px 16px 8px;display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:17px}
+.header-info{font-size:13px;color:#999}
+.page{padding:0 0 80px}
+
+/* ── 进度指示器 ── */
+.progress-bar{display:flex;align-items:center;gap:4px;margin:12px 0}
+.progress-step{height:8px;flex:1;border-radius:4px;background:#e8e8e8;transition:background .3s}
+.progress-step.done{background:#52c41a}
+.progress-step.current{background:#fa8c16}
+
+/* ── 蒙版 ── */
+.mask-msg{padding:12px;text-align:center;color:#999;font-size:13px}
+</style>
+</head>
+<body>
+
+<!-- ─────────────────────────────────── -->
+<!-- 页面1：登录 -->
+<!-- ─────────────────────────────────── -->
+<div id="page-login" class="page">
+  <div style="padding:40px 24px 0;text-align:center">
+    <div style="font-size:48px;margin-bottom:16px">🛠️</div>
+    <h1 style="font-size:22px;margin-bottom:8px">金典软装</h1>
+    <p style="color:#999;font-size:14px;margin-bottom:32px">安装师傅，请先登录</p>
+
+    <div class="card" style="text-align:left">
+      <div class="input-group">
+        <label>📱 手机号</label>
+        <div class="code-input-wrap">
+          <input class="input" id="login-phone" type="tel" placeholder="输入手机号" maxlength="11" value="13800001111">
+        </div>
+      </div>
+      <div class="input-group">
+        <label>🔐 验证码</label>
+        <div class="code-input-wrap">
+          <input class="input" id="login-code" type="text" placeholder="输入验证码" maxlength="6" value="888888">
+          <button class="btn btn-ghost btn-sm" id="btn-send-code" onclick="sendCode()">获取验证码</button>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()" style="margin-top:8px">登 录</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────── -->
+<!-- 页面2：今日任务 -->
+<!-- ─────────────────────────────────── -->
+<div id="page-home" class="page" style="display:none">
+  <div class="header">
+    <div>
+      <h1>📅 今日安装任务</h1>
+      <div class="header-info" id="home-info">加载中...</div>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="doLogout()">退出</button>
+  </div>
+
+  <div class="date-nav">
+    <span class="arrow" id="date-prev" onclick="changeDate(-1)">◀</span>
+    <span class="date-display" id="date-display">2026-04-14</span>
+    <span class="arrow" id="date-next" onclick="changeDate(1)">▶</span>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-box">
+      <div class="stat-num" id="stat-completed">0</div>
+      <div class="stat-label">已完成</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num" id="stat-pending">0</div>
+      <div class="stat-label">待安装</div>
+    </div>
+  </div>
+
+  <div id="task-list">
+    <div class="loading">加载中</div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────── -->
+<!-- 页面3：历史 -->
+<!-- ─────────────────────────────────── -->
+<div id="page-history" class="page" style="display:none">
+  <div class="header">
+    <h1>📋 安装历史</h1>
+    <div class="header-info">本月统计</div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-box">
+      <div class="stat-num" id="hist-completed">0</div>
+      <div class="stat-label">本月完成</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num" id="hist-pending">0</div>
+      <div class="stat-label">本月待安装</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div id="history-list">
+      <div class="loading">加载中</div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────── -->
+<!-- 页面4：我的 -->
+<!-- ─────────────────────────────────── -->
+<div id="page-me" class="page" style="display:none">
+  <div class="header">
+    <h1>👤 我的</h1>
+  </div>
+  <div class="card" style="text-align:center;padding:32px">
+    <div style="font-size:48px;margin-bottom:12px">👨‍🔧</div>
+    <h2 id="me-name" style="margin-bottom:4px">张师傅</h2>
+    <p style="color:#999;font-size:13px" id="me-phone">138****1111</p>
+  </div>
+  <div class="card">
+    <div style="padding:8px 0">
+      <div class="task-row" style="border-bottom:1px solid #f5f5f5;padding-bottom:12px;margin-bottom:12px">
+        <span class="task-icon">🏠</span>
+        <span class="task-value">金典软装</span>
+      </div>
+      <div class="task-row">
+        <span class="task-icon">📞</span>
+        <a href="tel:0571-88888888" class="task-value" style="color:#1a3a5c">0571-88888888</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────── -->
+<!-- 底部TabBar -->
+<!-- ─────────────────────────────────── -->
+<div class="tab-bar" id="tab-bar" style="display:none">
+  <div class="tab-item active" onclick="switchTab('home')">
+    <span class="tab-icon">📅</span>
+    <span>今日</span>
+  </div>
+  <div class="tab-item" onclick="switchTab('history')">
+    <span class="tab-icon">📋</span>
+    <span>历史</span>
+  </div>
+  <div class="tab-item" onclick="switchTab('me')">
+    <span class="tab-icon">👤</span>
+    <span>我的</span>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────── -->
+<!-- 确认完成弹窗 -->
+<!-- ─────────────────────────────────── -->
+<div class="modal-overlay" id="complete-modal">
+  <div class="modal">
+    <div class="modal-title">✅ 确认安装完成</div>
+    <div class="modal-row">
+      <label>订单号</label>
+      <div id="cm-order-no" style="font-size:14px;font-weight:600;color:#1a3a5c;padding:8px 0"></div>
+    </div>
+    <div class="modal-row">
+      <label>客户</label>
+      <div id="cm-customer" style="font-size:14px;padding:8px 0"></div>
+    </div>
+    <div class="modal-row">
+      <label>地址</label>
+      <div id="cm-address" style="font-size:14px;color:#666;padding:8px 0;word-break:break-all"></div>
+    </div>
+    <div class="modal-row">
+      <label>完成时间</label>
+      <input class="input" id="cm-time" type="datetime-local">
+    </div>
+    <div class="modal-row">
+      <label>备注（选填）</label>
+      <input class="input" id="cm-remark" type="text" placeholder="输入备注...">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      <button class="btn btn-success" id="btn-confirm-complete" onclick="confirmComplete()">确认完成 ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API_BASE = 'http://localhost:8000';
+
+// ── 全局状态 ──────────────────────────
+let gToken = localStorage.getItem('installer_token') || '';
+let gSelectedDate = new Date().toISOString().slice(0,10);
+let gPendingTasks = [];
+let gCurrentTaskId = null;
+
+// ── 初始化 ──────────────────────────
+(function init(){
+  if(gToken){
+    showMain();
+  } else {
+    showLogin();
+  }
+})();
+
+// ── 登录 ──────────────────────────────
+async function sendCode(){
+  const phone = document.getElementById('login-phone').value.trim();
+  if(!phone || phone.length < 11){ toast('请输入正确手机号'); return; }
+  const btn = document.getElementById('btn-send-code');
+  btn.disabled = true;
+  btn.textContent = '发送中...';
+  try {
+    const r = await fetch(API_BASE+'/api/sms/send',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({phone, type:'installer_login'})
+    });
+    const d = await r.json();
+    if(d.success){
+      toast('验证码已发送（Demo: 888888）');
+      let t = 60;
+      const iv = setInterval(()=>{
+        t--;
+        btn.textContent = t+'秒';
+        if(t<=0){clearInterval(iv);btn.disabled=false;btn.textContent='获取验证码';}
+      },1000);
+    } else {
+      toast(d.error||'发送失败'); btn.disabled=false; btn.textContent='获取验证码';
+    }
+  } catch(e){ toast('网络异常'); btn.disabled=false; btn.textContent='获取验证码'; }
+}
+
+async function doLogin(){
+  const phone = document.getElementById('login-phone').value.trim();
+  const code = document.getElementById('login-code').value.trim();
+  if(!phone || !code){ toast('请填写手机号和验证码'); return; }
+  try {
+    const r = await fetch(API_BASE+'/api/installer/login',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({phone, code})
+    });
+    const d = await r.json();
+    if(d.success){
+      gToken = d.data.token;
+      localStorage.setItem('installer_token', gToken);
+      localStorage.setItem('installer_name', d.data.installer.name);
+      localStorage.setItem('installer_phone', d.data.installer.phone_masked);
+      toast('登录成功！');
+      setTimeout(()=>showMain(), 300);
+    } else {
+      toast(d.error||'登录失败');
+    }
+  } catch(e){ toast('网络异常，请检查后端服务'); }
+}
+
+function doLogout(){
+  if(!confirm('确定退出？')) return;
+  localStorage.removeItem('installer_token');
+  localStorage.removeItem('installer_name');
+  localStorage.removeItem('installer_phone');
+  gToken = '';
+  showLogin();
+}
+
+// ── 页面切换 ─────────────────────────
+function showLogin(){
+  document.querySelectorAll('.page').forEach(p=>p.style.display='none');
+  document.getElementById('tab-bar').style.display='none';
+  document.getElementById('page-login').style.display='';
+}
+
+function showMain(){
+  document.querySelectorAll('.page').forEach(p=>p.style.display='none');
+  document.getElementById('page-home').style.display='';
+  document.getElementById('tab-bar').style.display='flex';
+  document.getElementById('me-name').textContent = localStorage.getItem('installer_name')||'安装师傅';
+  document.getElementById('me-phone').textContent = localStorage.getItem('installer_phone')||'';
+  updateDateDisplay();
+  loadTasks();
+}
+
+function switchTab(tab){
+  document.querySelectorAll('.page').forEach(p=>p.style.display='none');
+  document.querySelectorAll('.tab-item').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+tab).style.display='';
+  document.querySelector(`.tab-item:nth-child(${tab==='home'?1:tab==='history'?2:3})`).classList.add('active');
+  if(tab==='history') loadHistory();
+}
+
+// ── 日期导航 ─────────────────────────
+function updateDateDisplay(){
+  const d = new Date(gSelectedDate+'T00:00:00');
+  const fmt = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  document.getElementById('date-display').textContent = fmt;
+}
+
+function changeDate(delta){
+  const d = new Date(gSelectedDate+'T00:00:00');
+  d.setDate(d.getDate()+delta);
+  // 不允许选未来14天之后的
+  const maxDate = new Date();
+  maxDate.setDate(maxDate.getDate()+14);
+  if(d>maxDate || d<new Date('2026-01-01')){ toast('超出可选范围'); return; }
+  gSelectedDate = d.toISOString().slice(0,10);
+  updateDateDisplay();
+  loadTasks();
+}
+
+// ── 加载任务 ────────────────────────
+async function loadTasks(){
+  const list = document.getElementById('task-list');
+  list.innerHTML = '<div class="loading">加载中</div>';
+  try {
+    const r = await fetch(API_BASE+'/api/installer/tasks?date_str='+gSelectedDate,{
+      headers:{'Authorization':'Bearer '+gToken}
+    });
+    const d = await r.json();
+    if(!d.success){ toast(d.error||'加载失败'); return; }
+    document.getElementById('home-info').textContent = d.data.installer_name+' · '+d.data.date;
+    document.getElementById('stat-completed').textContent = d.data.today_completed;
+    document.getElementById('stat-pending').textContent = d.data.today_pending;
+    gPendingTasks = d.data.tasks || [];
+    renderTasks(d.data.tasks);
+  } catch(e){ list.innerHTML='<div class="empty">网络异常，请检查后端服务</div>'; }
+}
+
+function renderTasks(tasks){
+  const list = document.getElementById('task-list');
+  if(!tasks || tasks.length===0){
+    list.innerHTML='<div class="empty"><div class="empty-icon">📭</div><div>今日无安装任务</div></div>';
+    return;
+  }
+  list.innerHTML = tasks.map(t=>`
+    <div class="task-card">
+      <div class="task-header">
+        <span class="task-priority ${t.priority==='high'?'priority-high':'priority-normal'}">
+          ${t.priority==='high'?'⭐ 优先':'📅'}
+        </span>
+        <span class="task-slot">⏰ ${t.time_slot||'全天'}</span>
+      </div>
+      <div class="task-body">
+        <div class="task-row">
+          <span class="task-icon">🏠</span>
+          <span class="task-value">${t.address||''}</span>
+        </div>
+        <div class="task-row">
+          <span class="task-icon">👤</span>
+          <span class="task-value">${t.customer_name||''}</span>
+          <span class="task-value phone">${t.raw_customer_phone||t.customer_phone_masked||''}</span>
+        </div>
+        <div class="task-row">
+          <span class="task-icon">📋</span>
+          <span class="task-value">${t.content||''}</span>
+        </div>
+      </div>
+      <div class="task-actions">
+        ${t.navigate_url ? `<a href="${t.navigate_url}" target="_blank" class="btn btn-ghost btn-sm" style="text-decoration:none">🚗 导航</a>` : ''}
+        ${t.raw_customer_phone ? `<a href="tel:${t.raw_customer_phone}" class="btn btn-ghost btn-sm" style="text-decoration:none">📞 联系</a>` : ''}
+        <button class="btn btn-success btn-sm" onclick="openCompleteModal(${t.id},'${t.order_no||''}','${t.customer_name||''}','${t.address||''}')">✓ 完成</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── 完成弹窗 ────────────────────────
+function openCompleteModal(taskId, orderNo, customer, address){
+  gCurrentTaskId = taskId;
+  document.getElementById('cm-order-no').textContent = '#'+orderNo;
+  document.getElementById('cm-customer').textContent = customer;
+  document.getElementById('cm-address').textContent = address;
+  const now = new Date();
+  now.setMinutes(now.getMinutes()-now.getTimezoneOffset());
+  document.getElementById('cm-time').value = now.toISOString().slice(0,16);
+  document.getElementById('cm-remark').value = '';
+  document.getElementById('complete-modal').classList.add('show');
+}
+
+function closeModal(){
+  document.getElementById('complete-modal').classList.remove('show');
+  gCurrentTaskId = null;
+}
+
+async function confirmComplete(){
+  if(!gCurrentTaskId) return;
+  const btn = document.getElementById('btn-confirm-complete');
+  btn.disabled = true; btn.textContent='提交中...';
+  const completedAt = document.getElementById('cm-time').value;
+  const remark = document.getElementById('cm-remark').value;
+  try {
+    const r = await fetch(API_BASE+'/api/installer/tasks/'+gCurrentTaskId+'/complete',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+gToken},
+      body: JSON.stringify({completed_at: completedAt+':00', remark})
+    });
+    const d = await r.json();
+    if(d.success){
+      toast('安装完成确认成功！');
+      closeModal();
+      loadTasks();
+    } else {
+      toast(d.error||'提交失败');
+    }
+  } catch(e){ toast('网络异常'); }
+  btn.disabled = false; btn.textContent='确认完成 ✓';
+}
+
+// ── 历史记录 ────────────────────────
+async function loadHistory(){
+  const list = document.getElementById('history-list');
+  list.innerHTML = '<div class="loading">加载中</div>';
+  try {
+    const r = await fetch(API_BASE+'/api/installer/history',{
+      headers:{'Authorization':'Bearer '+gToken}
+    });
+    const d = await r.json();
+    if(!d.success){ toast(d.error||'加载失败'); return; }
+    document.getElementById('hist-completed').textContent = d.data.monthly_completed;
+    document.getElementById('hist-pending').textContent = d.data.monthly_pending;
+    const records = d.data.records||[];
+    if(records.length===0){
+      list.innerHTML='<div class="empty"><div class="empty-icon">📭</div><div>暂无安装记录</div></div>';
+      return;
+    }
+    list.innerHTML = records.map(r=>`
+      <div class="history-item">
+        <div class="history-date">${fmtDate(r.completed_at)}</div>
+        <div class="history-content">
+          <div class="history-name">${r.customer_name||''}</div>
+          <div class="history-addr">${r.address||''}</div>
+          <div class="history-addr">${r.content||''}</div>
+        </div>
+        <div class="history-status">✓ 已完成</div>
+      </div>
+    `).join('');
+  } catch(e){ list.innerHTML='<div class="empty">网络异常</div>'; }
+}
+
+function fmtDate(ts){
+  if(!ts) return '';
+  const d = ts.slice(0,10);
+  return d.slice(5);
+}
+
+// ── Toast ────────────────────────────
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+</script>
+</body>
+</html>

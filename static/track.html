@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>金典软装 · 订单进度</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#f5f6f8;color:#333;min-height:100vh}
+h1{font-size:18px;font-weight:600}
+
+/* ── 顶部 ── */
+.top-bar{background:#1a3a5c;color:#fff;padding:20px 20px 28px;text-align:center}
+.top-bar h1{font-size:19px;font-weight:600;margin-bottom:4px}
+.top-bar p{font-size:12px;color:rgba(255,255,255,.7)}
+
+/* ── 查询区 ── */
+.query-section{padding:20px 16px;margin-top:-16px}
+.query-card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.1)}
+.query-row{margin-bottom:14px}
+.query-row:last-child{margin-bottom:0}
+.query-row label{font-size:13px;color:#666;display:block;margin-bottom:6px}
+.input{width:100%;padding:12px 14px;border:1.5px solid #e8e8e8;border-radius:10px;font-size:15px;outline:none;transition:border-color .2s}
+.input:focus{border-color:#1a3a5c}
+.btn{width:100%;padding:13px;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer}
+.btn-primary{background:#1a3a5c;color:#fff}
+.btn-primary:active{background:#0f2a47}
+
+/* ── 结果区 ── */
+.result-section{padding:0 16px 24px;display:none}
+.result-card{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+.order-header{padding:16px;background:#fafbfc;border-bottom:1px solid #f0f0f0}
+.order-num{font-size:16px;font-weight:700;color:#1a3a5c}
+.order-meta{font-size:13px;color:#888;margin-top:4px}
+.order-meta span{margin-right:12px}
+
+/* ── 进度条 ── */
+.progress-section{padding:20px 16px}
+.progress-label{font-size:13px;color:#888;margin-bottom:10px}
+.progress-bar{display:flex;align-items:center;gap:4px;margin-bottom:6px}
+.prog-step{height:10px;flex:1;border-radius:5px;background:#e8e8e8;position:relative}
+.prog-step.done{background:#52c41a}
+.prog-step.current{background:#fa8c16}
+.prog-step::after{content:'';position:absolute;right:-2px;top:50%;transform:translateY(-50%);width:6px;height:6px;border-radius:50%;background:#fff;border:2px solid inherit}
+.prog-step.done::after{border-color:#52c41a;background:#52c41a}
+.prog-step.current::after{border-color:#fa8c16;background:#fa8c16}
+.prog-labels{display:flex;gap:4px}
+.prog-label{flex:1;text-align:center;font-size:10px;color:#999;padding-top:4px}
+
+/* ── 当前状态 ── */
+.status-card{margin:0 16px 14px;background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.status-current{font-size:15px;font-weight:600;color:#1a3a5c;margin-bottom:4px}
+.status-current .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.status-current .dot.done{background:#52c41a}
+.status-current .dot.current{background:#fa8c16}
+.status-time{font-size:12px;color:#999}
+
+/* ── 下一步 ── */
+.next-card{margin:0 16px 14px;background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.06);border-left:4px solid #fa8c16}
+.next-title{font-size:12px;color:#fa8c16;font-weight:600;margin-bottom:8px;text-transform:uppercase}
+.next-label{font-size:15px;font-weight:600;color:#333;margin-bottom:4px}
+.next-detail{font-size:13px;color:#666}
+.next-detail span{margin-right:16px}
+
+/* ── 商品明细 ── */
+.items-section{padding:0 16px 20px}
+.items-card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.items-title{font-size:14px;font-weight:600;color:#1a3a5c;margin-bottom:12px}
+.item-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f5f5f5;font-size:14px}
+.item-row:last-child{border:none}
+.item-room{color:#888;font-size:12px;min-width:50px}
+.item-name{color:#333;flex:1}
+.item-qty{color:#999;font-size:12px;margin-left:8px}
+
+/* ── 联系 ── */
+.contact-card{margin:0 16px 20px;background:#f5f6f8;border-radius:12px;padding:14px 16px;text-align:center}
+.contact-text{font-size:13px;color:#888;margin-bottom:8px}
+.contact-phone{font-size:20px;font-weight:700;color:#1a3a5c;text-decoration:none}
+
+/* ── 错误 ── */
+.error-card{margin:16px;background:#fff;border-radius:12px;padding:24px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.error-icon{font-size:40px;margin-bottom:12px}
+.error-msg{font-size:14px;color:#666}
+
+/* ── Loading ── */
+.loading{padding:40px;text-align:center;color:#999;font-size:14px}
+
+/* ── Toast ── */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.75);color:#fff;padding:10px 20px;border-radius:20px;font-size:14px;z-index:300;opacity:0;transition:opacity .3s}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h1>🏠 金典软装</h1>
+  <p>JINDIAN RUANZHUANG · 订单进度查询</p>
+</div>
+
+<!-- 查询区 -->
+<div class="query-section">
+  <div class="query-card">
+    <div class="query-row">
+      <label>📋 订单号</label>
+      <input class="input" id="input-order" type="text" placeholder="输入订单号，如 20260411002" value="20260411002">
+    </div>
+    <div class="query-row">
+      <label>📞 手机号后4位</label>
+      <input class="input" id="input-phone" type="text" placeholder="输入手机号末4位" maxlength="4" value="3333">
+    </div>
+    <button class="btn btn-primary" onclick="doQuery()">查 询 进 度</button>
+  </div>
+</div>
+
+<!-- 错误展示 -->
+<div id="error-section" class="result-section" style="display:none">
+  <div class="error-card">
+    <div class="error-icon">🔍</div>
+    <div class="error-msg" id="error-msg">订单号或手机号不正确</div>
+  </div>
+</div>
+
+<!-- 结果区 -->
+<div id="result-section" class="result-section" style="display:none">
+
+  <!-- 订单信息 -->
+  <div class="result-card" style="margin-bottom:14px">
+    <div class="order-header">
+      <div class="order-num" id="res-order-no">#20260411002</div>
+      <div class="order-meta">
+        <span id="res-customer">王五</span> ·
+        <span id="res-type">全屋窗帘</span> ·
+        <span>¥<span id="res-amount">5,600</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 进度条 -->
+  <div class="result-card progress-section">
+    <div class="progress-label">订单进度</div>
+    <div class="progress-bar" id="progress-bar"></div>
+    <div class="prog-labels" id="progress-labels"></div>
+  </div>
+
+  <!-- 当前状态 -->
+  <div class="status-card" id="status-card">
+    <div class="status-current">
+      <span class="dot current" id="status-dot"></span>
+      <span id="status-label">待安装</span>
+    </div>
+    <div class="status-time" id="status-time"></div>
+  </div>
+
+  <!-- 下一步 -->
+  <div class="next-card" id="next-card">
+    <div class="next-title">📅 下一步安排</div>
+    <div class="next-label" id="next-label">安装</div>
+    <div class="next-detail">
+      <span id="next-date">📅 04-20</span>
+      <span id="next-time">⏰ 09:00</span>
+    </div>
+    <div class="next-detail" style="margin-top:8px" id="next-installer">
+      👨‍🔧 张师傅  <a id="next-installer-phone" href="tel:" style="color:#1a3a5c;text-decoration:none"></a>
+    </div>
+  </div>
+
+  <!-- 商品明细 -->
+  <div class="items-section">
+    <div class="items-card">
+      <div class="items-title">📦 订单明细</div>
+      <div id="items-list"></div>
+    </div>
+  </div>
+
+  <!-- 联系门店 -->
+  <div class="contact-card">
+    <div class="contact-text">如有疑问，请致电门店</div>
+    <a class="contact-phone" id="store-phone" href="tel:0571-88888888">📞 0571-88888888</a>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_BASE = 'http://localhost:8000';
+
+const STEPS = [
+  {key:'created',    label:'核单'},
+  {key:'confirmed',  label:'确认'},
+  {key:'measured',    label:'测量'},
+  {key:'stocked',    label:'备货'},
+  {key:'processing',  label:'加工'},
+  {key:'install',    label:'安装'},
+  {key:'installed',   label:'完成'},
+];
+
+const STEP_COLORS = ['#909399','#409eff','#67c23a','#e6a23c','#f56c6c','#9c27b0','#1a3a5c'];
+
+async function doQuery(){
+  const orderNo = document.getElementById('input-order').value.trim();
+  const phoneHint = document.getElementById('input-phone').value.trim();
+
+  if(!orderNo){ toast('请输入订单号'); return; }
+  if(!phoneHint || phoneHint.length<4){ toast('请输入手机号后4位'); return; }
+
+  document.getElementById('result-section').style.display='none';
+  document.getElementById('error-section').style.display='none';
+
+  // 显示loading
+  const q = document.querySelector('.query-section');
+  q.insertAdjacentHTML('afterend','<div id="query-loading" class="loading">正在查询订单进度...</div>');
+
+  try {
+    const r = await fetch(API_BASE+'/api/track?order_no='+encodeURIComponent(orderNo)+'&phone_hint='+encodeURIComponent(phoneHint));
+    const d = await r.json();
+
+    document.getElementById('query-loading')?.remove();
+
+    if(!d.success){
+      document.getElementById('error-msg').textContent = d.error||'查询失败，请核对订单号和手机号';
+      document.getElementById('error-section').style.display='';
+      return;
+    }
+
+    renderResult(d.data);
+  } catch(e){
+    document.getElementById('query-loading')?.remove();
+    document.getElementById('error-msg').textContent = '网络异常，请检查后端服务是否启动';
+    document.getElementById('error-section').style.display='';
+  }
+}
+
+function renderResult(d){
+  document.getElementById('result-section').style.display='';
+
+  // 订单信息
+  document.getElementById('res-order-no').textContent = '#'+d.order_no;
+  document.getElementById('res-customer').textContent = d.customer_name;
+  document.getElementById('res-type').textContent = d.order_type;
+  document.getElementById('res-amount').textContent = Number(d.amount).toLocaleString();
+  document.getElementById('store-phone').textContent = '📞 '+(d.store_phone||'0571-88888888');
+
+  // 进度条
+  renderProgress(d.status_history, d.progress_step);
+
+  // 当前状态
+  const hist = d.status_history||[];
+  const current = hist.find(h=>h.is_current)||hist[hist.length-1];
+  if(current){
+    const dotClass = current.done ? 'done' : 'current';
+    const color = current.done ? '#52c41a' : '#fa8c16';
+    document.getElementById('status-dot').style.background = color;
+    document.getElementById('status-label').textContent = current.label;
+    document.getElementById('status-time').textContent = current.time ? '更新于：'+current.time : '当前步骤';
+  }
+
+  // 下一步
+  const ns = d.next_step;
+  if(ns && ns.type==='install'){
+    document.getElementById('next-card').style.display='';
+    document.getElementById('next-label').textContent = ns.label||'安装';
+    document.getElementById('next-date').textContent = '📅 '+(ns.date?ns.date.slice(5):'');
+    document.getElementById('next-time').textContent = '⏰ '+(ns.time_slot||'');
+    if(ns.installer_name){
+      document.getElementById('next-installer').style.display='';
+      document.getElementById('next-installer-phone').textContent = ns.installer_phone_masked||'';
+      document.getElementById('next-installer-phone').href = 'tel:'+ns.installer_phone;
+    } else {
+      document.getElementById('next-installer').style.display='none';
+    }
+  } else {
+    document.getElementById('next-card').style.display='none';
+  }
+
+  // 商品明细
+  const items = d.order_items||[];
+  const itemsList = document.getElementById('items-list');
+  if(items.length>0){
+    itemsList.parentElement.style.display='';
+    itemsList.innerHTML = items.map(i=>
+      `<div class="item-row">
+        <span class="item-room">${i.room||''}</span>
+        <span class="item-name">${i.product||''}</span>
+        <span class="item-qty">×${i.qty||1}</span>
+      </div>`
+    ).join('');
+  } else {
+    itemsList.parentElement.style.display='none';
+  }
+}
+
+function renderProgress(history, currentStep){
+  // history 按 step 顺序，最新已在最后
+  const bar = document.getElementById('progress-bar');
+  const labels = document.getElementById('progress-labels');
+
+  // 取最后一步作为"完成"标记之前的进度
+  // STEPS 共7个关键展示节点 (去掉completed最终态)
+  const displaySteps = STEPS.slice(0,6); // 核单~安装
+  bar.innerHTML = displaySteps.map((s,i)=>{
+    const histItem = history.find(h=>h.key===s.key);
+    const isDone = histItem && histItem.done;
+    const isCurrent = histItem && histItem.is_current;
+    let cls = '';
+    if(isDone) cls='done';
+    else if(isCurrent) cls='current';
+    return `<div class="prog-step ${cls}"></div>`;
+  }).join('');
+
+  labels.innerHTML = displaySteps.map((s,i)=>{
+    const histItem = history.find(h=>h.key===s.key);
+    const isDone = histItem && histItem.done;
+    const isCurrent = histItem && histItem.is_current;
+    const color = isDone?'#52c41a':isCurrent?'#fa8c16':'#ccc';
+    const check = isDone?'✓ ':isCurrent?'● ':'';
+    return `<span class="prog-label" style="color:${color}">${check}${s.label}</span>`;
+  }).join('');
+}
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+</script>
+</body>
+</html>
