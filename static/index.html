@@ -161,7 +161,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
     <template #title>
       <div style="color:#fff;font-size:15px;font-weight:bold">金典软装</div>
     </template>
-    <el-menu :default-active="activeMenu" background-color="#1a3a5c" text-color="#bcc8d8" active-text-color="#fff" @select="(k)=>{activeMenu=k;drawerVisible=false}">
+    <el-menu :default-active="activeMenu" background-color="#1a3a5c" text-color="#bcc8d8" active-text-color="#fff" @select="(k)=>{const pm={home:'home',product:'product',customer:'customer',employee:'employee',dict:'dict',order:'order',purchase:'purchase',warehouse:'warehouse',production:'production',install:'install',finance:'finance',report:'report'};if(k!=='basic'){page.value=pm[k]||k;activeMenu.value=k;}else{page.value='product';activeMenu.value='product';}drawerVisible=false;}">
       <el-menu-item index="home"><el-icon><house-fill/></el-icon>&nbsp;首页概览</el-menu-item>
       <el-sub-menu index="basic2">
         <template #title><el-icon><folder/></el-icon>&nbsp;基础资料</template>
@@ -995,7 +995,7 @@ const app=createApp({
     const switchPage=p=>{page.value=p;activeMenu.value=p==='basic'?'product':p};
 
     /* nav */
-    const navMap={'home':'home','product':'basic','customer':'basic','employee':'basic','dict':'basic','order':'order','purchase':'purchase','warehouse':'warehouse','production':'production','install':'install','finance':'finance','report':'report'};
+    const navMap={'home':'home','product':'product','customer':'customer','employee':'employee','dict':'dict','order':'order','purchase':'purchase','warehouse':'warehouse','production':'production','install':'install','finance':'finance','report':'report'};
     const handleNav=k=>{if(k!=='basic'){page.value=navMap[k]||k;activeMenu.value=k}else{page.value='product';activeMenu.value='product'}};
     const switchPage2=p=>page.value=p;
 
