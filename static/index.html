@@ -1435,6 +1435,7 @@ const app=createApp({
     const getSupplierName=id=>suppliers.value.find(s=>s.id===id)?.name||'';
     const getCatName=id=>categories.value.find(c=>c.id===id)?.name||'';
 
+    initAll();
     return{
       page,activeMenu,pageTitle,switchPage,handleNav,switchPage2,
       stats,alerts,
@@ -1463,8 +1464,8 @@ const app=createApp({
   }
 });
 
-const eicons=window.ElementPlusIconsVue;if(eicons){for(const[k,v]of Object.entries(eicons)){app.component(k,v);}} app.use(ElementPlus);
-initAll();
+const eicons=window.ElementPlusIconsVue;if(eicons){for(const[k,v]of Object.entries(eicons)){app.component(k,v);}}
+app.use(ElementPlus);
 app.mount('#app');
 </script>
 </html>
