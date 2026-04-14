@@ -4,9 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>金典软装销售管理系统 V2.2</title>
-<script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/element-plus@1.1.0/dist/index.full.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus@1.1.0/theme-chalk/index.css">
+<script src="https://cdn.bootcdn.net/ajax/libs/vue/3.4.0/vue.global.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/element-plus/2.4.0/index.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@element-plus/icons-vue@2.3.0/dist/index.iife.min.js"></script>
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/element-plus/2.4.0/index.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;color:#333}
@@ -1450,6 +1451,9 @@ const app=createApp({
   }
 });
 
+// register Element Plus icons from CDN
+const eicons=window.ElementPlusIconsVue;
+if(eicons){for(const[k,v]of Object.entries(eicons)){app.component(k,v);}}
 app.use(ElementPlus);
 initAll();
 app.mount('#app');
