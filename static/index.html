@@ -296,59 +296,47 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
         <div class="page-title">产品资料</div>
         <div class="card">
           <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <el-button type="primary" size="small" @click="dlgSupplier=true">+ 供应商</el-button>
-            <el-button size="small" @click="dlgCategory=true">+ 布版</el-button>
-            <el-button type="primary" plain size="small" @click="dlgProduct=true">+ 产品</el-button>
+            <el-button type="primary" size="small" @click="openWindow('/static/new_supplier.html','new_supplier','width=800,height=600,top=100,left=100,scrollbars=yes,resizable=yes')" v-if="btnVisible('product:add')">+ 供应商</el-button>
+            <el-button size="small" @click="openCategoryDlg()">+ 布版</el-button>
+            <el-button type="primary" plain size="small" @click="openWindow('/static/new_product.html','new_product','width=800,height=600,top=100,left=100,scrollbars=yes,resizable=yes')" v-if="btnVisible('product:add')">+ 产品</el-button>
             <el-input v-model="prodSearch" placeholder="搜索产品名称/编码" size="small" style="width:200px" clearable>
               <template #prefix><el-icon><search/></el-icon></template>
             </el-input>
           </div>
-          <div style="display:grid;grid-template-columns:280px 1fr;gap:14px">
-            <!-- 左侧树 -->
-            <div class="tree-card">
-              <div style="font-size:12px;color:#888;margin-bottom:8px;padding-left:4px">
-                三级层级：供应商 → 布版 → 产品 | 点击查看详情
-              </div>
-              <el-tree :data="productTree" node-key="id" :expand-on-click-node="false" :default-expand-all="true" @node-click="onProductNode" highlight-current style="background:transparent">
-                <template #default="{data}">
-                  <span style="display:flex;align-items:center;gap:6px;font-size:13px">
-                    <span v-if="data.lv===1" style="color:#8ab4d8">🏭</span>
-                    <span v-else-if="data.lv===2" style="color:#a0c4e0">📁</span>
-                    <span v-else style="color:#67c23a">🧵</span>
-                    <span>{{data.label}}</span>
-                    <span v-if="data.lv===3" style="font-size:10px;color:#999;margin-left:4px">{{data.code}}</span>
-                  </span>
-                </template>
-              </el-tree>
-            </div>
-            <!-- 右侧详情 -->
-            <div v-if="prodDetail" class="product-detail">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-                <div>
-                  <b style="font-size:15px;color:#1a3a5c">{{prodDetail?.name}}</b>
-                  <span style="margin-left:10px;font-size:12px;background:#e8f0ff;padding:2px 8px;border-radius:3px;color:#409eff">{{prodDetail?.code}}</span>
-                </div>
-                <el-button size="small" @click="prodDetail=null">关闭</el-button>
-              </div>
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-                <div><div style="font-size:11px;color:#999">供应商</div><div style="font-size:13px">{{getSupplierName(prodDetail?.sId)}}</div></div>
-                <div><div style="font-size:11px;color:#999">布版系列</div><div style="font-size:13px">{{getCatName(prodDetail?.cId)}}</div></div>
-                <div><div style="font-size:11px;color:#999">分类</div><div style="font-size:13px"><span class="num-tag" :class="prodDetail?.type==='面料'?'num-blue':'num-gray'">{{prodDetail?.type}}</span></div></div>
-                <div><div style="font-size:11px;color:#999">产品分类</div><div style="font-size:13px">{{prodDetail.class||'-'}}</div></div>
-                <div><div style="font-size:11px;color:#999">型号</div><div style="font-size:13px">{{prodDetail.model||'-'}}</div></div>
-                <div><div style="font-size:11px;color:#999">材质</div><div style="font-size:13px">{{prodDetail.mat||'-'}}</div></div>
-                <div><div style="font-size:11px;color:#999">门幅</div><div style="font-size:13px">{{prodDetail.width||0}} cm</div></div>
-                <div><div style="font-size:11px;color:#999">克重</div><div style="font-size:13px">{{prodDetail.weight||0}} g/㎡</div></div>
-                <div><div style="font-size:11px;color:#999">色牢度</div><div style="font-size:13px">{{prodDetail.cf||0}} 级</div></div>
-                <div><div style="font-size:11px;color:#999">单价</div><div style="font-size:15px;font-weight:bold;color:#67c23a">¥{{prodDetail.price||0}}/{{prodDetail.unit||'米'}}</div></div>
-                <div><div style="font-size:11px;color:#999">库存</div><div style="font-size:13px"><span :style="prodDetail.stock>0?'color:#67c23a':'color:#f56c6c'">{{prodDetail.stock||0}}</span> {{prodDetail.unit||'米'}}</div></div>
-              </div>
-              <div v-if="prodDetail.remark" style="margin-top:10px;font-size:12px;color:#888">备注：{{prodDetail.remark}}</div>
-            </div>
-            <div v-else class="product-detail" style="display:flex;align-items:center;justify-content:center;min-height:200px;color:#ccc;font-size:13px">
-              点击左侧产品节点查看详情
-            </div>
-          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead style="background:#f5f7fa">
+              <tr>
+                <th style="padding:10px 8px;text-align:left">货号</th>
+                <th style="padding:10px 8px;text-align:left">名称</th>
+                <th style="padding:10px 8px;text-align:left">分类</th>
+                <th style="padding:10px 8px;text-align:left">供应商</th>
+                <th style="padding:10px 8px;text-align:left">布版系列</th>
+                <th style="padding:10px 8px;text-align:right">零售价</th>
+                <th style="padding:10px 8px;text-align:center">单位</th>
+                <th style="padding:10px 8px;text-align:right">库存</th>
+                <th style="padding:10px 8px;text-align:center">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="p in filteredProducts" :key="p.id" style="border-bottom:1px solid #f0f0f0">
+                <td style="padding:8px 8px">{{p.code||'-'}}</td>
+                <td style="padding:8px 8px">{{p.name||'-'}}</td>
+                <td style="padding:8px 8px"><span class="num-tag" :class="p.type==='面料'?'num-blue':'num-gray'">{{p.type||'-'}}</span></td>
+                <td style="padding:8px 8px">{{getSupplierName(p.supplierId)}}</td>
+                <td style="padding:8px 8px">{{getCatName(p.categoryId)}}</td>
+                <td style="padding:8px 8px;text-align:right;color:#67c23a">¥{{p.price||0}}/{{p.unit||'米'}}</td>
+                <td style="padding:8px 8px;text-align:center">{{p.unit||'米'}}</td>
+                <td style="padding:8px 8px;text-align:right"><span :style="(p.stock||0)>0?'color:#67c23a':'color:#f56c6c'">{{p.stock||0}}</span></td>
+                <td style="padding:8px 8px;text-align:center">
+                  <el-button size="small" @click="openProductDlg(p)">编辑</el-button>
+                  <el-button size="small" type="danger" @click="delProduct(p,products.findIndex(x=>x.id===p.id))">删除</el-button>
+                </td>
+              </tr>
+              <tr v-if="filteredProducts.length===0">
+                <td colspan="9" style="padding:24px;text-align:center;color:#ccc;font-size:13px">暂无产品数据</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -992,6 +980,8 @@ const {ElMessage}=ElementPlus;
 
 const LS=key=>{try{return JSON.parse(localStorage.getItem(key))}catch{return null}};
 const SLS=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+// 临时：显示所有菜单项（RBAC权限系统待完整实现）
+const menuVisible=(m)=>true;
 
 const API='http://localhost:8000';
 const AUTH_TOKEN_KEY='authToken';
@@ -1169,9 +1159,12 @@ const app=createApp({
       });
     });
 
-    const prodDetail=ref(null);
     const prodSearch=ref('');
-    const onProductNode=data=>{if(data.lv===3){const p=products.value.find(x=>x.id===data.id);if(p)prodDetail.value={...p};}};
+    const filteredProducts=computed(()=>{
+      const q=(prodSearch.value||'').toLowerCase();
+      if(!q)return products.value;
+      return products.value.filter(p=>((p.name||'')+(p.code||'')+(p.type||'')+getSupplierName(p.supplierId)).toLowerCase().includes(q));
+    });
 
     /* 客户 */
     const customers=ref([]);
@@ -1482,7 +1475,7 @@ const app=createApp({
     return{
       page,activeMenu,pageTitle,switchPage,handleNav,switchPage2,
       stats,alerts,
-      suppliers,categories,products,productTree,prodDetail,prodSearch,onProductNode,
+      suppliers,categories,products,filteredProducts,prodSearch,
       customers,filteredCustomers,
       employees,
       dictCats,dictCat,dictCatLabel,dictItems,dictMap,orderStatusAll,
