@@ -162,6 +162,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
       <el-menu-item index="home"><el-icon><house-fill/></el-icon>&nbsp;首页概览</el-menu-item>
       <el-sub-menu index="basic">
         <template #title><el-icon><folder/></el-icon>&nbsp;基础资料</template>
+        <el-menu-item index="suppliers">供应商管理</el-menu-item>
         <el-menu-item index="product">产品资料</el-menu-item>
         <el-menu-item index="customer">客户资料</el-menu-item>
         <el-menu-item index="employee">员工资料</el-menu-item>
@@ -182,10 +183,11 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
     <template #title>
       <div style="color:#fff;font-size:15px;font-weight:bold">金典软装</div>
     </template>
-    <el-menu :default-active="activeMenu" background-color="#1a3a5c" text-color="#bcc8d8" active-text-color="#fff" @select="(k)=>{const pm={home:'home',product:'product',customer:'customer',employee:'employee',dict:'dict',order:'order',purchase:'purchase',warehouse:'warehouse',production:'production',install:'install',finance:'finance',report:'report'};if(k!=='basic'){page.value=pm[k]||k;activeMenu.value=k;}else{page.value='product';activeMenu.value='product';}drawerVisible=false;}">
+    <el-menu :default-active="activeMenu" background-color="#1a3a5c" text-color="#bcc8d8" active-text-color="#fff" @select="(k)=>{const pm={home:'home',suppliers:'suppliers',product:'product',customer:'customer',employee:'employee',dict:'dict',order:'order',purchase:'purchase',warehouse:'warehouse',production:'production',install:'install',finance:'finance',report:'report'};if(k!=='basic'&&k!=='basic2'){page.value=pm[k]||k;activeMenu.value=k;}else{page.value='product';activeMenu.value='product';}drawerVisible=false;}">
       <el-menu-item index="home"><el-icon><house-fill/></el-icon>&nbsp;首页概览</el-menu-item>
       <el-sub-menu index="basic2">
         <template #title><el-icon><folder/></el-icon>&nbsp;基础资料</template>
+        <el-menu-item index="suppliers">供应商管理</el-menu-item>
         <el-menu-item index="product">产品资料</el-menu-item>
         <el-menu-item index="customer">客户资料</el-menu-item>
         <el-menu-item index="employee">员工资料</el-menu-item>
@@ -293,50 +295,44 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
 
       <!-- ============ 产品资料 ============ -->
       <div v-if="page==='product'">
-        <div class="page-title">产品资料</div>
-        <div class="card">
-          <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <el-button type="primary" size="small" @click="openWindow('/static/new_supplier.html','new_supplier','width=800,height=600,top=100,left=100,scrollbars=yes,resizable=yes')" v-if="btnVisible('product:add')">+ 供应商</el-button>
-            <el-button size="small" @click="openCategoryDlg()">+ 布版</el-button>
-            <el-button type="primary" plain size="small" @click="openWindow('/static/new_product.html','new_product','width=800,height=600,top=100,left=100,scrollbars=yes,resizable=yes')" v-if="btnVisible('product:add')">+ 产品</el-button>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div class="page-title" style="margin:0">产品资料</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <el-button type="primary" size="small" @click="openSupplierDlg()">+ 新建供应商</el-button>
+            <el-button size="small" @click="openCategoryDlg()">+ 新建布版</el-button>
+            <el-button type="primary" plain size="small" @click="openProductDlg()">+ 新建产品</el-button>
             <el-input v-model="prodSearch" placeholder="搜索产品名称/编码" size="small" style="width:200px" clearable>
               <template #prefix><el-icon><search/></el-icon></template>
             </el-input>
           </div>
-          <table style="width:100%;border-collapse:collapse;font-size:13px">
-            <thead style="background:#f5f7fa">
-              <tr>
-                <th style="padding:10px 8px;text-align:left">货号</th>
-                <th style="padding:10px 8px;text-align:left">名称</th>
-                <th style="padding:10px 8px;text-align:left">分类</th>
-                <th style="padding:10px 8px;text-align:left">供应商</th>
-                <th style="padding:10px 8px;text-align:left">布版系列</th>
-                <th style="padding:10px 8px;text-align:right">零售价</th>
-                <th style="padding:10px 8px;text-align:center">单位</th>
-                <th style="padding:10px 8px;text-align:right">库存</th>
-                <th style="padding:10px 8px;text-align:center">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="p in filteredProducts" :key="p.id" style="border-bottom:1px solid #f0f0f0">
-                <td style="padding:8px 8px">{{p.code||'-'}}</td>
-                <td style="padding:8px 8px">{{p.name||'-'}}</td>
-                <td style="padding:8px 8px"><span class="num-tag" :class="p.type==='面料'?'num-blue':'num-gray'">{{p.type||'-'}}</span></td>
-                <td style="padding:8px 8px">{{getSupplierName(p.supplierId)}}</td>
-                <td style="padding:8px 8px">{{getCatName(p.categoryId)}}</td>
-                <td style="padding:8px 8px;text-align:right;color:#67c23a">¥{{p.price||0}}/{{p.unit||'米'}}</td>
-                <td style="padding:8px 8px;text-align:center">{{p.unit||'米'}}</td>
-                <td style="padding:8px 8px;text-align:right"><span :style="(p.stock||0)>0?'color:#67c23a':'color:#f56c6c'">{{p.stock||0}}</span></td>
-                <td style="padding:8px 8px;text-align:center">
-                  <el-button size="small" @click="openProductDlg(p)">编辑</el-button>
-                  <el-button size="small" type="danger" @click="delProduct(p,products.findIndex(x=>x.id===p.id))">删除</el-button>
-                </td>
-              </tr>
-              <tr v-if="filteredProducts.length===0">
-                <td colspan="9" style="padding:24px;text-align:center;color:#ccc;font-size:13px">暂无产品数据</td>
-              </tr>
-            </tbody>
-          </table>
+        </div>
+        <div class="card">
+          <el-table :data="filteredProducts" stripe size="small" style="font-size:13px">
+            <el-table-column prop="code" label="货号" width="110" align="center"/>
+            <el-table-column prop="name" label="名称" min-width="160"/>
+            <el-table-column prop="type" label="分类" width="80" align="center">
+              <template #default="{row}"><span class="num-tag" :class="row.type==='面料'?'num-blue':'num-gray'">{{row.type||'-'}}</span></template>
+            </el-table-column>
+            <el-table-column label="供应商" width="140" align="center">
+              <template #default="{row}">{{getSupplierName(row.supplierId)}}</template>
+            </el-table-column>
+            <el-table-column label="布版系列" width="130" align="center">
+              <template #default="{row}">{{getCatName(row.categoryId)}}</template>
+            </el-table-column>
+            <el-table-column label="零售价" width="110" align="right">
+              <template #default="{row}"><span style="color:#67c23a">¥{{row.price||0}}/{{row.unit||'米'}}</span></template>
+            </el-table-column>
+            <el-table-column prop="unit" label="单位" width="70" align="center"/>
+            <el-table-column prop="stock" label="库存" width="80" align="right">
+              <template #default="{row}"><span :style="(row.stock||0)>0?'color:#67c23a':'color:#f56c6c'">{{row.stock||0}}</span></template>
+            </el-table-column>
+            <el-table-column label="操作" width="130" align="center" fixed="right">
+              <template #default="{row}">
+                <el-button size="small" @click="openProductDlg(row)">编辑</el-button>
+                <el-button size="small" type="danger" @click="delProduct(row)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
         </div>
       </div>
 
@@ -344,26 +340,30 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
       <div v-if="page==='customer'">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
           <div class="page-title" style="margin:0">客户资料 <span>（必须先录入客户，才能下订单）</span></div>
-          <el-button type="primary" size="small" @click="openCustomerDlg()">+ 新增客户</el-button>
+          <div style="display:flex;gap:8px;align-items:center">
+            <el-button type="primary" size="small" @click="openCustomerDlg()">+ 新增客户</el-button>
+            <el-input v-model="customerSearch" placeholder="搜索客户名称/手机/小区" size="small" style="width:220px" clearable/>
+          </div>
         </div>
         <div class="card">
-          <el-table :data="filteredCustomers" stripe size="small">
-            <el-table-column prop="code" label="编号" width="130"/>
-            <el-table-column prop="name" label="客户名称" width="120"/>
-            <el-table-column prop="phone" label="电话" width="120"/>
-            <el-table-column prop="community" label="小区" min-width="130"/>
-            <el-table-column prop="type" label="类型" width="80">
+          <el-table :data="filteredCustomers" stripe size="small" style="font-size:13px">
+            <el-table-column prop="code" label="编号" width="100" align="center"/>
+            <el-table-column prop="name" label="名称" min-width="130"/>
+            <el-table-column prop="phone" label="手机" width="120" align="center"/>
+            <el-table-column prop="type" label="类型" width="75" align="center">
               <template #default="{row}"><span class="num-tag" :class="row.type==='零售'?'num-blue':row.type==='工程'?'num-red':'num-green'">{{row.type}}</span></template>
             </el-table-column>
-            <el-table-column prop="salesperson" label="导购" width="80"/>
-            <el-table-column prop="source" label="来源" width="80"/>
-            <el-table-column label="欠款" width="100" align="right">
+            <el-table-column prop="source" label="来源" width="80" align="center"/>
+            <el-table-column prop="salesperson" label="导购" width="80" align="center"/>
+            <el-table-column prop="community" label="小区" min-width="120"/>
+            <el-table-column prop="address" label="地址" min-width="150" show-overflow-tooltip/>
+            <el-table-column label="欠款" width="90" align="right">
               <template #default="{row}"><span :style="row.debt>0?'color:#f56c6c':'color:#67c23a'">¥{{(row.debt||0).toLocaleString()}}</span></template>
             </el-table-column>
-            <el-table-column label="操作" width="130">
-              <template #default="{row, $index}">
-                <el-button size="small" @click="openCustomerDlg(row,$index)">编辑</el-button>
-                <el-button size="small" type="danger" @click="delCustomer(row,$index)">删</el-button>
+            <el-table-column label="操作" width="130" align="center" fixed="right">
+              <template #default="{row}">
+                <el-button size="small" @click="openCustomerDlg(row)">编辑</el-button>
+                <el-button size="small" type="danger" @click="delCustomer(row)">删</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -377,19 +377,29 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
           <el-button type="primary" size="small" @click="openEmpDlg()">+ 新增员工</el-button>
         </div>
         <div class="card">
-          <el-table :data="employees" stripe size="small">
-            <el-table-column prop="code" label="工号" width="80"/>
-            <el-table-column prop="name" label="姓名" width="80"/>
-            <el-table-column prop="gender" label="性别" width="50"/>
-            <el-table-column prop="phone" label="电话" width="120"/>
-            <el-table-column prop="position" label="职务" width="80">
+          <el-table :data="employees" stripe size="small" style="font-size:13px">
+            <el-table-column prop="code" label="工号" width="90" align="center"/>
+            <el-table-column prop="name" label="姓名" width="90" align="center"/>
+            <el-table-column prop="position" label="职位" width="80" align="center">
               <template #default="{row}"><span class="num-tag num-blue">{{row.position}}</span></template>
             </el-table-column>
-            <el-table-column prop="dept" label="部门" width="90"/>
-            <el-table-column label="最大折扣" width="90">
+            <el-table-column prop="dept" label="部门" width="90" align="center"/>
+            <el-table-column prop="phone" label="手机" width="120" align="center"/>
+            <el-table-column label="最大折扣" width="100" align="center">
               <template #default="{row}"><span style="color:#e6a23c;font-weight:bold">{{((row.maxDiscount||0)*10).toFixed(1)}}折</span></template>
             </el-table-column>
-            <el-table-column label="抹零限制" width="90">
+            <el-table-column label="抹零限额" width="100" align="center">
+              <template #default="{row}"><span style="color:#666">¥{{row.roundLimit||0}}</span></template>
+            </el-table-column>
+            <el-table-column label="状态" width="80" align="center">
+              <template #default="{row}"><span :class="row.status==='启用'?'num-tag num-green':'num-tag num-gray'">{{row.status}}</span></template>
+            </el-table-column>
+            <el-table-column label="操作" width="130" align="center" fixed="right">
+              <template #default="{row}">
+                <el-button size="small" @click="openEmpDlg(row)">编辑</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
               <template #default="{row}">¥{{row.roundLimit}}</template>
             </el-table-column>
             <el-table-column label="状态" width="70">
@@ -398,6 +408,33 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
             <el-table-column label="操作" width="100">
               <template #default="{row,$index}">
                 <el-button size="small" @click="openEmpDlg(row,$index)">编辑</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
+
+      <!-- ============ 供应商管理 ============ -->
+      <div v-if="page==='suppliers'">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div class="page-title" style="margin:0">供应商管理</div>
+          <el-button type="primary" size="small" @click="openSupplierDlg()">+ 新建供应商</el-button>
+        </div>
+        <div class="card">
+          <el-table :data="suppliers" stripe size="small" style="font-size:13px">
+            <el-table-column prop="code" label="编号" width="90" align="center"/>
+            <el-table-column prop="name" label="名称" min-width="160"/>
+            <el-table-column prop="type" label="类型" width="110" align="center">
+              <template #default="{row}"><span class="num-tag" :class="row.type==='成品'?'num-blue':row.type==='布艺'?'num-green':'num-gray'">{{row.type||'-'}}</span></template>
+            </el-table-column>
+            <el-table-column prop="contact" label="联系人" width="100" align="center"/>
+            <el-table-column prop="phone" label="电话" width="120" align="center"/>
+            <el-table-column prop="deliveryDays" label="交货期(天)" width="90" align="center"/>
+            <el-table-column prop="address" label="地址" min-width="150" show-overflow-tooltip/>
+            <el-table-column label="操作" width="130" align="center" fixed="right">
+              <template #default="{row}">
+                <el-button size="small" @click="openSupplierDlg(row)">编辑</el-button>
+                <el-button size="small" type="danger" @click="delSupplier(row)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -503,18 +540,40 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
                 <div><div style="font-size:10px;color:#999">欠款</div><div style="font-size:14px;font-weight:bold" :style="selOrder.debt>0?'color:#f56c6c':'color:#67c23a'">¥{{selOrder.debt.toLocaleString()}}</div></div>
               </div>
             </div>
-            <!-- 产品明细 -->
-            <div v-if="selOrder.items&&selOrder.items.length>0">
-              <div style="font-size:13px;font-weight:bold;color:#1a3a5c;margin-bottom:8px">产品明细</div>
-              <el-table :data="selOrder.items" size="small" stripe>
-                <el-table-column prop="name" label="产品" min-width="150"/>
-                <el-table-column label="幅数" width="60" align="center" prop="qty"/>
-                <el-table-column label="单价" width="80" align="right" prop="price"/>
-                <el-table-column label="折扣" width="70" align="center">
+            <!-- 底部金额深蓝横条 -->
+            <div style="background:#1a3a5c;border-radius:8px;padding:14px;margin-bottom:14px;display:flex;justify-content:space-around;text-align:center">
+              <div><div style="font-size:10px;color:#8ab4d8">应收总额</div><div style="font-size:18px;font-weight:bold;color:#fff">¥{{selOrder.amount.toLocaleString()}}</div></div>
+              <div style="border-left:1px solid #2a4a6c"></div>
+              <div><div style="font-size:10px;color:#8ab4d8">已收</div><div style="font-size:16px;color:#67c23a;font-weight:bold">¥{{selOrder.received.toLocaleString()}}</div></div>
+              <div style="border-left:1px solid #2a4a6c"></div>
+              <div><div style="font-size:10px;color:#8ab4d8">抹零</div><div style="font-size:16px;color:#ccc">¥{{selOrder.roundAmount||0}}</div></div>
+              <div style="border-left:1px solid #2a4a6c"></div>
+              <div><div style="font-size:10px;color:#8ab4d8">欠款</div><div style="font-size:16px;font-weight:bold" :style="selOrder.debt>0?'color:#f56c6c':'color:#67c23a'">¥{{selOrder.debt.toLocaleString()}}</div></div>
+            </div>
+            <!-- 主料明细 -->
+            <div style="margin-bottom:14px">
+              <div style="font-size:13px;font-weight:bold;color:#1a3a5c;margin-bottom:8px">📦 主料明细</div>
+              <el-table :data="(selOrder.items||[]).filter(i=>i.product_type!=='辅料'&&i.product_type!=='配件')" size="small" stripe>
+                <el-table-column prop="name" label="产品名称" min-width="160"/>
+                <el-table-column prop="qty" label="幅数" width="70" align="center"/>
+                <el-table-column prop="price" label="单价" width="90" align="right"/>
+                <el-table-column label="折扣" width="80" align="center">
                   <template #default="{row}">{{((row.discount||1)*10).toFixed(1)}}折</template>
                 </el-table-column>
+                <el-table-column label="金额" width="100" align="right">
+                  <template #default="{row}"><b style="color:#1a3a5c">¥{{(row.amount||0).toLocaleString()}}</b></template>
+                </el-table-column>
+              </el-table>
+            </div>
+            <!-- 辅料明细 -->
+            <div>
+              <div style="font-size:13px;font-weight:bold;color:#1a3a5c;margin-bottom:8px">🔩 辅料明细</div>
+              <el-table :data="(selOrder.items||[]).filter(i=>i.product_type==='辅料'||i.product_type==='配件')" size="small" stripe>
+                <el-table-column prop="name" label="辅料名称" min-width="140"/>
+                <el-table-column prop="qty" label="数量" width="70" align="center"/>
+                <el-table-column prop="price" label="单价" width="80" align="right"/>
                 <el-table-column label="金额" width="90" align="right">
-                  <template #default="{row}"><b>¥{{row.amount.toLocaleString()}}</b></template>
+                  <template #default="{row}"><b style="color:#67c23a">¥{{(row.amount||0).toLocaleString()}}</b></template>
                 </el-table-column>
               </el-table>
             </div>
@@ -1002,7 +1061,7 @@ const app=createApp({
     /* page */
     const page=ref('home');
     const activeMenu=ref('home');
-    const pageTitle=computed(()=>({home:'首页概览',product:'产品资料',customer:'客户资料',employee:'员工资料',dict:'码表管理',order:'销售订单',purchase:'采购管理',warehouse:'仓库管理',production:'生产管理',install:'安装管理',finance:'财务结算',report:'统计报表'})[page.value]||'');
+    const pageTitle=computed(()=>({home:'首页概览',suppliers:'供应商管理',product:'产品资料',customer:'客户资料',employee:'员工资料',dict:'码表管理',order:'销售订单',purchase:'采购管理',warehouse:'仓库管理',production:'生产管理',install:'安装管理',finance:'财务结算',report:'统计报表'})[page.value]||'');
     const switchPage=p=>{page.value=p;activeMenu.value=p==='basic'?'product':p};
 
     /* nav */
@@ -1104,7 +1163,7 @@ const app=createApp({
         // load report data for current month
         await loadReportData();
         // dictMap orderStatus - initialize from API or use defaults
-        dictMap.orderStatus=[
+        dictMap.value.orderStatus=[
           {k:'created',v:'待确认',c:'#909399'},{k:'confirmed',v:'已核单',c:'#409eff'},
           {k:'measured',v:'已测量',c:'#67c23a'},{k:'stocked',v:'已备货',c:'#e6a23c'},
           {k:'processing',v:'加工中',c:'#f56c6c'},{k:'install',v:'待安装',c:'#9c27b0'},
@@ -1167,11 +1226,12 @@ const app=createApp({
     });
 
     /* 客户 */
+    const customerSearch=ref('');
     const customers=ref([]);
     const filteredCustomers=computed(()=>{
-      if(!prodSearch.value)return customers.value;
-      const q=prodSearch.value.toLowerCase();
-      return customers.value.filter(c=>c.name.includes(prodSearch.value)||c.phone.includes(q)||(c.community||'').includes(prodSearch.value));
+      if(!customerSearch.value)return customers.value;
+      const q=customerSearch.value.toLowerCase();
+      return customers.value.filter(c=>c.name.includes(customerSearch.value)||(c.phone||'').includes(q)||(c.community||'').includes(q));
     });
 
     /* 员工 */
@@ -1185,7 +1245,7 @@ const app=createApp({
       {k:'process',l:'工艺'},{k:'paymentType',l:'收款类型'},{k:'orderExpenseType',l:'订单费用类型'},
       {k:'warehouseType',l:'仓库分类'},{k:'department',l:'部门'},{k:'position',l:'职务'},
     ];
-    const dictMap=LS('dictMap')||{
+    const dictMap=ref(Object.assign({},LS('dictMap')||{
       orderStatus:[
         {k:'pending',v:'待确认',c:'#909399'},{k:'measure',v:'待测量',c:'#409eff'},
         {k:'stock',v:'待备货',c:'#f56c6c'},{k:'process',v:'待加工',c:'#67c23a'},
@@ -1194,13 +1254,13 @@ const app=createApp({
       ],
       orderType:[{k:'curtain',v:'窗帘'},{k:'wallpaper',v:'墙布'},{k:'hardsheet',v:'硬包'},{k:'rockboard',v:'岩板'},{k:'wholehouse',v:'全屋'}],
       deliveryMethod:[{k:'install',v:'上门安装'},{k:'pickup',v:'自提'}],
-    };
-// dictMap now from API, no localStorage sync
+    }));
+// dictMap now reactive ref, populated from API in initAll
 
     const dictCat=ref('orderStatus');
     const dictCatLabel=computed(()=>dictCats.find(d=>d.k===dictCat.value)?.l||'');
-    const dictItems=computed(()=>dictMap[dictCat.value]||[]);
-    const orderStatusAll=computed(()=>dictMap.orderStatus||[]);
+    const dictItems=computed(()=>dictMap.value[dictCat.value]||[]);
+    const orderStatusAll=computed(()=>dictMap.value.orderStatus||[]);
 
     /* 订单 */
     const orders=ref([]);
@@ -1290,6 +1350,14 @@ const app=createApp({
         dlgSupplier.value=false;ElMessage.success('保存成功');
       }catch(e){ElMessage.error('保存失败');}
     };
+    const openSupplierDlg=(row=null)=>{
+      if(row){editingSupplier.value=row;sForm.value={...row};}
+      else{editingSupplier.value=null;sForm.value={code:'',name:'',type:'布艺',contact:'',phone:'',deliveryDays:7,address:'',payment:''};}
+      dlgSupplier.value=true;
+    };
+    const delSupplier=async(row)=>{
+      try{await api(`/api/products/suppliers/${row.id}`,'DELETE');suppliers.value.splice(suppliers.value.findIndex(s=>s.id===row.id),1);ElMessage.success('已删除');}catch(e){ElMessage.error('删除失败');}
+    };
 
     /* 布版 */
     const dlgCategory=ref(false);
@@ -1308,6 +1376,11 @@ const app=createApp({
         dlgCategory.value=false;ElMessage.success('保存成功');
       }catch(e){ElMessage.error('保存失败');}
     };
+    const openCategoryDlg=(row=null)=>{
+      if(row){editingCategory.value=row;cForm.value={...row};}
+      else{editingCategory.value=null;cForm.value={code:'',name:'',supplierId:'',desc:''};}
+      dlgCategory.value=true;
+    };
 
     /* 产品 */
     const dlgProduct=ref(false);
@@ -1324,6 +1397,14 @@ const app=createApp({
         dlgProduct.value=false;
         ElMessage.success('产品已添加，编码：'+d.code);
       }catch(e){ElMessage.error('保存失败');}
+    };
+    const openProductDlg=(row=null)=>{
+      if(row){editingProduct.value=row;pForm.value={name:row.name,supplierId:row.supplierId,categoryId:row.categoryId,type:row.type||'面料',classification:row.classification||'定高',model:row.model||'',mat:row.mat||'雪尼尔',width:row.width||280,weight:row.weight||0,price:row.price||0,stock:row.stock||0};}
+      else{editingProduct.value=null;pForm.value={name:'',supplierId:'',categoryId:'',type:'面料',classification:'定高',model:'',mat:'雪尼尔',width:280,weight:0,price:0,stock:0};}
+      dlgProduct.value=true;
+    };
+    const delProduct=async(row)=>{
+      try{await api(`/api/products/${row.id}`,'DELETE');products.value.splice(products.value.findIndex(p=>p.id===row.id),1);ElMessage.success('已删除');}catch(e){ElMessage.error('删除失败');}
     };
 
     /* 客户 */
@@ -1388,17 +1469,17 @@ const app=createApp({
     };
     const saveDictItem=()=>{
       if(!diForm.value.k||!diForm.value.v){ElMessage.warning('键和值必填');return;}
-      if(!dictMap[dictCat.value])dictMap[dictCat.value]=[];
+      if(!dictMap.value[dictCat.value])dictMap.value[dictCat.value]=[];
       if(editingDictItem.value){
-        const arr=dictMap[dictCat.value];
+        const arr=dictMap.value[dictCat.value];
         const i=arr.findIndex(x=>x.k===editingDictItem.value.k);
         if(i>=0)arr[i]={k:diForm.value.k,v:diForm.value.v,c:diForm.value.c||''};
       }else{
-        dictMap[dictCat.value].push({k:diForm.value.k,v:diForm.value.v,c:diForm.value.c||''});
+        dictMap.value[dictCat.value].push({k:diForm.value.k,v:diForm.value.v,c:diForm.value.c||''});
       }
-      SLS('dictMap',dictMap);dlgDictItem.value=false;ElMessage.success('保存成功');
+      SLS('dictMap',dictMap.value);dlgDictItem.value=false;ElMessage.success('保存成功');
     };
-    const delDictItem=idx=>{dictMap[dictCat.value].splice(idx,1);SLS('dictMap',dictMap);ElMessage.success('已删除');};
+    const delDictItem=idx=>{dictMap.value[dictCat.value].splice(idx,1);SLS('dictMap',dictMap.value);ElMessage.success('已删除');};
 
     /* 新建订单 */
     const showNewOrder=ref(false);
@@ -1476,7 +1557,7 @@ const app=createApp({
       page,activeMenu,pageTitle,switchPage,handleNav,switchPage2,
       stats,alerts,
       suppliers,categories,products,filteredProducts,prodSearch,
-      customers,filteredCustomers,
+      customers,filteredCustomers,customerSearch,
       employees,
       dictCats,dictCat,dictCatLabel,dictItems,dictMap,orderStatusAll,
       orders,filteredOrders,selOrder,orderSearch,orderStatusF,orderTypeF,filterOrders,updateOrderStatus,
@@ -1486,9 +1567,9 @@ const app=createApp({
       installOrders,confirmInstall,
       financeData,costBreakdown,
       salesTrend,staffRank,topProducts,
-      dlgSupplier,sForm,editingSupplier,saveSupplier,
-      dlgCategory,cForm,editingCategory,saveCategory,
-      dlgProduct,pForm,editingProduct,supCategories,addProduct,
+      dlgSupplier,sForm,editingSupplier,saveSupplier,openSupplierDlg,delSupplier,
+      dlgCategory,cForm,editingCategory,saveCategory,openCategoryDlg,
+      dlgProduct,pForm,editingProduct,supCategories,addProduct,openProductDlg,delProduct,
       dlgCustomer,cuForm,editingCustomer,openCustomerDlg,saveCustomer,delCustomer,
       dlgEmployee,empForm,editingEmp,openEmpDlg,saveEmployee,
       dlgDictItem,diForm,editingDictItem,openDictItemDlg,saveDictItem,delDictItem,
