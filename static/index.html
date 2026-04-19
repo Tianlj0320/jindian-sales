@@ -588,7 +588,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <div>
                 <b style="font-size:16px;color:#1a3a5c">{{selOrder.orderNo}}</b>
                 <span :class="'status-dot s-'+(selOrder.statusKey||'created')+' '" style="margin-left:8px"></span>
-                <span style="font-size:13px">{{STATUS_MAP[selOrder.statusKey]||selOrder.status||'待确认'}}</span>
+                <span style="font-size:13px">{{STATUS_MAP[selOrder?.statusKey]||selOrder?.status||'待确认'}}</span>
               </div>
               <el-select v-model="selOrder.statusKey" size="small" style="width:120px" @change="updateOrderStatusByKey">
                 <el-option v-for="s in orderStatusAll" :key="s.k" :label="s.l" :value="s.k"/>
@@ -1860,7 +1860,7 @@ const app=createApp({
       customers,filteredCustomers,customerSearch,customerTypeF,
       employees,filteredEmployees,empSearch,empPositionF,
       dictCats,dictCat,dictCatLabel,dictItems,dictMap,orderStatusAll,
-      orders,filteredOrders,selOrder,orderSearch,orderStatusF,orderTypeF,filterOrders,updateOrderStatus,
+      orders,filteredOrders,selOrder,orderSearch,orderStatusF,orderTypeF,filterOrders,
       purchases,
       warehouses,
       productionSteps,prodStep,productionOrders,prodStepNext,
