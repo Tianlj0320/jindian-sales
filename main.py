@@ -6,7 +6,7 @@ import os
 
 from app.database import init_db
 from app.middleware import AuthMiddleware
-from app.api import track, installer, sms, orders, customers, products, employees, dashboard, purchase, warehouse, finance, reports, auth
+from app.api import track, installer, sms, orders, customers, products, employees, dashboard, purchase, warehouse, finance, reports, auth, print_api
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -43,6 +43,7 @@ app.include_router(warehouse.router)
 app.include_router(finance.router)
 app.include_router(reports.router)
 app.include_router(auth.router)
+app.include_router(print_api.router)
 
 
 @app.on_event("startup")
