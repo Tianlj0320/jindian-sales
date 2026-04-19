@@ -50,14 +50,11 @@ async def startup():
     await init_db()
 
 
+from fastapi.responses import RedirectResponse
+
 @app.get("/")
 async def root():
-    return {
-        "name": "金典软装销售系统 API",
-        "version": "2.2.0",
-        "docs": "/docs",
-        "health": "/health"
-    }
+    return RedirectResponse(url="/static/index.html")
 
 
 @app.get("/health")

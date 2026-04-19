@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>金典软装销售管理系统 V2.2</title>
-<script src="/static/lib/vue.js"></script>
+<script src="/static/lib/vue.js?v=prod1430"></script>
 <script src="/static/lib/ep.js"></script>
 <script src="/static/lib/icons.js"></script>
 <link rel="stylesheet" href="/static/lib/ep.css">
@@ -297,151 +297,212 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
       <div v-if="page==='product'">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
           <div class="page-title" style="margin:0">产品资料</div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <el-button type="primary" size="small" @click="openSupplierDlg()">+ 新建供应商</el-button>
-            <el-button size="small" @click="openCategoryDlg()">+ 新建布版</el-button>
-            <el-button type="primary" plain size="small" @click="openProductDlg()">+ 新建产品</el-button>
-            <el-input v-model="prodSearch" placeholder="搜索产品名称/编码" size="small" style="width:200px" clearable>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <el-button type="primary" size="small" @click="openProductDlg()">+ 新建产品</el-button>
+            <el-input v-model="prodSearch" placeholder="搜索名称/编码" size="small" style="width:160px" clearable>
               <template #prefix><el-icon><search/></el-icon></template>
             </el-input>
+            <el-select v-model="prodSupplierF" placeholder="供应商" size="small" style="width:130px" clearable>
+              <el-option v-for="s in suppliers" :key="s.id" :label="s.name" :value="s.id"/>
+            </el-select>
+            <el-select v-model="prodCatF" placeholder="布版" size="small" style="width:120px" clearable>
+              <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id"/>
+            </el-select>
+            <span style="color:#888;font-size:12px">共{{filteredProducts.length}}条</span>
           </div>
         </div>
-        <div class="card">
-          <el-table :data="filteredProducts" stripe size="small" style="font-size:13px">
-            <el-table-column prop="code" label="货号" width="110" align="center"/>
-            <el-table-column prop="name" label="名称" min-width="160"/>
-            <el-table-column prop="type" label="分类" width="80" align="center">
-              <template #default="{row}"><span class="num-tag" :class="row.type==='面料'?'num-blue':'num-gray'">{{row.type||'-'}}</span></template>
-            </el-table-column>
-            <el-table-column label="供应商" width="140" align="center">
-              <template #default="{row}">{{getSupplierName(row.supplierId)}}</template>
-            </el-table-column>
-            <el-table-column label="布版系列" width="130" align="center">
-              <template #default="{row}">{{getCatName(row.categoryId)}}</template>
-            </el-table-column>
-            <el-table-column label="零售价" width="110" align="right">
-              <template #default="{row}"><span style="color:#67c23a">¥{{row.price||0}}/{{row.unit||'米'}}</span></template>
-            </el-table-column>
-            <el-table-column prop="unit" label="单位" width="70" align="center"/>
-            <el-table-column prop="stock" label="库存" width="80" align="right">
-              <template #default="{row}"><span :style="(row.stock||0)>0?'color:#67c23a':'color:#f56c6c'">{{row.stock||0}}</span></template>
-            </el-table-column>
-            <el-table-column label="操作" width="130" align="center" fixed="right">
-              <template #default="{row}">
-                <el-button size="small" @click="openProductDlg(row)">编辑</el-button>
-                <el-button size="small" type="danger" @click="delProduct(row)">删除</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
+        <div class="card" style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap">
+            <thead><tr style="background:#f5f7fa">
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">货号</th>
+              <th style="padding:8px 6px;text-align:left;color:#1a3a5c;font-weight:600">名称</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">分类</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">供应商</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">布版系列</th>
+              <th style="padding:8px 6px;text-align:right;color:#1a3a5c;font-weight:600">零售价</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">单位</th>
+              <th style="padding:8px 6px;text-align:right;color:#1a3a5c;font-weight:600">库存</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">操作</th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="row in filteredProducts" :key="row.id" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background=\'#f5f7fa\'" onmouseout="this.style.background=\'\'">
+                <td style="padding:7px 6px;text-align:center">{{row.code||'-'}}</td>
+                <td style="padding:7px 6px;text-align:left">{{row.name}}</td>
+                <td style="padding:7px 6px;text-align:center"><span class="num-tag" :class="row.type==='面料'?'num-blue':'num-gray'">{{row.type||'-'}}</span></td>
+                <td style="padding:7px 6px;text-align:center">{{getSupplierName(row.supplierId)}}</td>
+                <td style="padding:7px 6px;text-align:center">{{getCatName(row.categoryId)}}</td>
+                <td style="padding:7px 6px;text-align:right;color:#67c23a">¥{{row.price||0}}/{{row.unit||'米'}}</td>
+                <td style="padding:7px 6px;text-align:center">{{row.unit||'-'}}</td>
+                <td style="padding:7px 6px;text-align:right" :style="(row.stock||0)>0?'color:#67c23a':'color:#f56c6c'">{{row.stock||0}}</td>
+                <td style="padding:7px 6px;text-align:center">
+                  <el-button size="small" @click="openProductDlg(row)">编辑</el-button>
+                  <el-button size="small" type="danger" @click="delProduct(row)">删除</el-button>
+                </td>
+              </tr>
+              <tr v-if="!filteredProducts||filteredProducts.length===0">
+                <td colspan="9" style="padding:20px;text-align:center;color:#ccc">暂无产品</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
       <!-- ============ 客户资料 ============ -->
       <div v-if="page==='customer'">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
           <div class="page-title" style="margin:0">客户资料 <span>（必须先录入客户，才能下订单）</span></div>
           <div style="display:flex;gap:8px;align-items:center">
             <el-button type="primary" size="small" @click="openCustomerDlg()">+ 新增客户</el-button>
-            <el-input v-model="customerSearch" placeholder="搜索客户名称/手机/小区" size="small" style="width:220px" clearable/>
+            <el-input v-model="customerSearch" placeholder="搜索名称/手机/小区" size="small" style="width:160px" clearable>
+              <template #prefix><el-icon><search/></el-icon></template>
+            </el-input>
+            <el-select v-model="customerTypeF" placeholder="客户类型" size="small" style="width:100px" clearable>
+              <el-option label="零售" value="零售"/>
+              <el-option label="工程" value="工程"/>
+              <el-option label="分销" value="分销"/>
+            </el-select>
+            <span style="color:#888;font-size:12px">共{{filteredCustomers.length}}条</span>
           </div>
         </div>
-        <div class="card">
-          <el-table :data="filteredCustomers" stripe size="small" style="font-size:13px">
-            <el-table-column prop="code" label="编号" width="100" align="center"/>
-            <el-table-column prop="name" label="名称" min-width="130"/>
-            <el-table-column prop="phone" label="手机" width="120" align="center"/>
-            <el-table-column prop="type" label="类型" width="75" align="center">
-              <template #default="{row}"><span class="num-tag" :class="row.type==='零售'?'num-blue':row.type==='工程'?'num-red':'num-green'">{{row.type}}</span></template>
-            </el-table-column>
-            <el-table-column prop="source" label="来源" width="80" align="center"/>
-            <el-table-column prop="salesperson" label="导购" width="80" align="center"/>
-            <el-table-column prop="community" label="小区" min-width="120"/>
-            <el-table-column prop="address" label="地址" min-width="150" show-overflow-tooltip/>
-            <el-table-column label="欠款" width="90" align="right">
-              <template #default="{row}"><span :style="row.debt>0?'color:#f56c6c':'color:#67c23a'">¥{{(row.debt||0).toLocaleString()}}</span></template>
-            </el-table-column>
-            <el-table-column label="操作" width="130" align="center" fixed="right">
-              <template #default="{row}">
-                <el-button size="small" @click="openCustomerDlg(row)">编辑</el-button>
-                <el-button size="small" type="danger" @click="delCustomer(row)">删</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
+        <div class="card" style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap">
+            <thead><tr style="background:#f5f7fa">
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">编号</th>
+              <th style="padding:8px 6px;text-align:left;color:#1a3a5c;font-weight:600">名称</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">手机</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">类型</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">来源</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">导购</th>
+              <th style="padding:8px 6px;text-align:left;color:#1a3a5c;font-weight:600">小区</th>
+              <th style="padding:8px 6px;text-align:left;color:#1a3a5c;font-weight:600">地址</th>
+              <th style="padding:8px 6px;text-align:right;color:#1a3a5c;font-weight:600">欠款</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">操作</th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="(row,idx) in filteredCustomers" :key="row.id" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
+                <td style="padding:7px 6px;text-align:center">{{row.code||'-'}}</td>
+                <td style="padding:7px 6px;text-align:left">{{row.name}}</td>
+                <td style="padding:7px 6px;text-align:center">{{row.phone||'-'}}</td>
+                <td style="padding:7px 6px;text-align:center"><span class="num-tag" :class="row.type==='零售'?'num-blue':row.type==='工程'?'num-red':'num-green'">{{row.type||'-'}}</span></td>
+                <td style="padding:7px 6px;text-align:center">{{row.source||'-'}}</td>
+                <td style="padding:7px 6px;text-align:center">{{row.salesperson||'-'}}</td>
+                <td style="padding:7px 6px;text-align:left">{{row.community||'-'}}</td>
+                <td style="padding:7px 6px;text-align:left">{{row.address||'-'}}</td>
+                <td style="padding:7px 6px;text-align:right" :style="(row.debt||0)>0?'color:#f56c6c':'color:#67c23a'">¥{{row.debt||0}}</td>
+                <td style="padding:7px 6px;text-align:center">
+                  <el-button size="small" @click="openCustomerDlg(row,idx)">编辑</el-button>
+                  <el-button size="small" type="danger" @click="delCustomer(row,idx)">删</el-button>
+                </td>
+              </tr>
+              <tr v-if="!filteredCustomers||filteredCustomers.length===0">
+                <td colspan="10" style="padding:20px;text-align:center;color:#ccc">暂无客户</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
-
       <!-- ============ 员工资料 ============ -->
       <div v-if="page==='employee'">
-        <div style="display:flex;justify-content:space-between;margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
           <div class="page-title" style="margin:0">员工资料</div>
-          <el-button type="primary" size="small" @click="openEmpDlg()">+ 新增员工</el-button>
+          <div style="display:flex;gap:8px;align-items:center">
+            <el-button type="primary" size="small" @click="openEmpDlg()">+ 新增员工</el-button>
+            <el-input v-model="empSearch" placeholder="搜索姓名/工号/手机" size="small" style="width:160px" clearable>
+              <template #prefix><el-icon><search/></el-icon></template>
+            </el-input>
+            <el-select v-model="empPositionF" placeholder="职务" size="small" style="width:110px" clearable>
+              <el-option v-for="p in [...new Set(employees.map(e=>e.position).filter(Boolean))]" :key="p" :label="p" :value="p"/>
+            </el-select>
+            <span style="color:#888;font-size:12px">共{{filteredEmployees.length}}条</span>
+          </div>
         </div>
-        <div class="card">
-          <el-table :data="employees" stripe size="small" style="font-size:13px">
-            <el-table-column prop="code" label="工号" width="90" align="center"/>
-            <el-table-column prop="name" label="姓名" width="90" align="center"/>
-            <el-table-column prop="position" label="职位" width="80" align="center">
-              <template #default="{row}"><span class="num-tag num-blue">{{row.position}}</span></template>
-            </el-table-column>
-            <el-table-column prop="dept" label="部门" width="90" align="center"/>
-            <el-table-column prop="phone" label="手机" width="120" align="center"/>
-            <el-table-column label="最大折扣" width="100" align="center">
-              <template #default="{row}"><span style="color:#e6a23c;font-weight:bold">{{((row.maxDiscount||0)*10).toFixed(1)}}折</span></template>
-            </el-table-column>
-            <el-table-column label="抹零限额" width="100" align="center">
-              <template #default="{row}"><span style="color:#666">¥{{row.roundLimit||0}}</span></template>
-            </el-table-column>
-            <el-table-column label="状态" width="80" align="center">
-              <template #default="{row}"><span :class="row.status==='启用'?'num-tag num-green':'num-tag num-gray'">{{row.status}}</span></template>
-            </el-table-column>
-            <el-table-column label="操作" width="130" align="center" fixed="right">
-              <template #default="{row}">
-                <el-button size="small" @click="openEmpDlg(row)">编辑</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-              <template #default="{row}">¥{{row.roundLimit}}</template>
-            </el-table-column>
-            <el-table-column label="状态" width="70">
-              <template #default="{row}"><span :class="row.status==='启用'?'num-tag num-green':'num-tag num-gray'">{{row.status}}</span></template>
-            </el-table-column>
-            <el-table-column label="操作" width="100">
-              <template #default="{row,$index}">
-                <el-button size="small" @click="openEmpDlg(row,$index)">编辑</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
+        <div class="card" style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap">
+            <thead><tr style="background:#f5f7fa">
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">工号</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">姓名</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">性别</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">职务</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">部门</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">手机</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">最大折扣</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">抹零限额</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">状态</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">操作</th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="(row,idx) in filteredEmployees" :key="row.id" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
+                <td style="padding:7px 6px;text-align:center">{{row.code||'-'}}</td>
+                <td style="padding:7px 6px;text-align:center">{{row.name}}</td>
+                <td style="padding:7px 6px;text-align:center">{{row.gender||'男'}}</td>
+                <td style="padding:7px 6px;text-align:center"><span class="num-tag num-blue">{{row.position||'-'}}</span></td>
+                <td style="padding:7px 6px;text-align:center">{{row.dept||'-'}}</td>
+                <td style="padding:7px 6px;text-align:center">{{row.phone||'-'}}</td>
+                <td style="padding:7px 6px;text-align:center;color:#e6a23c;font-weight:bold">{{((row.maxDiscount||1)*10).toFixed(1)}}折</td>
+                <td style="padding:7px 6px;text-align:center;color:#666">¥{{row.roundLimit||0}}</td>
+                <td style="padding:7px 6px;text-align:center"><span :class="row.status==='启用'?'num-tag num-green':'num-tag num-gray'">{{row.status}}</span></td>
+                <td style="padding:7px 6px;text-align:center">
+                  <el-button size="small" @click="openEmpDlg(row,idx)">编辑</el-button>
+                  
+                </td>
+              </tr>
+              <tr v-if="!filteredEmployees||filteredEmployees.length===0">
+                <td colspan="10" style="padding:20px;text-align:center;color:#ccc">暂无员工</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
-
       <!-- ============ 供应商管理 ============ -->
       <div v-if="page==='suppliers'">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
           <div class="page-title" style="margin:0">供应商管理</div>
-          <el-button type="primary" size="small" @click="openSupplierDlg()">+ 新建供应商</el-button>
+          <div style="display:flex;gap:8px;align-items:center">
+            <el-button type="primary" size="small" @click="openSupplierDlg()">+ 新建供应商</el-button>
+            <el-input v-model="suppSearch" placeholder="搜索名称/编号/联系人" size="small" style="width:180px" clearable>
+              <template #prefix><el-icon><search/></el-icon></template>
+            </el-input>
+            <el-select v-model="suppTypeF" placeholder="类型" size="small" style="width:100px" clearable>
+              <el-option label="成品" value="成品"/>
+              <el-option label="布艺" value="布艺"/>
+              <el-option label="辅料" value="辅料"/>
+            </el-select>
+            <span style="color:#888;font-size:12px">共{{filteredSuppliers.length}}条</span>
+          </div>
         </div>
-        <div class="card">
-          <el-table :data="suppliers" stripe size="small" style="font-size:13px">
-            <el-table-column prop="code" label="编号" width="90" align="center"/>
-            <el-table-column prop="name" label="名称" min-width="160"/>
-            <el-table-column prop="type" label="类型" width="110" align="center">
-              <template #default="{row}"><span class="num-tag" :class="row.type==='成品'?'num-blue':row.type==='布艺'?'num-green':'num-gray'">{{row.type||'-'}}</span></template>
-            </el-table-column>
-            <el-table-column prop="contact" label="联系人" width="100" align="center"/>
-            <el-table-column prop="phone" label="电话" width="120" align="center"/>
-            <el-table-column prop="deliveryDays" label="交货期(天)" width="90" align="center"/>
-            <el-table-column prop="address" label="地址" min-width="150" show-overflow-tooltip/>
-            <el-table-column label="操作" width="130" align="center" fixed="right">
-              <template #default="{row}">
-                <el-button size="small" @click="openSupplierDlg(row)">编辑</el-button>
-                <el-button size="small" type="danger" @click="delSupplier(row)">删除</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
+        <div class="card" style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap">
+            <thead><tr style="background:#f5f7fa">
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">编号</th>
+              <th style="padding:8px 6px;text-align:left;color:#1a3a5c;font-weight:600">名称</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">类型</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">联系人</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">电话</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">交货期</th>
+              <th style="padding:8px 6px;text-align:left;color:#1a3a5c;font-weight:600">地址</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">操作</th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="row in filteredSuppliers" :key="row.id" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
+                <td style="padding:7px 6px;text-align:center">{{row.code||'-'}}</td>
+                <td style="padding:7px 6px;text-align:left">{{row.name}}</td>
+                <td style="padding:7px 6px;text-align:center"><span class="num-tag" :class="row.type==='成品'?'num-blue':row.type==='布艺'?'num-green':'num-gray'">{{row.type||'-'}}</span></td>
+                <td style="padding:7px 6px;text-align:center">{{row.contact||'-'}}</td>
+                <td style="padding:7px 6px;text-align:center">{{row.phone||'-'}}</td>
+                <td style="padding:7px 6px;text-align:center">{{row.deliveryDays||row.delivery_days?row.deliveryDays||row.delivery_days+'天':'-'}}</td>
+                <td style="padding:7px 6px;text-align:left">{{row.address||'-'}}</td>
+                <td style="padding:7px 6px;text-align:center">
+                  <el-button size="small" @click="openSupplierDlg(row)">编辑</el-button>
+                  <el-button size="small" type="danger" @click="delSupplier(row)">删除</el-button>
+                </td>
+              </tr>
+              <tr v-if="!filteredSuppliers||filteredSuppliers.length===0">
+                <td colspan="8" style="padding:20px;text-align:center;color:#ccc">暂无供应商</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
-
-      <!-- ============ 码表管理 ============ -->
       <div v-if="page==='dict'">
         <div class="page-title">码表管理 <span>（两级架构：分类 → 条目，可按需增删）</span></div>
         <div class="card">
@@ -456,24 +517,35 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
                 <b style="color:#1a3a5c">{{dictCatLabel}} — 条目管理</b>
                 <el-button type="primary" size="small" @click="openDictItemDlg()">+ 新增条目</el-button>
               </div>
-              <el-table :data="dictItems" stripe size="small">
-                <el-table-column label="键" prop="k" width="120"/>
-                <el-table-column label="值" prop="v" min-width="160"/>
-                <el-table-column v-if="dictCat==='orderStatus'" label="颜色" width="120">
-                  <template #default="{row}">
-                    <span style="display:flex;align-items:center;gap:6px">
-                      <span :style="'display:inline-block;width:14px;height:14px;border-radius:50%;background:'+(row.c||'#ccc')"></span>
-                      {{row.c||'无'}}
-                    </span>
-                  </template>
-                </el-table-column>
-                <el-table-column label="操作" width="120">
-                  <template #default="{row,$index}">
-                    <el-button size="small" @click="openDictItemDlg(row,$index)">编辑</el-button>
-                    <el-button size="small" type="danger" @click="delDictItem($index)">删</el-button>
-                  </template>
-                </el-table-column>
-              </el-table>
+              <div style="overflow-x:auto">
+                <table style="width:100%;border-collapse:collapse;font-size:13px">
+                  <thead><tr style="background:#f5f7fa">
+                    <th style="padding:7px 8px;text-align:left;color:#1a3a5c;font-weight:600">键</th>
+                    <th style="padding:7px 8px;text-align:left;color:#1a3a5c;font-weight:600">值</th>
+                    <th v-if="dictCat==='orderStatus'" style="padding:7px 8px;text-align:left;color:#1a3a5c;font-weight:600">颜色</th>
+                    <th style="padding:7px 8px;text-align:center;color:#1a3a5c;font-weight:600">操作</th>
+                  </tr></thead>
+                  <tbody>
+                    <tr v-for="(row,idx) in dictItems" :key="idx" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
+                      <td style="padding:6px 8px">{{row.k}}</td>
+                      <td style="padding:6px 8px">{{row.v}}</td>
+                      <td v-if="dictCat==='orderStatus'" style="padding:6px 8px">
+                        <span style="display:flex;align-items:center;gap:6px">
+                          <span :style="'display:inline-block;width:14px;height:14px;border-radius:50%;background:'+(row.c||'#ccc')"></span>
+                          {{row.c||'无'}}
+                        </span>
+                      </td>
+                      <td style="padding:6px 8px;text-align:center">
+                        <el-button size="small" @click="openDictItemDlg(row,idx)">编辑</el-button>
+                        <el-button size="small" type="danger" @click="delDictItem(idx)">删</el-button>
+                      </td>
+                    </tr>
+                    <tr v-if="!dictItems||dictItems.length===0">
+                      <td :colspan="dictCat==='orderStatus'?4:3" style="padding:16px;text-align:center;color:#ccc">暂无条目</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -1012,7 +1084,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
   </template>
 </el-dialog>
 
-</div><!-- end #app -->
+
 
 <!-- Login Dialog -->
 <el-dialog v-model="showLogin" title="员工登录" width="360px" center>
@@ -1029,6 +1101,10 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
     <el-button type="primary" :loading="loginLoading" @click="doLogin">登录</el-button>
   </template>
 </el-dialog>
+
+</div><!-- end #app -->
+
+
 
 </body>
 </html>
@@ -1075,7 +1151,7 @@ const app=createApp({
     /* Auth */
     const showLogin=ref(false);
     const loginLoading=ref(false);
-    const currentUser=ref(JSON.parse(LS('currentUser')||'null'));
+    const _u=LS('currentUser');let _parsed=null;try{_parsed=JSON.parse(_u||'null');}catch(e){_parsed=null;}const currentUser=ref(_parsed);
     const isLoggedIn=ref(!!currentUser.value);
     if(!currentUser.value){showLogin.value=true;}
     const loginForm=ref({phone:'',password:''});
@@ -1196,6 +1272,15 @@ const app=createApp({
 
     /* 供应商 */
     const suppliers=ref([]);
+    const suppSearch=ref('');
+    const suppTypeF=ref('');
+    const filteredSuppliers=computed(()=>{
+      const q=(suppSearch.value||'').toLowerCase();
+      let list=suppliers.value;
+      if(q)list=list.filter(s=>((s.name||'')+(s.code||'')+(s.contact||'')+(s.phone||'')).toLowerCase().includes(q));
+      if(suppTypeF.value)list=list.filter(s=>s.type===suppTypeF.value);
+      return list;
+    });
 
     /* 布版 */
     const categories=ref([]);
@@ -1219,23 +1304,42 @@ const app=createApp({
     });
 
     const prodSearch=ref('');
+    const prodSupplierF=ref('');
+    const prodCatF=ref('');
     const filteredProducts=computed(()=>{
       const q=(prodSearch.value||'').toLowerCase();
-      if(!q)return products.value;
-      return products.value.filter(p=>((p.name||'')+(p.code||'')+(p.type||'')+getSupplierName(p.supplierId)).toLowerCase().includes(q));
+      let list=products.value;
+      if(q)list=list.filter(p=>((p.name||'')+(p.code||'')+(p.type||'')+getSupplierName(p.supplierId)).toLowerCase().includes(q));
+      if(prodSupplierF.value)list=list.filter(p=>String(p.supplierId)===String(prodSupplierF.value));
+      if(prodCatF.value)list=list.filter(p=>String(p.categoryId)===String(prodCatF.value));
+      return list;
     });
 
     /* 客户 */
     const customerSearch=ref('');
+    const customerTypeF=ref('');
     const customers=ref([]);
     const filteredCustomers=computed(()=>{
-      if(!customerSearch.value)return customers.value;
-      const q=customerSearch.value.toLowerCase();
-      return customers.value.filter(c=>c.name.includes(customerSearch.value)||(c.phone||'').includes(q)||(c.community||'').includes(q));
+      let list=customers.value;
+      if(customerSearch.value){
+        const q=customerSearch.value.toLowerCase();
+        list=list.filter(c=>c.name.toLowerCase().includes(q)||(c.phone||'').toLowerCase().includes(q)||(c.community||'').toLowerCase().includes(q));
+      }
+      if(customerTypeF.value)list=list.filter(c=>c.type===customerTypeF.value);
+      return list;
     });
 
     /* 员工 */
     const employees=ref([]);
+    const empSearch=ref('');
+    const empPositionF=ref('');
+    const filteredEmployees=computed(()=>{
+      const q=(empSearch.value||'').toLowerCase();
+      let list=employees.value;
+      if(q)list=list.filter(e=>((e.name||'')+(e.code||'')+(e.phone||'')).toLowerCase().includes(q));
+      if(empPositionF.value)list=list.filter(e=>e.position===empPositionF.value);
+      return list;
+    });
 
     /* 码表 */
     const dictCats=[
@@ -1556,9 +1660,9 @@ const app=createApp({
     return{
       page,activeMenu,pageTitle,switchPage,handleNav,switchPage2,
       stats,alerts,
-      suppliers,categories,products,filteredProducts,prodSearch,
-      customers,filteredCustomers,customerSearch,
-      employees,
+      suppliers,filteredSuppliers,suppSearch,suppTypeF,categories,products,filteredProducts,prodSearch,prodSupplierF,prodCatF,
+      customers,filteredCustomers,customerSearch,customerTypeF,
+      employees,filteredEmployees,empSearch,empPositionF,
       dictCats,dictCat,dictCatLabel,dictItems,dictMap,orderStatusAll,
       orders,filteredOrders,selOrder,orderSearch,orderStatusF,orderTypeF,filterOrders,updateOrderStatus,
       purchases,
