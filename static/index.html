@@ -625,27 +625,44 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
             <!-- 主料明细 -->
             <div style="margin-bottom:14px">
               <div style="font-size:13px;font-weight:bold;color:#1a3a5c;margin-bottom:8px">📦 主料明细</div>
-              <el-table :data="(selOrder.items||[]).filter(i=>i.product_type!=='辅料'&&i.product_type!=='配件')" size="small" stripe>
-                <el-table-column prop="name" label="产品名称" min-width="160"/>
-                <el-table-column prop="qty" label="幅数" width="70" align="center"/>
-                <el-table-column prop="price" label="单价" width="90" align="right"/>
-                <el-table-column label="折扣" width="80" align="center">
-                  <template #default="{row}">{{((row.discount||1)*10).toFixed(1)}}折</template>
+              <el-table :data="(selOrder.items||[]).filter(i=>i.item_type!=='accessory'&&i.item_type!=='material')" size="small" stripe>
+                <el-table-column label="位置" width="70" align="center">
+                  <template #default="{row}">{{row.room||'-'}}</template>
+                </el-table-column>
+                <el-table-column label="产品名称" min-width="160">
+                  <template #default="{row}">{{row.product_name||'-'}}</template>
+                </el-table-column>
+                <el-table-column label="尺寸" width="90" align="center">
+                  <template #default="{row}">{{row.width||''}}×{{row.height||''}}</template>
+                </el-table-column>
+                <el-table-column prop="qty" label="幅数" width="55" align="center"/>
+                <el-table-column label="单价" width="80" align="right">
+                  <template #default="{row}">¥{{(row.unit_price||0).toLocaleString()}}</template>
+                </el-table-column>
+                <el-table-column label="折扣" width="70" align="center">
+                  <template #default="{row}">{{row.discount?((row.discount)*10).toFixed(1)+'折':'-'}}</template>
                 </el-table-column>
                 <el-table-column label="金额" width="100" align="right">
-                  <template #default="{row}"><b style="color:#1a3a5c">¥{{(row.amount||0).toLocaleString()}}</b></template>
+                  <template #default="{row}"><b style="color:#1a3a5c">¥{{((row.amount)||((row.unit_price||0)*(row.qty||0))).toLocaleString()}}</b></template>
                 </el-table-column>
               </el-table>
             </div>
             <!-- 辅料明细 -->
             <div>
               <div style="font-size:13px;font-weight:bold;color:#1a3a5c;margin-bottom:8px">🔩 辅料明细</div>
-              <el-table :data="(selOrder.items||[]).filter(i=>i.product_type==='辅料'||i.product_type==='配件')" size="small" stripe>
-                <el-table-column prop="name" label="辅料名称" min-width="140"/>
-                <el-table-column prop="qty" label="数量" width="70" align="center"/>
-                <el-table-column prop="price" label="单价" width="80" align="right"/>
+              <el-table :data="(selOrder.items||[]).filter(i=>i.item_type==='accessory'||i.item_type==='material')" size="small" stripe>
+                <el-table-column label="分类" width="70" align="center">
+                  <template #default="{row}">{{row.item_type==='accessory'?'配件':row.item_type==='material'?'辅料':'-'}}</template>
+                </el-table-column>
+                <el-table-column label="产品名称" min-width="160">
+                  <template #default="{row}">{{row.product_name||'-'}}</template>
+                </el-table-column>
+                <el-table-column prop="qty" label="数量" width="55" align="center"/>
+                <el-table-column label="单价" width="80" align="right">
+                  <template #default="{row}">¥{{(row.unit_price||0).toLocaleString()}}</template>
+                </el-table-column>
                 <el-table-column label="金额" width="90" align="right">
-                  <template #default="{row}"><b style="color:#67c23a">¥{{(row.amount||0).toLocaleString()}}</b></template>
+                  <template #default="{row}"><b style="color:#67c23a">¥{{((row.amount)||((row.unit_price||0)*(row.qty||0))).toLocaleString()}}</b></template>
                 </el-table-column>
               </el-table>
             </div>
@@ -1019,69 +1036,251 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
   </template>
 </el-dialog>
 
-<!-- 新建订单弹窗 -->
-<el-dialog v-model="showNewOrder" title="新建订单" width="620px">
-  <el-form :model="orderF" label-width="90px" size="small">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <el-form-item label="客户" required>
-        <el-select v-model="orderF.customerId" style="width:100%" filterable placeholder="先选已有客户">
-          <el-option v-for="c in customers" :key="c.id" :label="c.name+'('+c.phone+')'" :value="c.id"/>
+<!-- 新建订单弹窗 V2.2（HTML表格彻底解决列对齐） -->
+<el-dialog v-model="showNewOrder" title="新建订单" width="1500px" top="0.5vh" :close-on-click-modal="false">
+  <div style="display:flex;flex-direction:column;max-height:calc(98vh - 40px);gap:12px">
+
+    <!-- 基础信息区（紧凑横向排列） -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;background:#f8f9fc;border-radius:8px;padding:10px 14px">
+      <div style="display:flex;align-items:center;gap:4px">
+        <span style="font-size:12px;color:#606266;width:42px;text-align:right">订单号</span>
+        <el-input v-model="newOrderNo" size="small" placeholder="自动生成" disabled style="background:#f5f7fa;width:100px"/>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span style="font-size:12px;color:#f56c6c">*</span>
+        <el-select v-model="orderF.customerId" filterable size="small" placeholder="选客户" @change="onCustomerSelect" style="width:200px">
+          <el-option v-for="c in customers" :key="c.id" :label="c.name+' '+c.phone" :value="c.id"/>
         </el-select>
-      </el-form-item>
-      <el-form-item label="订单类型">
-        <el-select v-model="orderF.orderType" style="width:100%">
+      </div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span style="font-size:12px;color:#606266">类型</span>
+        <el-select v-model="orderF.orderType" size="small" style="width:80px">
           <el-option label="窗帘" value="窗帘"/><el-option label="墙布" value="墙布"/><el-option label="硬包" value="硬包"/><el-option label="岩板" value="岩板"/><el-option label="全屋" value="全屋"/>
         </el-select>
-      </el-form-item>
-      <el-form-item label="接单日期">
-        <el-date-picker v-model="orderF.orderDate" type="date" value-format="YYYY-MM-DD" style="width:100%" @change="autoDelivery"/>
-      </el-form-item>
-      <el-form-item label="交期">
-        <el-date-picker v-model="orderF.deliveryDate" type="date" value-format="YYYY-MM-DD" style="width:100%"/>
-      </el-form-item>
-      <el-form-item label="提货方式">
-        <el-select v-model="orderF.deliveryMethod" style="width:100%">
+      </div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span style="font-size:12px;color:#606266">来源</span>
+        <el-select v-model="orderF.customerSource" size="small" style="width:80px">
+          <el-option label="抖音" value="抖音"/><el-option label="店面" value="店面"/><el-option label="小区" value="小区"/><el-option label="推荐" value="推荐"/>
+        </el-select>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span style="font-size:12px;color:#606266">接单</span>
+        <el-date-picker v-model="orderF.orderDate" type="date" value-format="YYYY-MM-DD" size="small" @change="autoDelivery" style="width:120px"/>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span style="font-size:12px;color:#606266">交期</span>
+        <el-date-picker v-model="orderF.deliveryDate" type="date" value-format="YYYY-MM-DD" size="small" style="width:120px"/>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span style="font-size:12px;color:#606266">安装</span>
+        <el-date-picker v-model="orderF.installDate" type="date" value-format="YYYY-MM-DD" size="small" style="width:120px"/>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span style="font-size:12px;color:#606266">提货</span>
+        <el-select v-model="orderF.deliveryMethod" size="small" style="width:100px">
           <el-option label="上门安装" value="上门安装"/><el-option label="自提" value="自提"/>
         </el-select>
-      </el-form-item>
-      <el-form-item label="导购">
-        <el-select v-model="orderF.salespersonId" style="width:100%">
+      </div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span style="font-size:12px;color:#606266">导购</span>
+        <el-select v-model="orderF.salespersonId" size="small" style="width:80px">
           <el-option v-for="e in employees" :key="e.id" :label="e.name" :value="e.id"/>
         </el-select>
-      </el-form-item>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span style="font-size:12px;color:#606266">手机</span>
+        <el-input v-model="orderF.customerPhone" size="small" placeholder="手机号" style="width:100px"/>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;gap:4px;min-width:200px">
+        <span style="font-size:12px;color:#606266;flex-shrink:0">地址</span>
+        <el-input v-model="orderF.installAddress" size="small" placeholder="安装地址" style="flex:1"/>
+      </div>
     </div>
-    <!-- 产品明细 -->
-    <el-form-item label="产品明细" style="margin-top:8px">
-      <el-table :data="orderF.items" size="small">
-        <el-table-column label="产品（面料）" min-width="180">
-          <template #default="{row,$index}">
-            <el-select v-model="row.productId" style="width:100%" @change="(val)=>{const r=row;onProdSelect(r);}">
-              <el-option v-for="p in products" :key="p.id" :label="p.name+'('+p.code+')'" :value="p.id"/>
-            </el-select>
-          </template>
-        </el-table-column>
-        <el-table-column label="幅数" width="65"><el-input-number v-model="row.qty" :min="1" size="small" @change="calcTotals()"/></el-table-column>
-        <el-table-column label="单价" width="75"><template #default="{row}">{{row.price||'-'}}</template></el-table-column>
-        <el-table-column label="折扣" width="75"><el-input-number v-model="row.discount" :min="0.1" :max="1" :step="0.05" :precision="2" size="small" @change="calcTotals()"/></el-table-column>
-        <el-table-column label="金额" width="90"><template #default="{row}">{{row.amount?'¥'+row.amount.toLocaleString():'-'}}</template></el-table-column>
-        <el-table-column width="40"><template #default="{row,$index}"><el-button size="small" type="danger" @click="orderF.items.splice($index,1)">×</el-button></template></el-table-column>
-      </el-table>
-      <el-button size="small" style="margin-top:6px" @click="orderF.items.push({productId:null,qty:1,discount:1,price:null,amount:null})">+ 添加产品</el-button>
-    </el-form-item>
-    <el-divider/>
-    <!-- 金额汇总 -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:10px">
-      <el-form-item label="标价"><el-input-number v-model="orderF.quoteAmount" :min="0" :precision="2" style="width:100%" @change="calcTotals"/></el-form-item>
-      <el-form-item label="优惠"><el-input-number v-model="orderF.discountAmount" :min="0" :precision="2" style="width:100%" @change="calcTotals"/></el-form-item>
-      <el-form-item label="抹零"><el-input-number v-model="orderF.roundAmount" :min="0" :precision="2" style="width:100%" @change="calcTotals"/></el-form-item>
-      <el-form-item label="应收"><el-input v-model="orderF.amount" readonly style="width:100%"/></el-form-item>
-      <el-form-item label="已收"><el-input-number v-model="orderF.received" :min="0" :precision="2" style="width:100%"/></el-form-item>
+
+    <!-- 主料+辅料 两栏（HTML表格） -->
+    <div style="flex:1;display:flex;gap:12px;min-height:0;overflow:hidden">
+      <!-- 左：主料明细 -->
+      <div style="flex:1;background:#fff;border-radius:8px;padding:12px;display:flex;flex-direction:column;overflow:hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:13px;font-weight:bold;color:#1a3a5c">📦 主料明细</span>
+          <el-button size="small" @click="addOrderItem">+ 添加主料</el-button>
+        </div>
+        <div style="flex:1;overflow-y:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap">
+            <thead>
+              <tr style="background:#f5f7fa">
+                <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600;width:60px">位置</th>
+                <th style="padding:8px 6px;text-align:center;width:50px">类型</th>
+                <th style="padding:8px 6px;text-align:center;width:50px">款式</th>
+                <th style="padding:8px 6px;text-align:center;width:50px">项目</th>
+                <th style="padding:8px 6px;text-align:left;min-width:120px">货号/名称</th>
+                <th style="padding:8px 6px;text-align:center;width:70px">尺寸</th>
+                <th style="padding:8px 6px;text-align:center;width:50px">幅数</th>
+                <th style="padding:8px 6px;text-align:right;width:65px">单价</th>
+                <th style="padding:8px 6px;text-align:center;width:55px">折扣</th>
+                <th style="padding:8px 6px;text-align:right;width:75px">金额</th>
+                <th style="padding:8px 6px;text-align:center;width:30px"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row,idx) in orderF.items" :key="idx" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
+                <td style="padding:6px 5px;text-align:center">
+                  <select v-model="row.location" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:2px;font-size:12px">
+                    <option value="客厅">客厅</option><option value="主卧">主卧</option><option value="次卧">次卧</option><option value="书房">书房</option><option value="厨房">厨房</option><option value="卫生间">卫生间</option>
+                  </select>
+                </td>
+                <td style="padding:6px 5px;text-align:center">
+                  <select v-model="row.productType" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:2px;font-size:12px">
+                    <option value="窗帘">窗帘</option><option value="墙布">墙布</option><option value="硬包">硬包</option>
+                  </select>
+                </td>
+                <td style="padding:6px 5px;text-align:center">
+                  <select v-model="row.style" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:2px;font-size:12px">
+                    <option value="001挂钩">001挂钩</option><option value="韩褶">韩褶</option><option value="穿杆">穿杆</option>
+                  </select>
+                </td>
+                <td style="padding:6px 5px;text-align:center">
+                  <select v-model="row.itemName" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:2px;font-size:12px">
+                    <option value="窗帘">窗帘</option><option value="配纱">配纱</option><option value="帷幔">帷幔</option><option value="罗马帘">罗马帘</option>
+                  </select>
+                </td>
+                <td style="padding:6px 5px">
+                  <select v-model="row.productId" @change="(e)=>{const p=products.value.find(x=>x.id===row.productId);if(p){row.price=p.price;calcItem(row);}calcTotals();}" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:2px;font-size:12px">
+                    <option v-for="p in products" :key="p.id" :value="p.id">{{p.name}} ({{p.code}})</option>
+                  </select>
+                </td>
+                <td style="padding:6px 5px;text-align:center">
+                  <input v-model="row.size" placeholder="2.3×2.5" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:2px;font-size:12px;text-align:center"/>
+                </td>
+                <td style="padding:6px 5px;text-align:center">
+                  <input type="number" v-model.number="row.qty" min="1" @change="calcItem(row)" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:2px;font-size:12px;text-align:center"/>
+                </td>
+                <td style="padding:6px 5px;text-align:right;color:#666">{{row.price?'¥'+row.price:''}}</td>
+                <td style="padding:6px 5px;text-align:center">
+                  <input type="number" v-model.number="row.discount" min="0.1" max="1" step="0.05" @change="calcItem(row)" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:2px;font-size:12px;text-align:center"/>
+                </td>
+                <td style="padding:6px 5px;text-align:right;font-weight:bold;color:#1a3a5c">{{row.amount?'¥'+row.amount.toLocaleString():''}}</td>
+                <td style="padding:6px 5px;text-align:center">
+                  <button @click="orderF.items.splice(idx,1);calcTotals()" style="background:none;border:none;color:#f56c6c;font-size:16px;cursor:pointer;padding:0">×</button>
+                </td>
+              </tr>
+              <tr v-if="!orderF.items||orderF.items.length===0">
+                <td colspan="11" style="text-align:center;color:#ccc;padding:16px">暂无主料，点击上方"+ 添加主料"</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- 主料小计 -->
+        <div style="margin-top:6px;font-size:12px;color:#666;text-align:right">
+          主料合计：<b style="color:#1a3a5c">¥{{orderF.itemsTotal||0}}</b>
+        </div>
+      </div>
+
+      <!-- 右：辅料明细 -->
+      <div style="flex:0.7;background:#fff;border-radius:8px;padding:12px;display:flex;flex-direction:column;overflow:hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:13px;font-weight:bold;color:#1a3a5c">🔩 辅料明细</span>
+          <el-button size="small" @click="addOrderMaterial">+ 添加辅料</el-button>
+        </div>
+        <div style="flex:1;overflow-y:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap">
+            <thead>
+              <tr style="background:#f5f7fa">
+                <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600;width:55px">分类</th>
+                <th style="padding:8px 6px;text-align:left;min-width:100px">货号/名称</th>
+                <th style="padding:8px 6px;text-align:center;width:50px">型号</th>
+                <th style="padding:8px 6px;text-align:center;width:45px">数量</th>
+                <th style="padding:8px 6px;text-align:center;width:45px">单位</th>
+                <th style="padding:8px 6px;text-align:right;width:60px">单价</th>
+                <th style="padding:8px 6px;text-align:right;width:70px">金额</th>
+                <th style="padding:8px 6px;text-align:center;width:28px"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row,idx) in orderF.materials" :key="idx" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
+                <td style="padding:6px 5px;text-align:center">
+                  <select v-model="row.category" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:2px;font-size:12px">
+                    <option value="布料">布料</option><option value="轨道">轨道</option><option value="辅料">辅料</option><option value="花边">花边</option>
+                  </select>
+                </td>
+                <td style="padding:6px 5px">
+                  <select v-model="row.productId" @change="(e)=>{const p=products.value.find(x=>x.id===row.productId);if(p){row.price=p.price;calcMaterial(row);}calcTotals();}" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:2px;font-size:12px">
+                    <option v-for="p in products.filter(x=>x.type!=='面料')" :key="p.id" :value="p.id">{{p.name}} ({{p.code}})</option>
+                  </select>
+                </td>
+                <td style="padding:6px 5px;text-align:center">
+                  <input v-model="row.model" placeholder="型号" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:2px;font-size:12px;text-align:center"/>
+                </td>
+                <td style="padding:6px 5px;text-align:center">
+                  <input type="number" v-model.number="row.qty" min="0.1" @change="calcMaterial(row)" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:2px;font-size:12px;text-align:center"/>
+                </td>
+                <td style="padding:6px 5px;text-align:center">
+                  <select v-model="row.unit" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:2px;font-size:12px">
+                    <option value="米">米</option><option value="个">个</option><option value="套">套</option><option value="根">根</option>
+                  </select>
+                </td>
+                <td style="padding:6px 5px;text-align:right;color:#666">{{row.price?'¥'+row.price:''}}</td>
+                <td style="padding:6px 5px;text-align:right;font-weight:bold;color:#67c23a">{{row.amount?'¥'+row.amount.toLocaleString():''}}</td>
+                <td style="padding:6px 5px;text-align:center">
+                  <button @click="orderF.materials.splice(idx,1);calcTotals()" style="background:none;border:none;color:#f56c6c;font-size:16px;cursor:pointer;padding:0">×</button>
+                </td>
+              </tr>
+              <tr v-if="!orderF.materials||orderF.materials.length===0">
+                <td colspan="8" style="text-align:center;color:#ccc;padding:16px">暂无辅料</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- 辅料小计 -->
+        <div style="margin-top:6px;font-size:12px;color:#666;text-align:right">
+          辅料合计：<b style="color:#67c23a">¥{{orderF.materialsTotal||0}}</b>
+        </div>
+      </div>
     </div>
-  </el-form>
-  <template #footer>
-    <el-button @click="showNewOrder=false">取消</el-button>
-    <el-button type="primary" @click="saveNewOrder">保存订单</el-button>
-  </template>
+
+    <!-- 金额汇总深蓝横条 -->
+    <div style="background:#1a3a5c;border-radius:8px;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+      <div style="display:flex;gap:24px">
+        <div style="text-align:center">
+          <div style="font-size:10px;color:#8ab4d8">主料合计</div>
+          <div style="font-size:14px;font-weight:bold;color:#fff">¥{{orderF.itemsTotal||0}}</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:10px;color:#8ab4d8">辅料合计</div>
+          <div style="font-size:14px;font-weight:bold;color:#67c23a">¥{{orderF.materialsTotal||0}}</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:10px;color:#8ab4d8">标价合计</div>
+          <div style="font-size:14px;font-weight:bold;color:#fff">¥{{orderF.quoteAmount||0}}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:20px;align-items:center">
+        <div style="text-align:center;color:#ff9a9a">
+          <div style="font-size:10px;color:#8ab4d8">优惠金额</div>
+          <el-input-number v-model="orderF.discountAmount" :min="0" :precision="2" size="small" style="width:80px" @change="calcTotals"/>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:10px;color:#ffd700">抹零</div>
+          <el-input-number v-model="orderF.roundAmount" :min="0" :precision="0" size="small" style="width:70px" @change="calcTotals"/>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:11px;color:#ffd700">应收总额</div>
+          <div style="font-size:22px;font-weight:bold;color:#ffd700">¥{{orderF.amount||0}}</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:11px;color:#8ab4d8">已收定金</div>
+          <el-input-number v-model="orderF.received" :min="0" :precision="2" size="small" style="width:90px"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div style="display:flex;justify-content:flex-end;gap:10px;flex-shrink:0">
+      <el-button size="small" @click="showNewOrder=false">取消</el-button>
+      <el-button type="primary" size="small" @click="saveNewOrder">保存订单</el-button>
+    </div>
+  </div>
 </el-dialog>
 
 
@@ -1587,7 +1786,7 @@ const app=createApp({
 
     /* 新建订单 */
     const showNewOrder=ref(false);
-    const orderF=ref({customerId:null,orderType:'窗帘',orderDate:'',deliveryDate:'',deliveryMethod:'上门安装',salespersonId:'',items:[],quoteAmount:0,discountAmount:0,roundAmount:0,amount:0,received:0});
+    const orderF=ref({customerId:null,orderType:'窗帘',orderDate:'',deliveryDate:'',deliveryMethod:'上门安装',salespersonId:'',items:[],materials:[],quoteAmount:0,discountAmount:0,roundAmount:0,amount:0,received:0,itemsTotal:0,materialsTotal:0});
     const autoDelivery=()=>{
       if(!orderF.value.orderDate)return;
       const d=new Date(orderF.value.orderDate);d.setDate(d.getDate()+14);
@@ -1595,12 +1794,20 @@ const app=createApp({
     };
     const onProdSelect=(row)=>{const p=products.value.find(x=>x.id===row.productId);if(p){row.price=p.price;calcItem(row);}calcTotals();};
     const calcItem=row=>{try{if(row&&row.price&&row.qty)row.amount=Math.round(row.price*row.qty*(row.discount||1)*100)/100;calcTotals();}catch(e){console.error('calcItem error',e);}};
+    const addOrderItem=()=>{orderF.value.items.push({productType:'窗帘',location:'客厅',style:'001挂钩',itemName:'窗帘',productId:null,size:'',qty:1,discount:1,price:null,amount:null});};
+    const addOrderMaterial=()=>{orderF.value.materials.push({category:'布料',productId:null,model:'',qty:1,unit:'米',price:null,amount:null,remark:''});};
+    const onMaterialSelect=(row)=>{const p=products.value.find(x=>x.id===row.productId);if(p){row.price=p.price;calcMaterial(row);}calcTotals();};
+    const calcMaterial=row=>{try{if(row&&row.price&&row.qty)row.amount=Math.round(row.price*row.qty*100)/100;const mats=(orderF.value.materials||[]);orderF.value.materialsTotal=mats.reduce((s,r)=>s+((r&&r.amount)||0),0);calcTotals();}catch(e){console.error('calcMaterial error',e);}};
     const calcTotals=()=>{
       try{
-      const items=orderF.value.items||[];
-      const itemsTotal=items.reduce((s,r)=>s+((r&&r.amount)||0),0);
-      orderF.value.quoteAmount=itemsTotal;
-      orderF.value.amount=Math.max(0,orderF.value.quoteAmount-(orderF.value.discountAmount||0)-(orderF.value.roundAmount||0));
+        const items=(orderF.value.items||[]);
+        const mats=(orderF.value.materials||[]);
+        const itemsTotal=items.reduce((s,r)=>s+((r&&r.amount)||0),0);
+        const materialsTotal=mats.reduce((s,r)=>s+((r&&r.amount)||0),0);
+        orderF.value.itemsTotal=itemsTotal;
+        orderF.value.materialsTotal=materialsTotal;
+        orderF.value.quoteAmount=itemsTotal+materialsTotal;
+        orderF.value.amount=Math.max(0,orderF.value.quoteAmount-(orderF.value.discountAmount||0)-(orderF.value.roundAmount||0));
       }catch(e){console.error('calcTotals error',e);}
     };
     const saveNewOrder=async()=>{
@@ -1628,7 +1835,7 @@ const app=createApp({
         install_address:orderF.value.installAddress||'',
         install_date:orderF.value.installDate||'',
         install_time_slot:orderF.value.installTimeSlot||'',
-        items:orderF.value.items.map(i=>({product_id:i.productId,product:products.value.find(p=>p.id===i.productId)?.name||'',qty:i.qty,price:i.price,discount:i.discount||1,amount:i.amount||0})),
+        items:[...orderF.value.items.map(i=>({product_id:i.productId,product:products.value.find(p=>p.id===i.productId)?.name||'',qty:i.qty,price:i.price,discount:i.discount||1,amount:i.amount||0})),...orderF.value.materials.map(m=>({product_id:m.productId,product:products.value.find(p=>p.id===m.productId)?.name||''+(m.model?' '+m.model:''),qty:m.qty,price:m.price,amount:m.amount||0,is_material:true}))],
       };
       try{
         const d=await api('/api/orders','POST',payload);
@@ -1656,6 +1863,7 @@ const app=createApp({
     const getSupplierName=id=>suppliers.value.find(s=>s.id===id)?.name||'';
     const getCatName=id=>categories.value.find(c=>c.id===id)?.name||'';
 
+    const showEditOrder=ref(false);
     initAll();
     return{
       page,activeMenu,pageTitle,switchPage,handleNav,switchPage2,
@@ -1677,7 +1885,7 @@ const app=createApp({
       dlgCustomer,cuForm,editingCustomer,openCustomerDlg,saveCustomer,delCustomer,
       dlgEmployee,empForm,editingEmp,openEmpDlg,saveEmployee,
       dlgDictItem,diForm,editingDictItem,openDictItemDlg,saveDictItem,delDictItem,
-      showNewOrder,orderF,autoDelivery,onProdSelect,calcItem,calcTotals,saveNewOrder,
+      showNewOrder,showEditOrder,orderF,autoDelivery,onProdSelect,onMaterialSelect,calcItem,calcMaterial,addOrderItem,addOrderMaterial,calcTotals,saveNewOrder,
       getSupplierName,getCatName,
       currentUser,isLoggedIn,loginForm,loginLoading,doLogin,logout,showLogin,drawerVisible,
       rptYear,rptMonth,rptTab,loadReportData,reportOrders,

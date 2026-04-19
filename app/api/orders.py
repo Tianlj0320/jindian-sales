@@ -188,7 +188,7 @@ async def create_order(req: dict = Body(...)):
 
         items = req.get("items", [])
         quote_amount = sum(
-            float(i.get("price", 0)) * int(i.get("qty", 0))
+            float(i.get("unit_price", i.get("price", 0))) * int(i.get("qty", 0))
             for i in items
         )
         discount = float(req.get("discount_amount", 0))
@@ -360,7 +360,7 @@ async def update_order(
         items = req.get("items")
         if items is not None:
             o.items = items
-            quote = sum(float(i.get("price", 0)) * int(i.get("qty", 0)) for i in items)
+            quote = sum(float(i.get("unit_price", i.get("price", 0))) * int(i.get("qty", 0)) for i in items)
             o.quote_amount = quote
             o.amount = max(0, quote - float(o.discount_amount or 0) - float(o.round_amount or 0))
             o.debt = max(0, float(o.amount or 0) - float(o.received or 0))
