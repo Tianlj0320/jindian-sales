@@ -574,7 +574,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
             <div style="font-size:12px;color:#888;margin-bottom:8px;padding-left:2px">
               {{filteredOrders.length}} 条订单
             </div>
-            <div v-for="o in filteredOrders" :key="o.id" :class="'order-list-item'+(selOrder&&selOrder.id===o.id?' active':'')" @click="selOrder={...o,items:(o.items||[]).map(i=>({...i,product_name:i.product_name||i.product||'',unit_price:i.unit_price||i.price||0,item_type:i.is_material?'material':(i.item_type||'product'),room:i.room||'',width:i.width||'',height:i.height||''}))}">
+            <div v-for="o in filteredOrders" :key="o.id" :class="'order-list-item'+(selOrder&&selOrder.id===o.id?' active':'')" @click="selOrder={...o,statusKey:o.status_key||'created',items:(o.items||[]).map(i=>({...i,product_name:i.product_name||i.product||'',unit_price:i.unit_price||i.price||0,item_type:i.is_material?'material':(i.item_type||'product'),room:i.room||'',width:i.width||'',height:i.height||''}))}">
               <div class="order-list-item-name">{{o.orderNo}}</div>
               <div class="order-list-item-meta">{{o.customerName}} · {{o.orderType}}</div>
               <div class="order-list-item-meta">
@@ -587,10 +587,10 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
             <div style="display:flex;justify-content:space-between;margin-bottom:14px">
               <div>
                 <b style="font-size:16px;color:#1a3a5c">{{selOrder.orderNo}}</b>
-                <span :class="'status-dot s-'+selOrder.statusColor+' '" style="margin-left:8px"></span>
-                <span style="font-size:13px">{{selOrder.status}}</span>
+                <span :class="'status-dot s-'+(selOrder.statusKey||'created')+' '" style="margin-left:8px"></span>
+                <span style="font-size:13px">{{STATUS_MAP[selOrder.statusKey]||selOrder.status||'待确认'}}</span>
               </div>
-              <el-select v-model="selOrder.statusColor" size="small" style="width:120px" @change="updateOrderStatus">
+              <el-select v-model="selOrder.statusKey" size="small" style="width:120px" @change="updateOrderStatusByKey">
                 <el-option v-for="s in orderStatusAll" :key="s.k" :label="s.l" :value="s.k"/>
               </el-select>
             </div>
@@ -1568,15 +1568,15 @@ const app=createApp({
       filteredOrders.value=list;
     };
 
-    const updateOrderStatus=async()=>{
+    const updateOrderStatusByKey=async()=>{
       if(!selOrder.value)return;
-      const newKey=selOrder.value.statusColor;
+      const newKey=selOrder.value.statusKey;
       const st=orderStatusAll.value.find(x=>x.k===newKey);
       if(!st)return;
       const newLabel=st.v;
       // update local
       const old=orders.value.find(o=>o.id===selOrder.value.id);
-      if(old){old.status=newLabel;old.statusColor=newKey;if(!old.history)old.history=[];old.history.push({s:old.status,s2:newLabel,c:newKey,time:new Date().toLocaleString()});Object.assign(selOrder.value,old);}
+      if(old){old.status=newLabel;old.statusKey=newKey;old.statusColor=newKey;if(!old.history)old.history=[];old.history.push({s:old.status,s2:newLabel,c:newKey,time:new Date().toLocaleString()});Object.assign(selOrder.value,old);}
       // sync to API
       try{await api(`/api/orders/${selOrder.value.id}/status`,'PUT',{new_status_key:newKey});}catch(e){console.error(e);}
     };
