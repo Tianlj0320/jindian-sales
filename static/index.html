@@ -574,7 +574,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
             <div style="font-size:12px;color:#888;margin-bottom:8px;padding-left:2px">
               {{filteredOrders.length}} 条订单
             </div>
-            <div v-for="o in filteredOrders" :key="o.id" :class="'order-list-item'+(selOrder&&selOrder.id===o.id?' active':'')" @click="selOrder=o">
+            <div v-for="o in filteredOrders" :key="o.id" :class="'order-list-item'+(selOrder&&selOrder.id===o.id?' active':'')" @click="selOrder={...o,items:(o.items||[]).map(i=>({...i,product_name:i.product_name||i.product||'',unit_price:i.unit_price||i.price||0,item_type:i.is_material?'material':(i.item_type||'product'),room:i.room||'',width:i.width||'',height:i.height||''}))}">
               <div class="order-list-item-name">{{o.orderNo}}</div>
               <div class="order-list-item-meta">{{o.customerName}} · {{o.orderType}}</div>
               <div class="order-list-item-meta">
@@ -602,17 +602,6 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <div><div style="font-size:11px;color:#999">交期</div><div style="font-size:13px;color:#e6a23c;font-weight:bold">{{selOrder.deliveryDate}}</div></div>
               <div><div style="font-size:11px;color:#999">提货方式</div><div style="font-size:13px">{{selOrder.deliveryMethod||'-'}}</div></div>
             </div>
-            <!-- 金额 -->
-            <div style="background:#f8f9fc;border-radius:8px;padding:12px;margin-bottom:14px">
-              <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;text-align:center">
-                <div><div style="font-size:10px;color:#999">标价</div><div style="font-size:14px;color:#666">¥{{selOrder.quoteAmount.toLocaleString()}}</div></div>
-                <div><div style="font-size:10px;color:#999">优惠</div><div style="font-size:14px;color:#f56c6c">-¥{{selOrder.discountAmount.toLocaleString()}}</div></div>
-                <div><div style="font-size:10px;color:#999">抹零</div><div style="font-size:14px;color:#999">-¥{{selOrder.roundAmount||0}}</div></div>
-                <div><div style="font-size:10px;color:#999">应收</div><div style="font-size:16px;font-weight:bold;color:#1a3a5c">¥{{selOrder.amount.toLocaleString()}}</div></div>
-                <div><div style="font-size:10px;color:#999">已收</div><div style="font-size:14px;color:#67c23a">¥{{selOrder.received.toLocaleString()}}</div></div>
-                <div><div style="font-size:10px;color:#999">欠款</div><div style="font-size:14px;font-weight:bold" :style="selOrder.debt>0?'color:#f56c6c':'color:#67c23a'">¥{{selOrder.debt.toLocaleString()}}</div></div>
-              </div>
-            </div>
             <!-- 底部金额深蓝横条 -->
             <div style="background:#1a3a5c;border-radius:8px;padding:14px;margin-bottom:14px;display:flex;justify-content:space-around;text-align:center">
               <div><div style="font-size:10px;color:#8ab4d8">应收总额</div><div style="font-size:18px;font-weight:bold;color:#fff">¥{{selOrder.amount.toLocaleString()}}</div></div>
@@ -623,49 +612,66 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <div style="border-left:1px solid #2a4a6c"></div>
               <div><div style="font-size:10px;color:#8ab4d8">欠款</div><div style="font-size:16px;font-weight:bold" :style="selOrder.debt>0?'color:#f56c6c':'color:#67c23a'">¥{{selOrder.debt.toLocaleString()}}</div></div>
             </div>
-            <!-- 主料明细 -->
-            <div style="margin-bottom:14px">
-              <div style="font-size:13px;font-weight:bold;color:#1a3a5c;margin-bottom:8px">📦 主料明细</div>
-              <el-table :data="(selOrder.items||[]).filter(i=>i.item_type!=='accessory'&&i.item_type!=='material')" size="small" stripe>
-                <el-table-column label="位置" width="70" align="center">
-                  <template #default="{row}">{{row.room||'-'}}</template>
-                </el-table-column>
-                <el-table-column label="产品名称" min-width="160">
-                  <template #default="{row}">{{row.product_name||'-'}}</template>
-                </el-table-column>
-                <el-table-column label="尺寸" width="90" align="center">
-                  <template #default="{row}">{{row.width||''}}×{{row.height||''}}</template>
-                </el-table-column>
-                <el-table-column prop="qty" label="幅数" width="55" align="center"/>
-                <el-table-column label="单价" width="80" align="right">
-                  <template #default="{row}">¥{{(row.unit_price||0).toLocaleString()}}</template>
-                </el-table-column>
-                <el-table-column label="折扣" width="70" align="center">
-                  <template #default="{row}">{{row.discount?((row.discount)*10).toFixed(1)+'折':'-'}}</template>
-                </el-table-column>
-                <el-table-column label="金额" width="100" align="right">
-                  <template #default="{row}"><b style="color:#1a3a5c">¥{{((row.amount)||((row.unit_price||0)*(row.qty||0))).toLocaleString()}}</b></template>
-                </el-table-column>
-              </el-table>
-            </div>
-            <!-- 辅料明细 -->
-            <div>
-              <div style="font-size:13px;font-weight:bold;color:#1a3a5c;margin-bottom:8px">🔩 辅料明细</div>
-              <el-table :data="(selOrder.items||[]).filter(i=>i.item_type==='accessory'||i.item_type==='material')" size="small" stripe>
-                <el-table-column label="分类" width="70" align="center">
-                  <template #default="{row}">{{row.item_type==='accessory'?'配件':row.item_type==='material'?'辅料':'-'}}</template>
-                </el-table-column>
-                <el-table-column label="产品名称" min-width="160">
-                  <template #default="{row}">{{row.product_name||'-'}}</template>
-                </el-table-column>
-                <el-table-column prop="qty" label="数量" width="55" align="center"/>
-                <el-table-column label="单价" width="80" align="right">
-                  <template #default="{row}">¥{{(row.unit_price||0).toLocaleString()}}</template>
-                </el-table-column>
-                <el-table-column label="金额" width="90" align="right">
-                  <template #default="{row}"><b style="color:#67c23a">¥{{((row.amount)||((row.unit_price||0)*(row.qty||0))).toLocaleString()}}</b></template>
-                </el-table-column>
-              </el-table>
+            <!-- 主料+辅料 两栏布局 -->
+            <div style="display:flex;gap:12px;margin-bottom:14px">
+              <!-- 主料明细 -->
+              <div style="flex:1;background:#fff;border-radius:8px;padding:12px;border:1px solid #e8e8e8">
+                <div style="font-size:13px;font-weight:bold;color:#1a3a5c;margin-bottom:8px">📦 主料明细</div>
+                <div style="overflow-x:auto">
+                  <table style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap">
+                    <thead><tr style="background:#f5f7fa">
+                      <th style="padding:7px 5px;text-align:center;color:#1a3a5c;font-weight:600">位置</th>
+                      <th style="padding:7px 5px;text-align:left;color:#1a3a5c;font-weight:600">产品名称</th>
+                      <th style="padding:7px 5px;text-align:center;color:#1a3a5c;font-weight:600">尺寸</th>
+                      <th style="padding:7px 5px;text-align:center;color:#1a3a5c;font-weight:600">幅数</th>
+                      <th style="padding:7px 5px;text-align:right;color:#1a3a5c;font-weight:600">单价</th>
+                      <th style="padding:7px 5px;text-align:center;color:#1a3a5c;font-weight:600">折扣</th>
+                      <th style="padding:7px 5px;text-align:right;color:#1a3a5c;font-weight:600">金额</th>
+                    </tr></thead>
+                    <tbody>
+                      <tr v-for="row in (selOrder.items||[]).filter(i=>i.item_type!=='accessory'&&i.item_type!=='material')" :key="row.id" style="border-bottom:1px solid #f0f0f0">
+                        <td style="padding:6px 5px;text-align:center;color:#666">{{row.room||'-'}}</td>
+                        <td style="padding:6px 5px;text-align:left;color:#333">{{row.product_name||'-'}}</td>
+                        <td style="padding:6px 5px;text-align:center;color:#666">{{row.width||''}}×{{row.height||''}}</td>
+                        <td style="padding:6px 5px;text-align:center;color:#666">{{row.qty||0}}</td>
+                        <td style="padding:6px 5px;text-align:right;color:#666">¥{{(row.unit_price||0).toLocaleString()}}</td>
+                        <td style="padding:6px 5px;text-align:center;color:#666">{{row.discount?((row.discount)*10).toFixed(1)+'折':'-'}}</td>
+                        <td style="padding:6px 5px;text-align:right;font-weight:bold;color:#1a3a5c">¥{{((row.amount)||((row.unit_price||0)*(row.qty||0))).toLocaleString()}}</td>
+                      </tr>
+                      <tr v-if="(selOrder.items||[]).filter(i=>i.item_type!=='accessory'&&i.item_type!=='material').length===0">
+                        <td colspan="7" style="text-align:center;color:#ccc;padding:16px">暂无主料</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <!-- 辅料明细 -->
+              <div style="flex:0.7;background:#fff;border-radius:8px;padding:12px;border:1px solid #e8e8e8">
+                <div style="font-size:13px;font-weight:bold;color:#1a3a5c;margin-bottom:8px">🔩 辅料明细</div>
+                <div style="overflow-x:auto">
+                  <table style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap">
+                    <thead><tr style="background:#f5f7fa">
+                      <th style="padding:7px 5px;text-align:center;color:#1a3a5c;font-weight:600">分类</th>
+                      <th style="padding:7px 5px;text-align:left;color:#1a3a5c;font-weight:600">产品名称</th>
+                      <th style="padding:7px 5px;text-align:center;color:#1a3a5c;font-weight:600">数量</th>
+                      <th style="padding:7px 5px;text-align:right;color:#1a3a5c;font-weight:600">单价</th>
+                      <th style="padding:7px 5px;text-align:right;color:#1a3a5c;font-weight:600">金额</th>
+                    </tr></thead>
+                    <tbody>
+                      <tr v-for="row in (selOrder.items||[]).filter(i=>i.item_type==='accessory'||i.item_type==='material')" :key="row.id" style="border-bottom:1px solid #f0f0f0">
+                        <td style="padding:6px 5px;text-align:center;color:#666">{{row.item_type==='accessory'?'配件':row.item_type==='material'?'辅料':'-'}}</td>
+                        <td style="padding:6px 5px;text-align:left;color:#333">{{row.product_name||'-'}}</td>
+                        <td style="padding:6px 5px;text-align:center;color:#666">{{row.qty||0}}</td>
+                        <td style="padding:6px 5px;text-align:right;color:#666">¥{{(row.unit_price||0).toLocaleString()}}</td>
+                        <td style="padding:6px 5px;text-align:right;font-weight:bold;color:#67c23a">¥{{((row.amount)||((row.unit_price||0)*(row.qty||0))).toLocaleString()}}</td>
+                      </tr>
+                      <tr v-if="(selOrder.items||[]).filter(i=>i.item_type==='accessory'||i.item_type==='material').length===0">
+                        <td colspan="5" style="text-align:center;color:#ccc;padding:16px">暂无辅料</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
             <!-- 状态历史 -->
             <div style="margin-top:14px">
@@ -1817,7 +1823,7 @@ const app=createApp({
         install_address:orderF.value.installAddress||'',
         install_date:orderF.value.installDate||'',
         install_time_slot:orderF.value.installTimeSlot||'',
-        items:[...orderF.value.items.map(i=>({product_id:i.productId,product:products.value.find(p=>p.id===i.productId)?.name||'',qty:i.qty,price:i.price,discount:i.discount||1,amount:i.amount||0})),...orderF.value.materials.map(m=>({product_id:m.productId,product:products.value.find(p=>p.id===m.productId)?.name||''+(m.model?' '+m.model:''),qty:m.qty,price:m.price,amount:m.amount||0,is_material:true}))],
+        items:[...orderF.value.items.map(i=>({product_id:i.productId,product_name:products.value.find(p=>p.id===i.productId)?.name||'',unit_price:i.price||0,qty:i.qty||1,discount:i.discount||1,amount:i.amount||0,item_type:'product',room:i.location||'',width:i.width||'',height:i.height||''})),...orderF.value.materials.map(m=>({product_id:m.productId,product_name:products.value.find(p=>p.id===m.productId)?.name||''+(m.model?' '+m.model:''),unit_price:m.price||0,qty:m.qty||1,amount:m.amount||0,item_type:'material',category:m.category||''}))],
       };
       try{
         const d=await api('/api/orders','POST',payload);
