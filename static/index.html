@@ -1385,6 +1385,8 @@ const app=createApp({
       }));
     };
 
+    const STATUS_MAP={created:'待确认',confirmed:'已核单',measured:'已测量',stocked:'已备货',processing:'加工中',install:'待安装',installed:'已安装',completed:'已完成',cancelled:'已取消'};
+
     const initAll=async()=>{
       try{isLoading.value=true;
         const [dash,sups,cats,prods,custs,emps,fin,ordData]=await Promise.all([
@@ -1432,8 +1434,6 @@ const app=createApp({
           {k:'processing',v:'加工中',c:'#f56c6c'},{k:'install',v:'待安装',c:'#9c27b0'},
           {k:'installed',v:'已安装',c:'#1a3a5c'},{k:'completed',v:'已完成',c:'#222'},
         ];
-        // orders
-        const STATUS_MAP={created:'待确认',confirmed:'已核单',measured:'已测量',stocked:'已备货',processing:'加工中',install:'待安装',installed:'已安装',completed:'已完成',cancelled:'已取消'};
         orders.value=(ordData.items||[]).map(o=>({
           id:o.id,orderNo:o.order_no,customerId:o.customer_id,customerName:o.customer_name||'',orderType:o.order_type||'窗帘',
           content:o.content||'',amount:o.amount||0,quoteAmount:o.quote_amount||0,discountAmount:o.discount_amount||0,roundAmount:o.round_amount||0,
@@ -1827,7 +1827,6 @@ const app=createApp({
       };
       try{
         const d=await api('/api/orders','POST',payload);
-        const STATUS_MAP={created:'待确认',confirmed:'已核单',measured:'已测量',stocked:'已备货',processing:'加工中',install:'待安装',installed:'已安装',completed:'已完成',cancelled:'已取消'};
         const newOrder={
           id:d.id,orderNo:d.order_no,customerId:payload.customer_id,customerName:payload.customer_name,
           orderType:payload.order_type,content:payload.content,amount:payload.amount,
