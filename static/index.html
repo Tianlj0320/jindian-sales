@@ -1354,7 +1354,7 @@ const app=createApp({
         if(res.token){
           AUTH_TOKEN=res.token;
           authToken.value=res.token;
-          LS('authToken',res.token);
+          SLS('authToken',res.token);
           const u={id:res.user_id,name:res.name||'员工',role:res.role||'staff'};
           currentUser.value=u;LS('currentUser',JSON.stringify(u));
           showLogin.value=false;isLoggedIn.value=true;ElMessage.success('登录成功');
