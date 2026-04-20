@@ -1357,7 +1357,7 @@ const app=createApp({
           localStorage.setItem('authToken',res.token);
           const u={id:res.user_id,name:res.name||'员工',role:res.role||'staff'};
           currentUser.value=u;localStorage.setItem('currentUser',JSON.stringify(u));
-          showLogin.value=false;isLoggedIn.value=true;ElMessage.success('登录成功');
+          showLogin.value=false;isLoggedIn.value=true;initAll();ElMessage.success('登录成功');
         }else{ElMessage.error(res.message||'登录失败');}
       }catch(e){ElMessage.error(typeof e==='string'?e:(e.message||'登录失败'));}
       finally{loginLoading.value=false;}
