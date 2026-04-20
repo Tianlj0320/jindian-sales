@@ -1310,7 +1310,7 @@ const AUTH_TOKEN_KEY='authToken';
 let AUTH_TOKEN=localStorage.getItem(AUTH_TOKEN_KEY)||'';
 const api=async(u,m='GET',b=null)=>{
   const headers={'Content-Type':'application/json'};
-  const _tok=localStorage.getItem('authToken');
+  const _tok=(localStorage.getItem('authToken')||'').replace(/^"|"$/g,'');
   if(_tok)headers['Authorization']='Bearer '+_tok;
   const r=await fetch(API+u,{method:m,headers,body:b?JSON.stringify(b):null});
   if(!r.ok)throw new Error(u+r.status);
