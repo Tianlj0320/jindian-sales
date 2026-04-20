@@ -574,7 +574,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
             <div style="font-size:12px;color:#888;margin-bottom:8px;padding-left:2px">
               {{filteredOrders.length}} 条订单
             </div>
-            <div v-for="o in filteredOrders" :key="o.id" :class="'order-list-item'+(selOrder&&selOrder.id===o.id?' active':'')" @click="selOrder={id:o.id,orderNo:o.orderNo,customerName:o.customerName,orderType:o.orderType,salesperson:o.salesperson,orderDate:o.orderDate,deliveryDate:o.deliveryDate,deliveryMethod:o.deliveryMethod,amount:o.amount,received:o.received,debt:o.debt,status:o.status,statusKey:o.status_key||o.statusKey||'created',statusColor:o.statusColor||o.status_key||'created',history:o.history||[],items:(o.items||[]).map(i=>({product_name:i.product_name||i.product||'',unit_price:i.unit_price||i.price||0,item_type:i.is_material?'material':(i.item_type||'product'),room:i.room||'',width:i.width||'',height:i.height||'',qty:i.qty||0,discount:i.discount||1,amount:i.amount||0}))}">
+            <div v-for="o in filteredOrders" :key="o.id" :class="'order-list-item'+(selOrder&&selOrder.id===o.id?' active':'')" @click="selectOrder(o)">
               <div class="order-list-item-name">{{o.orderNo}}</div>
               <div class="order-list-item-meta">{{o.customerName}} · {{o.orderType}}</div>
               <div class="order-list-item-meta">
@@ -1557,6 +1557,7 @@ const app=createApp({
     /* 订单 */
     const orders=ref([]);
     const selOrder=ref({});
+    const selectOrder=(o)=>{Object.assign(selOrder.value,{id:o.id,orderNo:o.orderNo,customerName:o.customerName,orderType:o.orderType,salesperson:o.salesperson,orderDate:o.orderDate,deliveryDate:o.deliveryDate,deliveryMethod:o.deliveryMethod,amount:o.amount,received:o.received,debt:o.debt,roundAmount:o.roundAmount,status:o.status,statusKey:o.status_key||o.statusKey||'created',statusColor:o.statusColor||o.status_key||'created',history:o.history||[],items:(o.items||[]).map(i=>({product_name:i.product_name||i.product||'',unit_price:i.unit_price||i.price||0,item_type:i.is_material?'material':(i.item_type||'product'),room:i.room||'',width:i.width||'',height:i.height||'',qty:i.qty||0,discount:i.discount||1,amount:i.amount||0}))});};
     const orderSearch=ref('');
     const orderStatusF=ref('');
     const orderTypeF=ref('');
@@ -1860,7 +1861,7 @@ const app=createApp({
       customers,filteredCustomers,customerSearch,customerTypeF,
       employees,filteredEmployees,empSearch,empPositionF,
       dictCats,dictCat,dictCatLabel,dictItems,dictMap,orderStatusAll,
-      orders,filteredOrders,selOrder,orderSearch,orderStatusF,orderTypeF,filterOrders,
+      orders,filteredOrders,selOrder,orderSearch,orderStatusF,orderTypeF,filterOrders,selectOrder,
       purchases,
       warehouses,
       productionSteps,prodStep,productionOrders,prodStepNext,
