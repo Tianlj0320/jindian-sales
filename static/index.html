@@ -583,7 +583,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               </div>
             </div>
           </div>
-          <div v-if="selOrder" class="order-right">
+          <div v-if="selOrder?.id" class="order-right">
             <div style="display:flex;justify-content:space-between;margin-bottom:14px">
               <div>
                 <b style="font-size:16px;color:#1a3a5c">{{selOrder.orderNo}}</b>
@@ -1556,7 +1556,7 @@ const app=createApp({
 
     /* 订单 */
     const orders=ref([]);
-    const selOrder=ref(null);
+    const selOrder=ref({});
     const orderSearch=ref('');
     const orderStatusF=ref('');
     const orderTypeF=ref('');
