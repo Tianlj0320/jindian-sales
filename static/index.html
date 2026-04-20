@@ -267,7 +267,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
             </el-table-column>
             <el-table-column prop="status" label="状态" width="105">
               <template #default="{row}">
-                <span :class="'status-dot s-'+row.statusColor"></span>{{row.status}}
+                <span :class="'status-dot s-'+(row.statusColor||'pending')"></span>{{row.status}}
               </template>
             </el-table-column>
             <el-table-column prop="date" label="日期" width="105"/>
@@ -578,8 +578,8 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <div class="order-list-item-name">{{o.orderNo}}</div>
               <div class="order-list-item-meta">{{o.customerName}} · {{o.orderType}}</div>
               <div class="order-list-item-meta">
-                <span :class="'status-dot s-'+o.statusColor"></span>{{o.status}} ·
-                <span style="color:#1a3a5c;font-weight:500">¥{{o.amount.toLocaleString()}}</span>
+                <span :class="'status-dot s-'+(o.statusColor||'pending')"></span>{{o.status}} ·
+                <span style="color:#1a3a5c;font-weight:500">¥{{(o.amount||0).toLocaleString()}}</span>
               </div>
             </div>
           </div>
@@ -604,13 +604,13 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
             </div>
             <!-- 底部金额深蓝横条 -->
             <div style="background:#1a3a5c;border-radius:8px;padding:14px;margin-bottom:14px;display:flex;justify-content:space-around;text-align:center">
-              <div><div style="font-size:10px;color:#8ab4d8">应收总额</div><div style="font-size:18px;font-weight:bold;color:#fff">¥{{selOrder.amount.toLocaleString()}}</div></div>
+              <div><div style="font-size:10px;color:#8ab4d8">应收总额</div><div style="font-size:18px;font-weight:bold;color:#fff">¥{{(selOrder.amount||0).toLocaleString()}}</div></div>
               <div style="border-left:1px solid #2a4a6c"></div>
-              <div><div style="font-size:10px;color:#8ab4d8">已收</div><div style="font-size:16px;color:#67c23a;font-weight:bold">¥{{selOrder.received.toLocaleString()}}</div></div>
+              <div><div style="font-size:10px;color:#8ab4d8">已收</div><div style="font-size:16px;color:#67c23a;font-weight:bold">¥{{(selOrder.received||0).toLocaleString()}}</div></div>
               <div style="border-left:1px solid #2a4a6c"></div>
               <div><div style="font-size:10px;color:#8ab4d8">抹零</div><div style="font-size:16px;color:#ccc">¥{{selOrder.roundAmount||0}}</div></div>
               <div style="border-left:1px solid #2a4a6c"></div>
-              <div><div style="font-size:10px;color:#8ab4d8">欠款</div><div style="font-size:16px;font-weight:bold" :style="selOrder.debt>0?'color:#f56c6c':'color:#67c23a'">¥{{selOrder.debt.toLocaleString()}}</div></div>
+              <div><div style="font-size:10px;color:#8ab4d8">欠款</div><div style="font-size:16px;font-weight:bold" :style="(selOrder.debt||0)>0?'color:#f56c6c':'color:#67c23a'">¥{{(selOrder.debt||0).toLocaleString()}}</div></div>
             </div>
             <!-- 主料+辅料 两栏布局 -->
             <div style="display:flex;gap:12px;margin-bottom:14px">
@@ -891,7 +891,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
                 </el-table-column>
                 <el-table-column prop="status" label="状态" width="90">
                   <template #default="{row}">
-                    <span :class="'status-dot s-'+row.statusColor.replace('#','')"></span>{{row.status}}
+                    <span :class="'status-dot s-'+(row.statusColor||'pending').replace('#','')"></span>{{row.status}}
                   </template>
                 </el-table-column>
                 <el-table-column prop="orderDate" label="日期" width="100"/>
@@ -1310,7 +1310,8 @@ const AUTH_TOKEN_KEY='authToken';
 let AUTH_TOKEN=localStorage.getItem(AUTH_TOKEN_KEY)||'';
 const api=async(u,m='GET',b=null)=>{
   const headers={'Content-Type':'application/json'};
-  if(AUTH_TOKEN)headers['Authorization']='Bearer '+AUTH_TOKEN;
+  const _tok=localStorage.getItem('authToken');
+  if(_tok)headers['Authorization']='Bearer '+_tok;
   const r=await fetch(API+u,{method:m,headers,body:b?JSON.stringify(b):null});
   if(!r.ok)throw new Error(u+r.status);
   const d=await r.json();
