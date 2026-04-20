@@ -588,7 +588,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <div>
                 <b style="font-size:16px;color:#1a3a5c">{{selOrder.orderNo}}</b>
                 <span :class="'status-dot s-'+(selOrder.statusKey||'created')+' '" style="margin-left:8px"></span>
-                <span style="font-size:13px">{{STATUS_MAP[selOrder?.statusKey]||selOrder?.status||'待确认'}}</span>
+                <span style="font-size:13px">{{selOrder?.statusKey==='confirmed'?'已核单':selOrder?.statusKey==='measured'?'已测量':selOrder?.statusKey==='stocked'?'已备货':selOrder?.statusKey==='processing'?'加工中':selOrder?.statusKey==='install'?'待安装':selOrder?.statusKey==='installed'?'已安装':selOrder?.statusKey==='completed'?'已完成':selOrder?.statusKey==='cancelled'?'已取消':selOrder?.status||'待确认'}}</span>
               </div>
               <el-select v-model="selOrder.statusKey" size="small" style="width:120px" @change="updateOrderStatusByKey">
                 <el-option v-for="s in orderStatusAll" :key="s.k" :label="s.l" :value="s.k"/>
