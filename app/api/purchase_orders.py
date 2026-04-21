@@ -164,7 +164,11 @@ async def split_order(
         if not order_status:
             raise HTTPException(status_code=404, detail="订单不存在")
 
-        # 已拆分的不能再拆
+        # Bug #9: 订单未确认（created）时不能拆分，必须先"已确认"
+        if order_status != "已确认":
+            raise HTTPException(status_code=400, detail=f"订单状态为「{order_status}」，请先确认订单后再拆分")
+
+        # Bug #10: 已拆分的不能再拆
         if "已拆分" in order_status or "采购中" in order_status:
             raise HTTPException(status_code=400, detail=f"订单状态为「{order_status}」，不可重复拆分")
 
