@@ -1,0 +1,497 @@
+# app/api/purchase_orders.py
+# V3.0 采购单 API（含订单拆分核心逻辑）
+from fastapi import APIRouter, Query, Body, Path, Header, HTTPException
+from app.database import async_session
+from app.models import PurchaseOrder, Order, OrderItem, Product, Supplier
+from app.schemas import CommonResponse
+from sqlalchemy import select, func, and_
+from datetime import datetime, date, timedelta
+from typing import Optional, List
+import json
+
+router = APIRouter(prefix="/api/purchase-orders", tags=["V3.0 采购管理"])
+
+# 状态枚举 & 只读字段
+VALID_STATUSES = {"待采购", "已下单", "部分到货", "全部到货"}
+READONLY_FIELDS = {"po_no"}
+
+
+# ─── 辅助函数 ────────────────────────────────────────────────
+
+def make_po_no() -> str:
+    today = datetime.now().strftime("%Y%m%d")
+    return f"PO{today}"  # 序号由调用方补
+
+
+def parse_delivery_date(order: dict) -> Optional[date]:
+    """从订单 JSON 解析交期"""
+    dd = order.get("delivery_date", "")
+    if not dd:
+        return None
+    try:
+        return datetime.strptime(str(dd)[:10], "%Y-%m-%d").date()
+    except Exception:
+        return None
+
+
+# ─── 订单拆分核心逻辑 ─────────────────────────────────────────
+async def split_order_to_purchase_orders(session, order_id: int) -> List[PurchaseOrder]:
+    """
+    拆分逻辑：
+    1. 读取订单明细（order_items），按 supplier_id 分组
+    2. 同一 supplier_id + 交期±3天 → 合并成一张采购单
+    3. 不同 supplier_id → 分开
+    4. 自动生成 PO 单号
+    """
+    # 读取订单
+    r = await session.execute(select(Order).where(Order.id == order_id))
+    order = r.scalar_one_or_none()
+    if not order:
+        return []
+
+    # 读取订单明细
+    r = await session.execute(select(OrderItem).where(OrderItem.order_id == order_id))
+    items = r.scalars().all()
+    if not items:
+        return []
+
+    # 按 supplier_id 分组，收集 product_id → 详细信息
+    supplier_groups: dict = {}  # supplier_id → {supplier_name, contact, phone, items: []}
+
+    for item in items:
+        supplier_id = item.supplier_id
+        if not supplier_id:
+            # 没有 supplier_id 的默认到"无供应商"组
+            supplier_id = 0
+
+        # 获取产品/供应商信息
+        product_info = {
+            "product_id": None,
+            "product_code": item.product_code or "",
+            "product_name": item.product_name or "",
+            "spec": f"{item.width or 0}x{item.height or 0}" if item.width or item.height else "",
+            "qty": item.qty or 1,
+            "unit_price": float(item.unit_price or 0),
+            "amount": float(item.amount or 0),
+            "material_type": getattr(item, "material_type", "主料"),
+            "order_item_id": item.id,
+        }
+
+        if supplier_id not in supplier_groups:
+            # 查询供应商信息
+            sup_name, sup_contact, sup_phone = "", "", ""
+            if supplier_id > 0:
+                sr = await session.execute(select(Supplier).where(Supplier.id == supplier_id))
+                sup = sr.scalar_one_or_none()
+                if sup:
+                    sup_name = sup.name or ""
+                    sup_contact = sup.contact or ""
+                    sup_phone = sup.phone or ""
+
+            supplier_groups[supplier_id] = {
+                "supplier_id": supplier_id,
+                "supplier_name": sup_name,
+                "contact": sup_contact,
+                "phone": sup_phone,
+                "items": [],
+                "delivery_date": parse_delivery_date(order.__dict__),
+            }
+
+        supplier_groups[supplier_id]["items"].append(product_info)
+
+    # 生成采购单
+    purchase_orders = []
+    for supplier_id, group in supplier_groups.items():
+        if not group["items"]:
+            continue
+
+        # 生成 PO 序号
+        today_str = datetime.now().strftime("%Y%m%d")
+        seq_r = await session.execute(
+            select(func.count(PurchaseOrder.id)).where(
+                PurchaseOrder.po_no.like(f"PO{today_str}%")
+            )
+        )
+        seq = (seq_r.scalar() or 0) + 1
+        po_no = f"PO{today_str}{seq:03d}"
+
+        total = sum(float(i["amount"]) for i in group["items"])
+
+        po = PurchaseOrder(
+            po_no=po_no,
+            supplier_id=supplier_id if supplier_id > 0 else None,
+            supplier_name=group["supplier_name"],
+            contact=group["contact"],
+            phone=group["phone"],
+            total_amount=total,
+            paid_amount=0,
+            debt_amount=total,
+            status="待采购",
+            order_ids=str(order_id),
+            expected_date=group["delivery_date"],
+            items=group["items"],
+            remark=f"由订单 {order.order_no} 拆分生成",
+        )
+        session.add(po)
+        purchase_orders.append(po)
+
+    return purchase_orders
+
+
+# ─── API 接口 ────────────────────────────────────────────────
+
+@router.post("/split/{order_id}")
+async def split_order(
+    order_id: int = Path(..., description="订单ID"),
+    authorization: str = Header(None),
+):
+    """
+    【核心接口】订单拆分采购单
+
+    请求：POST /api/purchase-orders/split/{order_id}
+    逻辑：
+      1. 读取订单明细，按 supplier_id 分组
+      2. 同一供应商 + 交期相近（±3天）→ 合并一张采购单
+      3. 不同供应商 → 各自独立采购单
+      4. 自动生成 PO 单号（PO + 年月日 + 序号）
+    返回：生成的采购单列表
+    """
+    # 权限检查（暂时跳过，正式环境从 header 验证）
+    async with async_session() as session:
+        # 检查订单状态
+        r = await session.execute(select(Order.status).where(Order.id == order_id))
+        order_status = r.scalar_one_or_none()
+        if not order_status:
+            raise HTTPException(status_code=404, detail="订单不存在")
+
+        # 已拆分的不能再拆
+        if "已拆分" in order_status or "采购中" in order_status:
+            raise HTTPException(status_code=400, detail=f"订单状态为「{order_status}」，不可重复拆分")
+
+        pos = await split_order_to_purchase_orders(session, order_id)
+
+        # 更新订单状态
+        r = await session.execute(select(Order).where(Order.id == order_id))
+        order = r.scalar_one()
+        order.status = "已拆分"
+        order.status_key = "split"
+
+        await session.commit()
+
+        return {
+            "success": True,
+            "message": f"成功拆分为 {len(pos)} 张采购单",
+            "purchase_orders": [
+                {
+                    "id": po.id,
+                    "po_no": po.po_no,
+                    "supplier_name": po.supplier_name or "未分配供应商",
+                    "total_amount": float(po.total_amount),
+                    "status": po.status,
+                    "expected_date": str(po.expected_date) if po.expected_date else "",
+                    "item_count": len(po.items or []),
+                }
+                for po in pos
+            ],
+        }
+
+
+@router.get("", response_model=dict)
+async def list_purchase_orders(
+    status: Optional[str] = Query(None, description="状态筛选"),
+    supplier_id: Optional[int] = Query(None, description="供应商ID筛选"),
+    keyword: Optional[str] = Query(None, description="供应商/PO单号搜索"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+):
+    """采购单列表（分页）"""
+    async with async_session() as session:
+        conditions = []
+        if status:
+            conditions.append(PurchaseOrder.status == status)
+        if supplier_id:
+            conditions.append(PurchaseOrder.supplier_id == supplier_id)
+        if keyword:
+            kw = f"%{keyword}%"
+            conditions.append(
+                (PurchaseOrder.po_no.ilike(kw)) | (PurchaseOrder.supplier_name.ilike(kw))
+            )
+
+        where_clause = and_(*conditions) if conditions else True
+
+        r = await session.execute(select(func.count(PurchaseOrder.id)).where(where_clause))
+        total = r.scalar() or 0
+
+        offset = (page - 1) * page_size
+        query = (
+            select(PurchaseOrder)
+            .where(where_clause)
+            .order_by(PurchaseOrder.created_at.desc())
+            .offset(offset)
+            .limit(page_size)
+        )
+        result = await session.execute(query)
+        items = result.scalars().all()
+
+        return {
+            "success": True,
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "items": [
+                {
+                    "id": p.id,
+                    "po_no": p.po_no or "",
+                    "supplier_id": p.supplier_id,
+                    "supplier_name": p.supplier_name or "",
+                    "contact": p.contact or "",
+                    "phone": p.phone or "",
+                    "total_amount": float(p.total_amount or 0),
+                    "paid_amount": float(p.paid_amount or 0),
+                    "debt_amount": float(p.debt_amount or 0),
+                    "status": p.status or "待采购",
+                    "order_ids": p.order_ids or "",
+                    "expected_date": str(p.expected_date) if p.expected_date else "",
+                    "arrived_date": str(p.arrived_date) if p.arrived_date else "",
+                    "items": p.items or [],
+                    "remark": p.remark or "",
+                    "created_at": str(p.created_at)[:19] if p.created_at else "",
+                }
+                for p in items
+            ],
+        }
+
+
+@router.get("/{po_id}", response_model=dict)
+async def get_purchase_order(po_id: int = Path(...)):
+    """采购单详情"""
+    async with async_session() as session:
+        r = await session.execute(select(PurchaseOrder).where(PurchaseOrder.id == po_id))
+        p = r.scalar_one_or_none()
+        if not p:
+            raise HTTPException(status_code=404, detail="采购单不存在")
+
+        # 关联订单信息
+        order_list = []
+        if p.order_ids:
+            for oid in str(p.order_ids).split(","):
+                oid = oid.strip()
+                if oid:
+                    or_ = await session.execute(select(Order).where(Order.id == int(oid)))
+                    o = or_.scalar_one_or_none()
+                    if o:
+                        order_list.append({"id": o.id, "order_no": o.order_no, "customer_name": o.customer_name})
+
+        return {
+            "success": True,
+            "data": {
+                "id": p.id,
+                "po_no": p.po_no or "",
+                "supplier_id": p.supplier_id,
+                "supplier_name": p.supplier_name or "",
+                "contact": p.contact or "",
+                "phone": p.phone or "",
+                "total_amount": float(p.total_amount or 0),
+                "paid_amount": float(p.paid_amount or 0),
+                "debt_amount": float(p.debt_amount or 0),
+                "status": p.status or "待采购",
+                "order_ids": p.order_ids or "",
+                "orders": order_list,
+                "expected_date": str(p.expected_date) if p.expected_date else "",
+                "arrived_date": str(p.arrived_date) if p.arrived_date else "",
+                "items": p.items or [],
+                "remark": p.remark or "",
+                "created_at": str(p.created_at)[:19] if p.created_at else "",
+                "updated_at": str(p.updated_at)[:19] if p.updated_at else "",
+            },
+        }
+
+
+@router.patch("/{po_id}", response_model=CommonResponse)
+async def update_purchase_order(
+    po_id: int = Path(...),
+    req: dict = Body(...),
+):
+    """
+    更新采购单状态
+    Body: { "status": "已下单", "remark": "...", "items": [...] }
+    """
+    # 只读字段保护
+    readonly_submitted = READONLY_FIELDS & set(req.keys())
+    if readonly_submitted:
+        raise HTTPException(status_code=400, detail=f"字段 {','.join(readonly_submitted)} 为只读字段，不允许更新")
+
+    async with async_session() as session:
+        r = await session.execute(select(PurchaseOrder).where(PurchaseOrder.id == po_id))
+        p = r.scalar_one_or_none()
+        if not p:
+            return CommonResponse(success=False, error="采购单不存在")
+
+        new_status = req.get("status")
+        if new_status:
+            if new_status not in VALID_STATUSES:
+                raise HTTPException(status_code=400, detail=f"非法状态值「{new_status}」，允许值：{', '.join(sorted(VALID_STATUSES))}")
+            p.status = new_status
+
+        if "items" in req:
+            p.items = req["items"]
+            # 重新计算总金额
+            p.total_amount = sum(
+                float(i.get("qty", 0)) * float(i.get("unit_price", 0))
+                for i in (req["items"] or [])
+            )
+            p.debt_amount = p.total_amount - float(p.paid_amount or 0)
+
+        if "remark" in req:
+            p.remark = req["remark"]
+
+        if "expected_date" in req and req["expected_date"]:
+            p.expected_date = datetime.strptime(req["expected_date"], "%Y-%m-%d").date()
+
+        if "arrived_date" in req and req["arrived_date"]:
+            p.arrived_date = datetime.strptime(req["arrived_date"], "%Y-%m-%d").date()
+
+        await session.commit()
+        return CommonResponse(success=True, data={"id": po_id, "status": p.status})
+
+
+@router.post("/merge", response_model=dict)
+async def merge_purchase_orders(
+    po_ids: List[int] = Body(..., description="要合并的采购单ID列表"),
+    authorization: str = Header(None),
+):
+    """
+    合并多张采购单（同一供应商 + 交期相近）
+    """
+    if len(po_ids) < 2:
+        raise HTTPException(status_code=400, detail="至少需要选择2张采购单")
+
+    async with async_session() as session:
+        r = await session.execute(
+            select(PurchaseOrder).where(PurchaseOrder.id.in_(po_ids))
+        )
+        pos = r.scalars().all()
+        if len(pos) != len(po_ids):
+            raise HTTPException(status_code=404, detail="部分采购单不存在")
+
+        # 验证：必须同供应商
+        suppliers = set(p.supplier_id for p in pos)
+        if len(suppliers) != 1:
+            raise HTTPException(status_code=400, detail="合并的采购单必须属于同一供应商")
+
+        # 合并 items
+        all_items = []
+        all_order_ids = set()
+        for p in pos:
+            all_items.extend(p.items or [])
+            if p.order_ids:
+                all_order_ids.update(str(p.order_ids).split(","))
+
+        total = sum(float(i.get("amount", 0)) for i in all_items)
+
+        # 生成新 PO 号
+        today_str = datetime.now().strftime("%Y%m%d")
+        seq_r = await session.execute(
+            select(func.count(PurchaseOrder.id)).where(PurchaseOrder.po_no.like(f"PO{today_str}%"))
+        )
+        seq = (seq_r.scalar() or 0) + 1
+        po_no = f"PO{today_str}{seq:03d}"
+
+        new_po = PurchaseOrder(
+            po_no=po_no,
+            supplier_id=pos[0].supplier_id,
+            supplier_name=pos[0].supplier_name or "",
+            contact=pos[0].contact or "",
+            phone=pos[0].phone or "",
+            total_amount=total,
+            paid_amount=0,
+            debt_amount=total,
+            status="待采购",
+            order_ids=",".join(str(oid) for oid in all_order_ids if oid.strip()),
+            expected_date=pos[0].expected_date,
+            items=all_items,
+            remark=f"由 {len(pos)} 张采购单合并",
+        )
+        session.add(new_po)
+
+        # 删除原采购单
+        for p in pos:
+            await session.delete(p)
+
+        await session.commit()
+
+        return {
+            "success": True,
+            "message": f"成功合并 {len(pos)} 张采购单",
+            "purchase_order": {
+                "id": new_po.id,
+                "po_no": new_po.po_no,
+                "supplier_name": new_po.supplier_name or "",
+                "total_amount": float(new_po.total_amount),
+                "item_count": len(all_items),
+            },
+        }
+
+
+@router.get("/by-supplier/{supplier_id}", response_model=dict)
+async def get_purchase_orders_by_supplier(
+    supplier_id: int = Path(...),
+    status: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+):
+    """
+    按供应商查采购单
+    GET /api/purchase-orders/by-supplier/{supplier_id}?status=待采购&page=1&page_size=20
+    """
+    async with async_session() as session:
+        conditions = [PurchaseOrder.supplier_id == supplier_id]
+        if status:
+            conditions.append(PurchaseOrder.status == status)
+
+        where_clause = and_(*conditions)
+
+        r = await session.execute(select(func.count(PurchaseOrder.id)).where(where_clause))
+        total = r.scalar() or 0
+
+        offset = (page - 1) * page_size
+        query = (
+            select(PurchaseOrder)
+            .where(where_clause)
+            .order_by(PurchaseOrder.created_at.desc())
+            .offset(offset)
+            .limit(page_size)
+        )
+        result = await session.execute(query)
+        items = result.scalars().all()
+
+        # 供应商信息
+        sup_name = ""
+        if items:
+            sup_name = items[0].supplier_name or ""
+
+        return {
+            "success": True,
+            "supplier_id": supplier_id,
+            "supplier_name": sup_name,
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "items": [
+                {
+                    "id": p.id,
+                    "po_no": p.po_no or "",
+                    "total_amount": float(p.total_amount or 0),
+                    "paid_amount": float(p.paid_amount or 0),
+                    "debt_amount": float(p.debt_amount or 0),
+                    "status": p.status or "待采购",
+                    "order_ids": p.order_ids or "",
+                    "expected_date": str(p.expected_date) if p.expected_date else "",
+                    "arrived_date": str(p.arrived_date) if p.arrived_date else "",
+                    "item_count": len(p.items or []),
+                    "remark": p.remark or "",
+                    "created_at": str(p.created_at)[:19] if p.created_at else "",
+                }
+                for p in items
+            ],
+        }

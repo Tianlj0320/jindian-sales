@@ -7,14 +7,15 @@ import os
 from app.database import init_db
 from app.middleware import AuthMiddleware
 from app.api import track, installer, sms, orders, customers, products, employees, dashboard, purchase, warehouse, finance, reports, auth, print_api
+from app.api import purchase_orders, production_feedback, installation_orders
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 app = FastAPI(
     title="金典软装销售系统 API",
-    version="2.2.0",
-    description="V2.2 客户进度查询 + 安装工手机端 API"
+    version="3.0.0",
+    description="V3.0 窗帘行业特性：采购拆分 + 生产反馈 + 安装单"
 )
 
 # CORS
@@ -44,6 +45,9 @@ app.include_router(finance.router)
 app.include_router(reports.router)
 app.include_router(auth.router)
 app.include_router(print_api.router)
+app.include_router(purchase_orders.router)
+app.include_router(production_feedback.router)
+app.include_router(installation_orders.router)
 
 
 @app.on_event("startup")

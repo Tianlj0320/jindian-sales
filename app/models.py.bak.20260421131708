@@ -267,26 +267,6 @@ class OrderItem(Base):
     created_at = Column(DateTime, default=datetime.now)
 
 
-class PurchaseOrderItem(Base):
-    """采购单明细（V3.0，独立表）"""
-    __tablename__ = "purchase_order_items"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    purchase_order_id = Column(Integer, ForeignKey("purchase_orders.id"))
-    order_item_id = Column(Integer)  # 原始订单明细ID
-    product_id = Column(Integer)
-    product_name = Column(String(200))
-    product_code = Column(String(50))
-    spec = Column(String(100))  # 规格描述
-    quantity = Column(DECIMAL(10, 2), default=1)
-    unit = Column(String(20), default="米")
-    unit_price = Column(DECIMAL(10, 2), default=0)
-    subtotal = Column(DECIMAL(12, 2), default=0)
-    material_type = Column(String(20), default="主料")  # 主料/辅料
-    arrived_qty = Column(DECIMAL(10, 2), default=0)  # 已到货数量
-    created_at = Column(DateTime, default=datetime.now)
-
-
 class FinanceRecord(Base):
     __tablename__ = "finance_records"
 

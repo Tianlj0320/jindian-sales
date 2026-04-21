@@ -1,7 +1,9 @@
 # app/api/orders.py
 from fastapi import APIRouter, Query, Path, Body
 from app.database import async_session
-from app.models import Order, InstallTask, Customer, Employee, Product
+from app.models import Order, InstallTask, Customer, Employee, Product, PurchaseOrder, InstallationOrder
+from app.api.purchase_orders import split_order_to_purchase_orders
+from app.api.installation_orders import auto_generate_installation_order as _auto_gen_install
 from app.schemas import (
     OrderListResponse, OrderResponse,
     OrderListItem, OrderDetailData, CommonResponse
@@ -14,22 +16,27 @@ import json
 router = APIRouter(prefix="/api/orders", tags=["订单管理"])
 
 
-# ─── 订单状态8态映射 ─────────────────────────────────────────────────────────
+# ─── 订单状态12态映射（V3.0）────────────────────────────────────────────────
 ORDER_STATUS_MAP = {
-    "created":     {"label": "待确认",    "color": "#909399"},
-    "confirmed":  {"label": "已核单",    "color": "#409eff"},
-    "measured":   {"label": "已测量",    "color": "#67c23a"},
-    "stocked":    {"label": "已备货",    "color": "#e6a23c"},
-    "processing": {"label": "加工中",    "color": "#f56c6c"},
-    "install":    {"label": "待安装",    "color": "#9c27b0"},
-    "installed":  {"label": "已安装",    "color": "#1a3a5c"},
-    "completed": {"label": "已完成",    "color": "#222222"},
-    "cancelled": {"label": "已取消",    "color": "#d9d9d9"},
+    "created":              {"label": "已创建",      "color": "#909399"},
+    "confirmed":           {"label": "已确认",      "color": "#409eff"},
+    "split":               {"label": "已拆分",      "color": "#7c3aed"},  # V3.0 采购拆分
+    "purchasing":           {"label": "采购中",       "color": "#f59e0b"},  # V3.0
+    "stocked":             {"label": "已到货",       "color": "#10b981"},
+    "processing":          {"label": "生产中",       "color": "#f97316"},
+    "production_exception":{"label": "生产异常",    "color": "#ef4444"},  # V3.0
+    "completed":           {"label": "已完成",       "color": "#6366f1"},
+    "install_order_generated": {"label": "安装单已生成","color": "#8b5cf6"},  # V3.0
+    "shipped":             {"label": "已发货",       "color": "#06b6d4"},  # V3.0
+    "installed":           {"label": "已安装",       "color": "#1a3a5c"},
+    "accepted":            {"label": "已验收",       "color": "#059669"},
+    "cancelled":           {"label": "已取消",       "color": "#d9d9d9"},
 }
 
 STATUS_STEPS = [
-    "created", "confirmed", "measured", "stocked",
-    "processing", "install", "installed", "completed"
+    "created", "confirmed", "split", "purchasing",
+    "stocked", "processing", "production_exception", "completed",
+    "install_order_generated", "shipped", "installed", "accepted"
 ]
 
 
@@ -320,11 +327,75 @@ async def update_order_status(
 
         await session.commit()
 
+        # ─── V3.0 订单流程联动 ───────────────────────────────────────────
+        auto_action_msg = None
+
+        # 订单确认（confirmed）→ 自动触发采购拆分
+        if new_status_key == "confirmed":
+            try:
+                pos = await split_order_to_purchase_orders(session, order_id)
+                for po in pos:
+                    await session.flush()
+                if pos:
+                    auto_action_msg = f"已自动拆分为 {len(pos)} 张采购单"
+                    o.status_key = "split"
+                    o.status = "已拆分"
+                    o.status_color = ORDER_STATUS_MAP["split"]["color"]
+                    history = o.history or []
+                    history.append({"s": "已确认", "s2": "已拆分", "c": "split", "time": datetime.now().strftime("%Y-%m-%d %H:%M")})
+                    o.history = history
+                    await session.commit()
+            except Exception as e:
+                auto_action_msg = f"拆分失败：{str(e)}"
+
+        # 订单生产完成（completed）→ 自动生成安装单
+        if new_status_key == "completed":
+            try:
+                from sqlalchemy import select as sa_select
+                r = await session.execute(sa_select(InstallationOrder).where(InstallationOrder.order_id == order_id))
+                existing_ins = r.scalar_one_or_none()
+                if not existing_ins:
+                    # 生成安装单
+                    INS_NO_PREFIX = "INS"
+                    today_str = datetime.now().strftime("%Y%m%d")
+                    seq_r = await session.execute(
+                        select(func.count(InstallationOrder.id)).where(
+                            InstallationOrder.ins_no.like(f"{INS_NO_PREFIX}{today_str}%")
+                        )
+                    )
+                    seq = (seq_r.scalar() or 0) + 1
+                    ins_no = f"{INS_NO_PREFIX}{today_str}{seq:03d}"
+                    ins = InstallationOrder(
+                        ins_no=ins_no,
+                        order_id=o.id,
+                        order_no=o.order_no or "",
+                        customer_name=o.customer_name or "",
+                        customer_phone=o.customer_phone or "",
+                        address=getattr(o, "install_address", "") or o.address or "",
+                        product_details=o.items or {},
+                        measure_summary=str(getattr(o, "measure_data", "") or ""),
+                        install_requirements=getattr(o, "install_requires", "") or "",
+                        status="待分配",
+                    )
+                    session.add(ins)
+                    await session.flush()
+                    o.status_key = "install_order_generated"
+                    o.status = "安装单已生成"
+                    o.status_color = ORDER_STATUS_MAP["install_order_generated"]["color"]
+                    history = o.history or []
+                    history.append({"s": "已完成", "s2": "安装单已生成", "c": "install_order_generated", "time": datetime.now().strftime("%Y-%m-%d %H:%M")})
+                    o.history = history
+                    await session.commit()
+                    auto_action_msg = f"已自动生成安装单 {ins_no}"
+            except Exception as e:
+                auto_action_msg = f"生成安装单失败：{str(e)}"
+
         return CommonResponse(success=True, data={
             "id": order_id,
             "status_key": new_status_key,
             "status_label": new_label,
-            "status_color": new_color
+            "status_color": new_color,
+            "auto_action": auto_action_msg,
         })
 
 
