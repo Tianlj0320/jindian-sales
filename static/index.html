@@ -696,7 +696,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
           <el-table :data="purchases" stripe size="small">
             <el-table-column prop="purchaseNo" label="采购单号" width="140"/>
             <el-table-column prop="supplierName" label="供应商" width="150"/>
-            <el-table-column prop="orderNo" label="关联订单" width="130"/>
+            <el-table-column prop="orderIds" label="关联订单" width="130"/>
             <el-table-column prop="items" label="采购物料" min-width="200" show-overflow-tooltip/>
             <el-table-column prop="status" label="状态" width="100">
               <template #default="{row}"><span class="num-tag" :class="row.status==='已完成'?'num-green':row.status==='已发货'?'num-blue':row.status==='待分发'?'num-red':'num-gray'">{{row.status}}</span></template>
@@ -1420,12 +1420,12 @@ const app=createApp({
           api('/api/reports/trend').catch(()=>({items:[]})),
           api('/api/reports/employee-performance').catch(()=>({items:[]})),
           api('/api/reports/product-rank').catch(()=>({items:[]})),
-          api('/api/purchase').catch(()=>({items:[]})),
+          api('/api/purchase-orders').catch(()=>({items:[]})),
         ]).catch(()=>[{},{},{},{}]);
         salesTrend.value=(trend.items||[]).filter(t=>t).map(t=>t.amount||0);
         staffRank.value=(empRpt.items||[]).filter(e=>e).map(e=>({name:e.salesperson||'',amount:e.total_amount||0,orders:e.order_count||0}));
         topProducts.value=(prodRpt.items||[]).filter(p=>p).map(p=>({name:p.product||'',times:p.qty||0,amount:p.amount||0}));
-        purchases.value=(purchData.items||[]).map(p=>({id:p.id,purchaseNo:p.po_no||'',supplierId:'s'+p.supplier_id,supplierName:p.supplier_name||'',items:Array.isArray(p.items)?p.items.map(i=>i.product||'').join(' '):p.items||'',status:p.status||'待采购',amount:p.amount||0,date:p.order_date||''}));
+        purchases.value=(purchData.items||[]).map(p=>({id:p.id,purchaseNo:p.po_no||'',supplierId:'s'+p.supplier_id,supplierName:p.supplier_name||'',items:Array.isArray(p.items)?p.items.map(i=>i.product_name||'').join(' '):p.items||'',status:p.status||'待采购',amount:(p.total_amount||p.amount||0),date:p.expected_date||p.order_date||'',orderIds:p.order_ids||''}));
         // load report data for current month
         await loadReportData();
         // dictMap orderStatus - initialize from API or use defaults
