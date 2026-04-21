@@ -128,16 +128,6 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
 </head>
 <body>
 <div id="app">
-<script>
-// Pure HTML auth guard - runs before Vue
-(function(){
-  var tok = localStorage.getItem('authToken');
-  if(!tok){
-    document.write('<div style="position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#1a3a5c 0%,#0d1f35 100%);display:flex;align-items:center;justify-content:center;font-family:sans-serif"><div style="background:#fff;border-radius:16px;padding:40px;text-align:center"><h2 style="color:#1a3a5c;margin-bottom:20px">金典软装</h2><p style="color:#666">请重新登录系统</p><p style="color:#999;font-size:12px;margin-top:10px">按 Ctrl+Shift+R 强制刷新页面</p></div></div>');
-    document.close();
-  }
-})();
-</script>
 
 
 
@@ -748,7 +738,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
             <el-table-column label="操作" width="160">
               <template #default="{row}">
                 <el-button size="small" type="primary" v-if="row.step<6" @click="prodStepNext(row)">推进 →</el-button>
-                <el-button size="small" v-if="row.step<6" @click="prodStep--">重置</el-button>
+                <el-button size="small" v-if="row.step<6" @click="row.step--">重置</el-button>
                 <span v-if="row.step>=6" style="color:#67c23a;font-size:12px">✅ 完成</span>
               </template>
             </el-table-column>
@@ -1311,7 +1301,6 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
 </body>
 </html>
 
-<script>
 const {createApp,ref,computed,watch}=Vue;
 const {ElMessage}=ElementPlus;
 
@@ -1611,311 +1600,20 @@ const app=createApp({
     const loadProduction=async()=>{try{const d=await api('/api/orders?status_key=processing');const arr=(d.data||[]).map(o=>({id:o.id,orderNo:o.order_no||'',customerName:o.customer_name||'',step:1,content:o.items?.map(i=>i.product_name||i.product||'').join(',')||''}));productionOrders.value=arr;filterProduction();}catch(e){console.error(e);}};
     const loadInstallOrders=async()=>{try{const d=await api('/api/installation-orders');installOrders.value=(d.items||[]).map(i=>({id:i.id,insNo:i.ins_no||'',orderId:i.order_id,customerName:i.customer_name||'',address:i.address||'',scheduledDate:i.scheduled_date||'',status:i.status||'待分配',installerName:i.installer_name||''}));filterInstall();}catch(e){console.error(e);}};
 
-    /* 仓库 */
+    
+    /* 生产（供应链） */
+    const productionSteps=['订单接单审核','用料核定','报货','下料汇总','加工','完成审核'];
+    const productionOrders=ref([]);
+    const filteredProduction=ref([]);
+    const prodStepF=ref('');
+    const filterProduction=()=>{let list=productionOrders.value;if(prodSearch.value)list=list.filter(o=>(o.orderNo||'').includes(prodSearch.value)||(o.customerName||'').includes(prodSearch.value));if(prodStepF.value)list=list.filter(o=>o.step===prodStepF.value);filteredProduction.value=list;};
+/* 仓库 */
     const warehouses=ref([]);
 
     /* 生产 */
-    const productionSteps=['订单接单审核','用料核定','报货','下料汇总','加工','完成审核'];
-    const prodStep=ref(3);
-    const productionOrders=ref([]);
-    const filteredProduction=ref([]);
-    const prodSearch=ref('');
-    const prodStepF=ref('');
-    const prodStepNext=row=>{if(row.step<6)row.step++;filterProduction();SLS('productionOrders',productionOrders.value);};
-    const filterProduction=()=>{let list=productionOrders.value;if(prodSearch.value)list=list.filter(o=>(o.orderNo||'').includes(prodSearch.value)||(o.customerName||'').includes(prodSearch.value));if(prodStepF.value)list=list.filter(o=>o.step===prodStepF.value);filteredProduction.value=list;};
 
-    /* 安装 */
-    const installOrders=ref([]);
-    const filteredInstall=ref([]);
-    const installSearch=ref('');
-    const installStatusF=ref('');
-    const confirmInstall=async row=>{
-      const o=orders.value.find(x=>x.id===row.id);
-      if(o){o.status='已完成';o.statusColor='installed';}
-      row.status='已完成';
-      try{
-        const installRes=await api('/api/installer/tasks','GET');
-        const t=(installRes.tasks||[]).find(t=>t.order_no===(o?.orderNo||''));
-        if(t)await api(`/api/installer/tasks/${t.id}/complete`,'POST',{completed_at:new Date().toISOString().slice(0,19).replace('T',' '),remark:''});
-        await api(`/api/orders/${row.id}/status`,'PUT',{new_status_key:'installed'});
-      }catch(e){console.error(e);}
-      ElMessage.success('已确认安装完成');
-    };
-
-    /* 财务 */
-    const financeData=ref({monthRevenue:0,monthCost:0,monthProfit:0,totalDebt:0,pendingCommission:0});
-    const costBreakdown=ref([]);
-
-    /* 报表 */
-    const salesTrend=ref([]);
-    const reportOrders=ref([]);
-    const staffRank=ref([
-      {name:'小王',amount:85600,orders:12},{name:'小李',amount:42800,orders:6},{name:'张师傅',amount:0,orders:8},
-    ]);
-    const topProducts=ref([
-      {name:'婴儿绒雪尼尔-奶白',times:18,amount:38500},{name:'亚麻纱-自然白',times:15,amount:24600},{name:'缎面雪尼尔-浅咖',times:12,amount:18900},{name:'DUOY静音轨道',times:9,amount:14200},{name:'复古绿亚麻纱',times:7,amount:9800},
-    ]);
-
-    /* =================== DIALOGS =================== */
-
-    /* 供应商 */
-    const dlgSupplier=ref(false);
-    const sForm=ref({code:'',name:'',type:'布艺',contact:'',phone:'',deliveryDays:7,address:'',payment:''});
-    const editingSupplier=ref(null);
-    const saveSupplier=async()=>{
-      if(!sForm.value.name){ElMessage.warning('名称必填');return;}
-      try{
-        if(editingSupplier.value){
-          await api(`/api/products/suppliers`,'POST',{name:sForm.value.name,type:sForm.value.type||'布艺',contact:sForm.value.contact||'',phone:sForm.value.phone||'',delivery_days:sForm.value.deliveryDays||7,address:sForm.value.address||''});
-          Object.assign(suppliers.value.find(s=>s.id===editingSupplier.value.id),sForm.value);
-        }else{
-          const d=await api('/api/products/suppliers','POST',{name:sForm.value.name,type:sForm.value.type||'布艺',contact:sForm.value.contact||'',phone:sForm.value.phone||'',delivery_days:sForm.value.deliveryDays||7,address:sForm.value.address||''});
-          suppliers.value.push({id:d.id,code:d.code,name:sForm.value.name,type:sForm.value.type||'布艺',contact:sForm.value.contact||'',phone:sForm.value.phone||'',deliveryDays:sForm.value.deliveryDays||7,address:'',payment:''});
-        }
-        dlgSupplier.value=false;ElMessage.success('保存成功');
-      }catch(e){ElMessage.error('保存失败');}
-    };
-    const openSupplierDlg=(row=null)=>{
-      if(row){editingSupplier.value=row;sForm.value={...row};}
-      else{editingSupplier.value=null;sForm.value={code:'',name:'',type:'布艺',contact:'',phone:'',deliveryDays:7,address:'',payment:''};}
-      dlgSupplier.value=true;
-    };
-    const delSupplier=async(row)=>{
-      try{await api(`/api/products/suppliers/${row.id}`,'DELETE');suppliers.value.splice(suppliers.value.findIndex(s=>s.id===row.id),1);ElMessage.success('已删除');}catch(e){ElMessage.error('删除失败');}
-    };
-
-    /* 布版 */
-    const dlgCategory=ref(false);
-    const cForm=ref({code:'',name:'',supplierId:'',desc:''});
-    const editingCategory=ref(null);
-    const saveCategory=async()=>{
-      if(!cForm.value.name||!cForm.value.supplierId){ElMessage.warning('请填写完整');return;}
-      const supId=parseInt(String(cForm.value.supplierId).replace('s',''));
-      try{
-        if(editingCategory.value){
-          categories.value.find(c=>c.id===editingCategory.value.id) && Object.assign(categories.value.find(c=>c.id===editingCategory.value.id),cForm.value);
-        }else{
-          const d=await api('/api/products/categories','POST',{name:cForm.value.name,supplier_id:supId,description:cForm.value.desc||''});
-          categories.value.push({id:d.id,code:d.code,name:cForm.value.name,supplierId:cForm.value.supplierId,desc:cForm.value.desc||''});
-        }
-        dlgCategory.value=false;ElMessage.success('保存成功');
-      }catch(e){ElMessage.error('保存失败');}
-    };
-    const openCategoryDlg=(row=null)=>{
-      if(row){editingCategory.value=row;cForm.value={...row};}
-      else{editingCategory.value=null;cForm.value={code:'',name:'',supplierId:'',desc:''};}
-      dlgCategory.value=true;
-    };
-
-    /* 产品 */
-    const dlgProduct=ref(false);
-    const pForm=ref({name:'',supplierId:'',categoryId:'',type:'面料',classification:'定高',model:'',mat:'雪尼尔',width:280,weight:0,price:0,stock:0});
-    const editingProduct=ref(null);
-    const supCategories=computed(()=>{if(!pForm.value.supplierId)return categories.value;return categories.value.filter(c=>c.supplierId===pForm.value.supplierId);});
-    const addProduct=async()=>{
-      if(!pForm.value.name||!pForm.value.supplierId||!pForm.value.categoryId){ElMessage.warning('请填写名称、供应商和布版');return;}
-      const supId=parseInt(String(pForm.value.supplierId).replace('s',''));
-      const catId=parseInt(String(pForm.value.categoryId).replace('c',''));
-      try{
-        const d=await api('/api/products','POST',{name:pForm.value.name,supplier_id:supId,category_id:catId,product_type:pForm.value.type||'面料',classification:pForm.value.classification||'定高',model:pForm.value.model||'',material:pForm.value.mat||'',width:pForm.value.width||280,weight:pForm.value.weight||0,unit_price:pForm.value.price||0,unit:'米',stock:pForm.value.stock||0});
-        products.value.push({id:d.id,code:d.code,name:pForm.value.name,supplierId:pForm.value.supplierId,categoryId:pForm.value.categoryId,type:pForm.value.type||'面料',classification:pForm.value.classification||'定高',model:pForm.value.model||'',mat:pForm.value.mat||'',width:pForm.value.width||280,weight:pForm.value.weight||0,cf:0,price:pForm.value.price||0,stock:pForm.value.stock||0,unit:'米',remark:''});
-        dlgProduct.value=false;
-        ElMessage.success('产品已添加，编码：'+d.code);
-      }catch(e){ElMessage.error('保存失败');}
-    };
-    const openProductDlg=(row=null)=>{
-      if(row){editingProduct.value=row;pForm.value={name:row.name,supplierId:row.supplierId,categoryId:row.categoryId,type:row.type||'面料',classification:row.classification||'定高',model:row.model||'',mat:row.mat||'雪尼尔',width:row.width||280,weight:row.weight||0,price:row.price||0,stock:row.stock||0};}
-      else{editingProduct.value=null;pForm.value={name:'',supplierId:'',categoryId:'',type:'面料',classification:'定高',model:'',mat:'雪尼尔',width:280,weight:0,price:0,stock:0};}
-      dlgProduct.value=true;
-    };
-    const delProduct=async(row)=>{
-      try{await api(`/api/products/${row.id}`,'DELETE');products.value.splice(products.value.findIndex(p=>p.id===row.id),1);ElMessage.success('已删除');}catch(e){ElMessage.error('删除失败');}
-    };
-
-    /* 客户 */
-    const dlgCustomer=ref(false);
-    const cuForm=ref({name:'',type:'零售',contact:'',phone:'',community:'',address:'',salespersonId:'',source:'',debtLimit:0,remark:''});
-    const editingCustomer=ref(null);
-    const openCustomerDlg=(row=null)=>{
-      if(row){editingCustomer.value=row;cuForm.value={...row};}
-      else{editingCustomer.value=null;cuForm.value={name:'',type:'零售',contact:'',phone:'',community:'',address:'',salespersonId:'',source:'',debtLimit:0,remark:''};}
-      dlgCustomer.value=true;
-    };
-    const saveCustomer=async()=>{
-      if(!cuForm.value.name||!cuForm.value.phone){ElMessage.warning('名称和电话必填');return;}
-      const emp=employees.value.find(e=>e.id===cuForm.value.salespersonId);
-      const payload={name:cuForm.value.name,phone:cuForm.value.phone,type:cuForm.value.type||'零售',address:cuForm.value.address||'',community:cuForm.value.community||'',source:cuForm.value.source||'',salesperson:emp?.name||''};
-      try{
-        if(editingCustomer.value){
-          await api(`/api/customers/${editingCustomer.value.id}`,'PUT',payload);
-          Object.assign(customers.value.find(c=>c.id===editingCustomer.value.id),{...cuForm.value,salesperson:emp?.name||''});
-        }else{
-          const d=await api('/api/customers','POST',payload);
-          const today=new Date().toISOString().slice(0,10).replace(/-/g,'');
-          customers.value.push({id:d.id,code:d.code,...cuForm.value,salesperson:emp?.name||'',debt:0});
-        }
-        dlgCustomer.value=false;ElMessage.success('客户已保存');
-      }catch(e){ElMessage.error('保存失败');}
-    };
-    const delCustomer=async(row,idx)=>{try{await api(`/api/customers/${row.id}`,'DELETE');customers.value.splice(idx,1);ElMessage.success('已删除');}catch(e){ElMessage.error('删除失败');}};
-
-    /* 员工 */
-    const dlgEmployee=ref(false);
-    const empForm=ref({code:'',name:'',gender:'男',phone:'',position:'导购',dept:'',maxDiscount:0.75,roundLimit:500,status:'启用',hireDate:''});
-    const editingEmp=ref(null);
-    const openEmpDlg=(row=null)=>{
-      if(row){editingEmp.value=row;empForm.value={...row};}
-      else{editingEmp.value=null;empForm.value={code:'',name:'',gender:'男',phone:'',position:'导购',dept:'',maxDiscount:0.75,roundLimit:500,status:'启用',hireDate:''};}
-      dlgEmployee.value=true;
-    };
-    const saveEmployee=async()=>{
-      if(!empForm.value.name){ElMessage.warning('姓名必填');return;}
-      const payload={name:empForm.value.name,gender:empForm.value.gender||'男',phone:empForm.value.phone||'',position:empForm.value.position||'导购',department:empForm.value.dept||'',max_discount:empForm.value.maxDiscount||1,round_limit:empForm.value.roundLimit||0,is_installer:empForm.value.position==='安装',status:empForm.value.status||'启用'};
-      try{
-        if(editingEmp.value){
-          await api(`/api/employees/${editingEmp.value.id}`,'PUT',payload);
-          Object.assign(employees.value.find(e=>e.id===editingEmp.value.id),empForm.value);
-        }else{
-          const d=await api('/api/employees','POST',payload);
-          employees.value.push({id:d.id,code:d.code,...empForm.value});
-        }
-        dlgEmployee.value=false;ElMessage.success('员工已保存');
-      }catch(e){ElMessage.error('保存失败');}
-    };
-
-    /* 码表 */
-    const dlgDictItem=ref(false);
-    const diForm=ref({k:'',v:'',c:''});
-    const editingDictItem=ref(null);
-    const openDictItemDlg=(row=null,idx=null)=>{
-      if(row){editingDictItem.value={...row,idx};diForm.value={k:row.k,v:row.v,c:row.c||''};}
-      else{editingDictItem.value=null;diForm.value={k:'',v:'',c:''};}
-      dlgDictItem.value=true;
-    };
-    const saveDictItem=()=>{
-      if(!diForm.value.k||!diForm.value.v){ElMessage.warning('键和值必填');return;}
-      if(!dictMap.value[dictCat.value])dictMap.value[dictCat.value]=[];
-      if(editingDictItem.value){
-        const arr=dictMap.value[dictCat.value];
-        const i=arr.findIndex(x=>x.k===editingDictItem.value.k);
-        if(i>=0)arr[i]={k:diForm.value.k,v:diForm.value.v,c:diForm.value.c||''};
-      }else{
-        dictMap.value[dictCat.value].push({k:diForm.value.k,v:diForm.value.v,c:diForm.value.c||''});
-      }
-      SLS('dictMap',dictMap.value);dlgDictItem.value=false;ElMessage.success('保存成功');
-    };
-    const delDictItem=idx=>{dictMap.value[dictCat.value].splice(idx,1);SLS('dictMap',dictMap.value);ElMessage.success('已删除');};
-
-    /* 新建订单 */
-    const showNewOrder=ref(false);
-    const orderF=ref({customerId:null,orderType:'窗帘',orderDate:'',deliveryDate:'',deliveryMethod:'上门安装',salespersonId:'',items:[],materials:[],quoteAmount:0,discountAmount:0,roundAmount:0,amount:0,received:0,itemsTotal:0,materialsTotal:0});
-    const autoDelivery=()=>{
-      if(!orderF.value.orderDate)return;
-      const d=new Date(orderF.value.orderDate);d.setDate(d.getDate()+14);
-      orderF.value.deliveryDate=d.toISOString().slice(0,10);
-    };
-    const onProdSelect=(row)=>{const p=products.value.find(x=>x.id===row.productId);if(p){row.price=p.price;calcItem(row);}calcTotals();};
-    const calcItem=row=>{try{if(row&&row.price&&row.qty)row.amount=Math.round(row.price*row.qty*(row.discount||1)*100)/100;calcTotals();}catch(e){console.error('calcItem error',e);}};
-    const addOrderItem=()=>{orderF.value.items.push({productType:'窗帘',location:'客厅',style:'001挂钩',itemName:'窗帘',productId:null,size:'',qty:1,discount:1,price:null,amount:null});};
-    const addOrderMaterial=()=>{orderF.value.materials.push({category:'布料',productId:null,model:'',qty:1,unit:'米',price:null,amount:null,remark:''});};
-    const onMaterialSelect=(row)=>{const p=products.value.find(x=>x.id===row.productId);if(p){row.price=p.price;calcMaterial(row);}calcTotals();};
-    const calcMaterial=row=>{try{if(row&&row.price&&row.qty)row.amount=Math.round(row.price*row.qty*100)/100;const mats=(orderF.value.materials||[]);orderF.value.materialsTotal=mats.reduce((s,r)=>s+((r&&r.amount)||0),0);calcTotals();}catch(e){console.error('calcMaterial error',e);}};
-    const calcTotals=()=>{
-      try{
-        const items=(orderF.value.items||[]);
-        const mats=(orderF.value.materials||[]);
-        const itemsTotal=items.reduce((s,r)=>s+((r&&r.amount)||0),0);
-        const materialsTotal=mats.reduce((s,r)=>s+((r&&r.amount)||0),0);
-        orderF.value.itemsTotal=itemsTotal;
-        orderF.value.materialsTotal=materialsTotal;
-        orderF.value.quoteAmount=itemsTotal+materialsTotal;
-        orderF.value.amount=Math.max(0,orderF.value.quoteAmount-(orderF.value.discountAmount||0)-(orderF.value.roundAmount||0));
-      }catch(e){console.error('calcTotals error',e);}
-    };
-    const saveNewOrder=async()=>{
-      if(!orderF.value.customerId){ElMessage.warning('请选择客户');return;}
-      const customer=customers.value.find(c=>c.id===orderF.value.customerId);
-      const emp=employees.value.find(e=>e.id===orderF.value.salespersonId);
-      const today=new Date().toISOString().slice(0,10);
-      const amount=Math.max(0,(orderF.value.items||[]).reduce((s,r)=>s+((r&&r.amount)||0),0)-(orderF.value.discountAmount||0)-(orderF.value.roundAmount||0));
-      const payload={
-        customer_id:orderF.value.customerId,
-        customer_name:customer?.name||'',
-        customer_phone:customer?.phone||'',
-        order_type:orderF.value.orderType,
-        content:orderF.value.items.map(i=>products.value.find(p=>p.id===i.productId)?.name||'').filter(Boolean).join('+')||'窗帘',
-        quote_amount:orderF.value.quoteAmount,
-        discount_amount:orderF.value.discountAmount||0,
-        round_amount:orderF.value.roundAmount||0,
-        amount,
-        received:orderF.value.received||0,
-        order_date:orderF.value.orderDate||today,
-        delivery_date:orderF.value.deliveryDate||'',
-        delivery_method:orderF.value.deliveryMethod||'上门安装',
-        salesperson:emp?.name||'',
-        salesperson_id:orderF.value.salespersonId,
-        install_address:orderF.value.installAddress||'',
-        install_date:orderF.value.installDate||'',
-        install_time_slot:orderF.value.installTimeSlot||'',
-        items:[...orderF.value.items.map(i=>({product_id:i.productId,product_name:products.value.find(p=>p.id===i.productId)?.name||'',unit_price:i.price||0,qty:i.qty||1,discount:i.discount||1,amount:i.amount||0,item_type:'product',room:i.location||'',width:i.width||'',height:i.height||''})),...orderF.value.materials.map(m=>({product_id:m.productId,product_name:products.value.find(p=>p.id===m.productId)?.name||''+(m.model?' '+m.model:''),unit_price:m.price||0,qty:m.qty||1,amount:m.amount||0,item_type:'material',category:m.category||''}))],
-      };
-      try{
-        const d=await api('/api/orders','POST',payload);
-        const newOrder={
-          id:d.id,orderNo:d.order_no,customerId:payload.customer_id,customerName:payload.customer_name,
-          orderType:payload.order_type,content:payload.content,amount:payload.amount,
-          quoteAmount:payload.quote_amount,discountAmount:payload.discount_amount,roundAmount:payload.round_amount,
-          received:payload.received,debt:payload.amount-payload.received,
-          status:'待确认',statusColor:'created',
-          date:payload.order_date,orderDate:payload.order_date,deliveryDate:payload.delivery_date,
-          deliveryMethod:payload.delivery_method,salesperson:payload.salesperson,salespersonId:null,
-          history:[{s:'创建订单',s2:'待确认',c:'created',time:new Date().toLocaleString()}],
-          items:payload.items,
-        };
-        orders.value.unshift(newOrder);
-        filteredOrders.value=[...orders.value];
-        showNewOrder.value=false;
-        orderF.value={customerId:null,orderType:'窗帘',orderDate:'',deliveryDate:'',deliveryMethod:'上门安装',salespersonId:'',items:[],quoteAmount:0,discountAmount:0,roundAmount:0,amount:0,received:0};
-        ElMessage.success('订单已保存：'+d.order_no);
-      }catch(e){ElMessage.error('保存失败：'+(e.message||e));}
-    };
-
-    /* helpers */
-    const getSupplierName=id=>suppliers.value.find(s=>s.id===id)?.name||'';
-    const getCatName=id=>categories.value.find(c=>c.id===id)?.name||'';
-
-    const showEditOrder=ref(false);
-    initAll();loadPurchases();loadProduction();loadInstallOrders();
-    return{
-      page,activeMenu,pageTitle,switchPage,handleNav,switchPage2,
-      stats,alerts,
-      suppliers,filteredSuppliers,suppSearch,suppTypeF,categories,products,filteredProducts,prodSearch,prodSupplierF,prodCatF,
-      customers,filteredCustomers,customerSearch,customerTypeF,
-      employees,filteredEmployees,empSearch,empPositionF,
-      dictCats,dictCat,dictCatLabel,dictItems,dictMap,orderStatusAll,
-      orders,filteredOrders,selOrder,orderSearch,orderStatusF,orderTypeF,filterOrders,selectOrder,
-      purchases,
-      warehouses,
-      productionSteps,prodStep,productionOrders,prodStepNext,
-      installOrders,confirmInstall,loadPurchases,loadProduction,loadInstallOrders,filteredPurchase,purchaseSearch,purchaseStatusF,filterPurchase,filteredProduction,prodSearch,prodStepF,filterProduction,filteredInstall,installSearch,installStatusF,filterInstall,
-      financeData,costBreakdown,
-      salesTrend,staffRank,topProducts,
-      dlgSupplier,sForm,editingSupplier,saveSupplier,openSupplierDlg,delSupplier,
-      dlgCategory,cForm,editingCategory,saveCategory,openCategoryDlg,
-      dlgProduct,pForm,editingProduct,supCategories,addProduct,openProductDlg,delProduct,
-      dlgCustomer,cuForm,editingCustomer,openCustomerDlg,saveCustomer,delCustomer,
-      dlgEmployee,empForm,editingEmp,openEmpDlg,saveEmployee,
-      dlgDictItem,diForm,editingDictItem,openDictItemDlg,saveDictItem,delDictItem,
-      showNewOrder,showEditOrder,orderF,autoDelivery,onProdSelect,onMaterialSelect,calcItem,calcMaterial,addOrderItem,addOrderMaterial,calcTotals,saveNewOrder,
-      getSupplierName,getCatName,
-      currentUser,isLoggedIn,loginForm,loginLoading,doLogin,logout,showLogin,drawerVisible,
-      rptYear,rptMonth,rptTab,loadReportData,reportOrders,
-    };
-  }
-});
-
-const eicons=window.ElementPlusIconsVue;if(eicons){for(const[k,v]of Object.entries(eicons)){app.component(k,v);}}
-app.use(ElementPlus);
-app.mount('#app');
+    const eicons=window.ElementPlusIconsVue;if(eicons){for(const[k,v]of Object.entries(eicons)){app.component(k,v);}}
+    app.use(ElementPlus);
+    app.mount('#app');
 </script>
 </html>
