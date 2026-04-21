@@ -1305,6 +1305,8 @@ const {createApp,ref,computed,watch}=Vue;
 const {ElMessage}=ElementPlus;
 
 const LS=key=>{try{return JSON.parse(localStorage.getItem(key))}catch{return null}};
+// ?clear=1 forces localStorage reset (bypass cached HTML)
+if(new URLSearchParams(location.search).get('clear')==='1'){localStorage.clear();location.replace(location.pathname);}
 const SLS=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 // 临时：显示所有菜单项（RBAC权限系统待完整实现）
 const menuVisible=(m)=>true;
