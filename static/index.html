@@ -1366,7 +1366,7 @@ const app=createApp({
       }catch(e){ElMessage.error(typeof e==='string'?e:(e.message||'登录失败'));}
       finally{loginLoading.value=false;}
     };
-    const logout=()=>{AUTH_TOKEN='';currentUser.value=null;isLoggedIn.value=false;authToken.value='';localStorage.removeItem('authToken');localStorage.removeItem('currentUser');ElMessage.success('已退出');};
+    const logout=()=>{showNewOrder.value=false;showEditOrder.value=false;AUTH_TOKEN='';currentUser.value=null;isLoggedIn.value=false;authToken.value='';localStorage.removeItem('authToken');localStorage.removeItem('currentUser');ElMessage.success('已退出');};
 
     /* Report date range */
     const rptYear=ref(new Date().getFullYear());
@@ -1608,7 +1608,8 @@ const app=createApp({
     const prodStepF=ref('');
     const filterProduction=()=>{let list=productionOrders.value;if(prodSearch.value)list=list.filter(o=>(o.orderNo||'').includes(prodSearch.value)||(o.customerName||'').includes(prodSearch.value));if(prodStepF.value)list=list.filter(o=>o.step===prodStepF.value);filteredProduction.value=list;};
     const prodStepNext=row=>{if(row.step<6)row.step++;filterProduction();};
-/* 仓库 */
+
+    /* 仓库 */
     const warehouses=ref([]);
 
     /* 生产 */
