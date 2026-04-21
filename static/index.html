@@ -1341,6 +1341,7 @@ const app=createApp({
 
     /* ── API初始化 ── */
     /* Auth */
+    const showNewOrder=ref(false);const showEditOrder=ref(false);
     const showLogin=ref(false);
     const loginLoading=ref(false);
     const _u=LS('currentUser');let _parsed=null;try{_parsed=JSON.parse(_u||'null');}catch(e){_parsed=null;}const currentUser=ref(_parsed);
