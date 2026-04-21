@@ -1607,6 +1607,7 @@ const app=createApp({
     const filteredProduction=ref([]);
     const prodStepF=ref('');
     const filterProduction=()=>{let list=productionOrders.value;if(prodSearch.value)list=list.filter(o=>(o.orderNo||'').includes(prodSearch.value)||(o.customerName||'').includes(prodSearch.value));if(prodStepF.value)list=list.filter(o=>o.step===prodStepF.value);filteredProduction.value=list;};
+    const prodStepNext=row=>{if(row.step<6)row.step++;filterProduction();};
 /* 仓库 */
     const warehouses=ref([]);
 
