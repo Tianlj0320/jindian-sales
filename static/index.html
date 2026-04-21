@@ -691,20 +691,24 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
 
       <!-- ============ 采购管理 ============ -->
       <div v-if="page==='purchase'">
-        <div class="page-title">采购管理 <span>（订单确认后自动按供应商拆分）</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div class="page-title">采购管理 <span>（订单确认后自动按供应商拆分）</span></div><div style="display:flex;gap:8px"><el-input v-model="purchaseSearch" placeholder="搜索供应商/订单" size="small" style="width:180px" clearable @input="filterPurchase"/><el-select v-model="purchaseStatusF" size="small" placeholder="筛选状态" clearable style="width:120px" @change="filterPurchase"><el-option label="待采购" value="待采购"/><el-option label="已下单" value="已下单"/><el-option label="部分到货" value="部分到货"/><el-option label="全部到货" value="全部到货"/></el-select><el-button size="small" @click="loadPurchases">刷新</el-button></div></div>
         <div class="card">
-          <el-table :data="purchases" stripe size="small">
-            <el-table-column prop="purchaseNo" label="采购单号" width="140"/>
-            <el-table-column prop="supplierName" label="供应商" width="150"/>
-            <el-table-column prop="orderIds" label="关联订单" width="130"/>
-            <el-table-column prop="items" label="采购物料" min-width="200" show-overflow-tooltip/>
-            <el-table-column prop="status" label="状态" width="100">
-              <template #default="{row}"><span class="num-tag" :class="row.status==='已完成'?'num-green':row.status==='已发货'?'num-blue':row.status==='待分发'?'num-red':'num-gray'">{{row.status}}</span></template>
+          <el-table :data="filteredPurchase" stripe size="small" style="font-size:13px">
+            <el-table-column prop="purchaseNo" label="采购单号" width="150"/>
+            <el-table-column prop="supplierName" label="供应商" width="120">
+              <template #default="{row}"><span :style="row.supplierName?'color:#1a3a5c':'color:#999'">{{row.supplierName||'(未分配)'}}</span></template>
             </el-table-column>
-            <el-table-column label="金额" width="100" align="right">
-              <template #default="{row}"><b>¥{{row.amount.toLocaleString()}}</b></template>
+            <el-table-column prop="orderIds" label="来源订单" width="110"/>
+            <el-table-column prop="items" label="采购物料" min-width="260">
+              <template #default="{row}"><span style="color:#666;font-size:12px">{{row.items||'无'}}</span></template>
             </el-table-column>
-            <el-table-column prop="date" label="日期" width="105"/>
+            <el-table-column prop="status" label="状态" width="90">
+              <template #default="{row}"><span class="num-tag" :class="row.status==='全部到货'?'num-green':row.status==='部分到货'?'num-blue':row.status==='已下单'?'num-orange':'num-gray'">{{row.status}}</span></template>
+            </el-table-column>
+            <el-table-column label="金额" width="110" align="right">
+              <template #default="{row}"><b style="color:#f56c6c">¥{{Number(row.amount||0).toLocaleString()}}</b></template>
+            </el-table-column>
+            <el-table-column prop="date" label="预计到货" width="105"/>
           </el-table>
         </div>
       </div>
@@ -1376,7 +1380,7 @@ const app=createApp({
           localStorage.setItem('authToken',res.token);
           const u={id:res.user_id,name:res.name||'员工',role:res.role||'staff'};
           currentUser.value=u;localStorage.setItem('currentUser',JSON.stringify(u));
-          showLogin.value=false;isLoggedIn.value=true;initAll();loadProduction();loadInstallOrders();ElMessage.success('登录成功');
+          showLogin.value=false;isLoggedIn.value=true;initAll();loadPurchases();loadProduction();loadInstallOrders();ElMessage.success('登录成功');
         }else{ElMessage.error(res.message||'登录失败');}
       }catch(e){ElMessage.error(typeof e==='string'?e:(e.message||'登录失败'));}
       finally{loginLoading.value=false;}
@@ -1607,6 +1611,13 @@ const app=createApp({
 
     /* 采购 */
     const purchases=ref([]);
+    const filteredPurchase=ref([]);
+    const purchaseSearch=ref('');
+    const purchaseStatusF=ref('');
+    const filterPurchase=()=>{let list=purchases.value;if(purchaseSearch.value)list=list.filter(p=>(p.supplierName||'').includes(purchaseSearch.value)||(p.purchaseNo||'').includes(purchaseSearch.value)||(p.orderIds||'').includes(purchaseSearch.value));if(purchaseStatusF.value)list=list.filter(p=>p.status===purchaseStatusF.value);filteredPurchase.value=list;};
+    const loadPurchases=async()=>{try{const d=await api('/api/purchase-orders');purchases.value=(d.items||[]).map(p=>({id:p.id,purchaseNo:p.po_no||'',supplierName:p.supplier_name||'',orderIds:p.order_ids||'',items:Array.isArray(p.items)?p.items.map(i=>i.product_name||'').join(', '):(p.items||''),status:p.status||'待采购',amount:(p.total_amount||p.amount||0),date:p.expected_date||''}));filterPurchase();}catch(e){console.error(e);}};
+    const loadProduction=async()=>{try{const d=await api('/api/orders?status_key=processing');const arr=(d.data||[]).map(o=>({id:o.id,orderNo:o.order_no||'',customerName:o.customer_name||'',step:1,content:o.items?.map(i=>i.product_name||i.product||'').join(',')||''}));productionOrders.value=arr;filterProduction();}catch(e){console.error(e);}};
+    const loadInstallOrders=async()=>{try{const d=await api('/api/installation-orders');installOrders.value=(d.items||[]).map(i=>({id:i.id,insNo:i.ins_no||'',orderId:i.order_id,customerName:i.customer_name||'',address:i.address||'',scheduledDate:i.scheduled_date||'',status:i.status||'待分配',installerName:i.installer_name||''}));filterInstall();}catch(e){console.error(e);}};
 
     /* 仓库 */
     const warehouses=ref([]);
@@ -1620,8 +1631,6 @@ const app=createApp({
     const prodStepF=ref('');
     const prodStepNext=row=>{if(row.step<6)row.step++;filterProduction();SLS('productionOrders',productionOrders.value);};
     const filterProduction=()=>{let list=productionOrders.value;if(prodSearch.value)list=list.filter(o=>(o.orderNo||'').includes(prodSearch.value)||(o.customerName||'').includes(prodSearch.value));if(prodStepF.value)list=list.filter(o=>o.step===prodStepF.value);filteredProduction.value=list;};
-    const loadProduction=async()=>{try{const d=await api('/api/orders?status_key=processing');const arr=(d.data||[]).map(o=>({id:o.id,orderNo:o.order_no||'',customerName:o.customer_name||'',step:1,content:o.items?.map(i=>i.product_name||i.product||'').join(',')||''}));productionOrders.value=arr;filterProduction();}catch(e){console.error(e);}};
-    const loadInstallOrders=async()=>{try{const d=await api('/api/installation-orders');installOrders.value=(d.items||[]).map(i=>({id:i.id,insNo:i.ins_no||'',orderId:i.order_id,customerName:i.customer_name||'',address:i.address||'',scheduledDate:i.scheduled_date||'',status:i.status||'待分配',installerName:i.installer_name||''}));}catch(e){console.error(e);}};
 
     /* 安装 */
     const installOrders=ref([]);
@@ -1884,7 +1893,7 @@ const app=createApp({
     const getCatName=id=>categories.value.find(c=>c.id===id)?.name||'';
 
     const showEditOrder=ref(false);
-    initAll();loadProduction();loadInstallOrders();
+    initAll();loadPurchases();loadProduction();loadInstallOrders();
     return{
       page,activeMenu,pageTitle,switchPage,handleNav,switchPage2,
       stats,alerts,
@@ -1896,7 +1905,7 @@ const app=createApp({
       purchases,
       warehouses,
       productionSteps,prodStep,productionOrders,prodStepNext,
-      installOrders,confirmInstall,loadProduction,loadInstallOrders,filteredProduction,prodSearch,prodStepF,filterProduction,filteredInstall,installSearch,installStatusF,filterInstall,
+      installOrders,confirmInstall,loadPurchases,loadProduction,loadInstallOrders,filteredPurchase,purchaseSearch,purchaseStatusF,filterPurchase,filteredProduction,prodSearch,prodStepF,filterProduction,filteredInstall,installSearch,installStatusF,filterInstall,
       financeData,costBreakdown,
       salesTrend,staffRank,topProducts,
       dlgSupplier,sForm,editingSupplier,saveSupplier,openSupplierDlg,delSupplier,
