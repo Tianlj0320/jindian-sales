@@ -734,8 +734,15 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
           </div>
           <div v-if="prodStep>6" style="background:#67c23a;color:#fff;padding:8px 16px;border-radius:6px;font-size:13px">✅ 已完成</div>
         </div>
+        <div style="margin-bottom:12px;display:flex;gap:10px;align-items:center">
+          <el-input v-model="prodSearch" placeholder="搜索订单号/客户" size="small" style="width:200px" clearable @input="filterProduction"/>
+          <el-select v-model="prodStepF" size="small" placeholder="筛选阶段" clearable style="width:140px" @change="filterProduction">
+            <el-option v-for="(s,i) in productionSteps" :key="i" :label="s" :value="i+1"/>
+          </el-select>
+          <el-button size="small" @click="loadProduction">刷新</el-button>
+        </div>
         <div class="card">
-          <el-table :data="productionOrders" stripe size="small">
+          <el-table :data="filteredProduction" stripe size="small">
             <el-table-column prop="orderNo" label="订单号" width="130"/>
             <el-table-column prop="customerName" label="客户" width="100"/>
             <el-table-column prop="step" label="当前阶段" width="120">
@@ -756,19 +763,31 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
       <!-- ============ 安装管理 ============ -->
       <div v-if="page==='install'">
         <div class="page-title">安装管理</div>
+        <div style="margin-bottom:12px;display:flex;gap:10px;align-items:center">
+          <el-input v-model="installSearch" placeholder="搜索客户/地址" size="small" style="width:200px" clearable @input="filterInstall"/>
+          <el-select v-model="installStatusF" size="small" placeholder="筛选状态" clearable style="width:140px" @change="filterInstall">
+            <el-option label="待分配" value="待分配"/>
+            <el-option label="已分配" value="已分配"/>
+            <el-option label="已安装" value="已安装"/>
+            <el-option label="已验收" value="已验收"/>
+          </el-select>
+          <el-button size="small" @click="loadInstallOrders">刷新</el-button>
+        </div>
         <div class="card">
-          <el-table :data="installOrders" stripe size="small">
-            <el-table-column prop="orderNo" label="订单号" width="130"/>
+          <el-table :data="filteredInstall" stripe size="small">
+            <el-table-column prop="insNo" label="安装单号" width="150"/>
+            <el-table-column prop="orderId" label="订单ID" width="80"/>
             <el-table-column prop="customerName" label="客户" width="100"/>
-            <el-table-column prop="address" label="地址" min-width="180"/>
-            <el-table-column prop="installStaff" label="安装师傅" width="90"/>
-            <el-table-column prop="installDate" label="预约日期" width="110"/>
-            <el-table-column label="状态" width="90">
-              <template #default="{row}"><span class="num-tag" :class="row.status==='已完成'?'num-green':'num-gray'">{{row.status}}</span></template>
+            <el-table-column prop="address" label="安装地址" min-width="180"/>
+            <el-table-column prop="installerName" label="安装师傅" width="100"/>
+            <el-table-column prop="scheduledDate" label="预约日期" width="110"/>
+            <el-table-column label="状态" width="100">
+              <template #default="{row}"><span class="num-tag" :class="row.status==='已验收'?'num-green':row.status==='已安装'?'num-blue':'num-gray'">{{row.status}}</span></template>
             </el-table-column>
-            <el-table-column label="操作" width="100">
+            <el-table-column label="操作" width="120">
               <template #default="{row}">
-                <el-button size="small" type="primary" v-if="row.status==='待安装'" @click="confirmInstall(row)">确认完成</el-button>
+                <el-button size="small" type="primary" v-if="row.status==='待分配'" @click="confirmInstall(row)">分配</el-button>
+                <el-button size="small" type="success" v-if="row.status==='已分配'" @click="confirmInstall(row)">确认完成</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -1357,7 +1376,7 @@ const app=createApp({
           localStorage.setItem('authToken',res.token);
           const u={id:res.user_id,name:res.name||'员工',role:res.role||'staff'};
           currentUser.value=u;localStorage.setItem('currentUser',JSON.stringify(u));
-          showLogin.value=false;isLoggedIn.value=true;initAll();ElMessage.success('登录成功');
+          showLogin.value=false;isLoggedIn.value=true;initAll();loadProduction();loadInstallOrders();ElMessage.success('登录成功');
         }else{ElMessage.error(res.message||'登录失败');}
       }catch(e){ElMessage.error(typeof e==='string'?e:(e.message||'登录失败'));}
       finally{loginLoading.value=false;}
@@ -1596,10 +1615,19 @@ const app=createApp({
     const productionSteps=['订单接单审核','用料核定','报货','下料汇总','加工','完成审核'];
     const prodStep=ref(3);
     const productionOrders=ref([]);
-    const prodStepNext=row=>{if(row.step<6)row.step++;SLS('productionOrders',productionOrders.value);};
+    const filteredProduction=ref([]);
+    const prodSearch=ref('');
+    const prodStepF=ref('');
+    const prodStepNext=row=>{if(row.step<6)row.step++;filterProduction();SLS('productionOrders',productionOrders.value);};
+    const filterProduction=()=>{let list=productionOrders.value;if(prodSearch.value)list=list.filter(o=>(o.orderNo||'').includes(prodSearch.value)||(o.customerName||'').includes(prodSearch.value));if(prodStepF.value)list=list.filter(o=>o.step===prodStepF.value);filteredProduction.value=list;};
+    const loadProduction=async()=>{try{const d=await api('/api/orders?status_key=processing');const arr=(d.data||[]).map(o=>({id:o.id,orderNo:o.order_no||'',customerName:o.customer_name||'',step:1,content:o.items?.map(i=>i.product_name||i.product||'').join(',')||''}));productionOrders.value=arr;filterProduction();}catch(e){console.error(e);}};
+    const loadInstallOrders=async()=>{try{const d=await api('/api/installation-orders');installOrders.value=(d.items||[]).map(i=>({id:i.id,insNo:i.ins_no||'',orderId:i.order_id,customerName:i.customer_name||'',address:i.address||'',scheduledDate:i.scheduled_date||'',status:i.status||'待分配',installerName:i.installer_name||''}));}catch(e){console.error(e);}};
 
     /* 安装 */
     const installOrders=ref([]);
+    const filteredInstall=ref([]);
+    const installSearch=ref('');
+    const installStatusF=ref('');
     const confirmInstall=async row=>{
       const o=orders.value.find(x=>x.id===row.id);
       if(o){o.status='已完成';o.statusColor='installed';}
@@ -1856,7 +1884,7 @@ const app=createApp({
     const getCatName=id=>categories.value.find(c=>c.id===id)?.name||'';
 
     const showEditOrder=ref(false);
-    initAll();
+    initAll();loadProduction();loadInstallOrders();
     return{
       page,activeMenu,pageTitle,switchPage,handleNav,switchPage2,
       stats,alerts,
@@ -1868,7 +1896,7 @@ const app=createApp({
       purchases,
       warehouses,
       productionSteps,prodStep,productionOrders,prodStepNext,
-      installOrders,confirmInstall,
+      installOrders,confirmInstall,loadProduction,loadInstallOrders,filteredProduction,prodSearch,prodStepF,filterProduction,filteredInstall,installSearch,installStatusF,filterInstall,
       financeData,costBreakdown,
       salesTrend,staffRank,topProducts,
       dlgSupplier,sForm,editingSupplier,saveSupplier,openSupplierDlg,delSupplier,
