@@ -588,7 +588,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <div>
                 <b style="font-size:16px;color:#1a3a5c">{{selOrder.orderNo}}</b>
                 <span :class="'status-dot s-'+(selOrder.statusKey||'created')+' '" style="margin-left:8px"></span>
-                <span style="font-size:13px">{{selOrder?.statusKey==='confirmed'?'已核单':selOrder?.statusKey==='measured'?'已测量':selOrder?.statusKey==='stocked'?'已备货':selOrder?.statusKey==='processing'?'加工中':selOrder?.statusKey==='install'?'待安装':selOrder?.statusKey==='installed'?'已安装':selOrder?.statusKey==='completed'?'已完成':selOrder?.statusKey==='cancelled'?'已取消':selOrder?.status||'待确认'}}</span>
+                <span style="font-size:13px">{{selOrder?.status||selOrder?.statusKey||'待确认'}}</span>
               </div>
               <el-select v-model="selOrder.statusKey" size="small" style="width:120px" @change="updateOrderStatusByKey">
                 <el-option v-for="s in orderStatusAll" :key="s.k" :label="s.l" :value="s.k"/>
@@ -1386,7 +1386,7 @@ const app=createApp({
       }));
     };
 
-    const STATUS_MAP={created:'待确认',confirmed:'已核单',measured:'已测量',stocked:'已备货',processing:'加工中',install:'待安装',installed:'已安装',completed:'已完成',cancelled:'已取消'};
+    const STATUS_MAP={created:'已创建',confirmed:'已确认',split:'已拆分',purchasing:'采购中',stocked:'已到货',processing:'生产中',production_exception:'生产异常',install_order_generated:'安装单已生成',shipped:'已发货',installed:'已安装',accepted:'已验收',completed:'已完成',cancelled:'已取消'};
 
     const initAll=async()=>{
       try{isLoading.value=true;
@@ -1539,10 +1539,13 @@ const app=createApp({
     ];
     const dictMap=ref(Object.assign({},LS('dictMap')||{
       orderStatus:[
-        {k:'pending',v:'待确认',c:'#909399'},{k:'measure',v:'待测量',c:'#409eff'},
-        {k:'stock',v:'待备货',c:'#f56c6c'},{k:'process',v:'待加工',c:'#67c23a'},
-        {k:'install',v:'待安装',c:'#9c27b0'},{k:'done',v:'已安装',c:'#1a3a5c'},
-        {k:'partial',v:'有尾款',c:'#e6a23c'},{k:'complete',v:'完成',c:'#222'},
+        {k:'created',v:'已创建',c:'#909399'},{k:'confirmed',v:'已确认',c:'#409eff'},
+        {k:'split',v:'已拆分',c:'#7c3aed'},{k:'purchasing',v:'采购中',c:'#f59e0b'},
+        {k:'stocked',v:'已到货',c:'#10b981'},{k:'processing',v:'生产中',c:'#f97316'},
+        {k:'production_exception',v:'生产异常',c:'#ef4444'},{k:'install_order_generated',v:'安装单已生成',c:'#8b5cf6'},
+        {k:'shipped',v:'已发货',c:'#06b6d4'},{k:'installed',v:'已安装',c:'#1a3a5c'},
+        {k:'accepted',v:'已验收',c:'#059669'},{k:'completed',v:'已完成',c:'#6366f1'},
+        {k:'cancelled',v:'已取消',c:'#d9d9d9'},
       ],
       orderType:[{k:'curtain',v:'窗帘'},{k:'wallpaper',v:'墙布'},{k:'hardsheet',v:'硬包'},{k:'rockboard',v:'岩板'},{k:'wholehouse',v:'全屋'}],
       deliveryMethod:[{k:'install',v:'上门安装'},{k:'pickup',v:'自提'}],
