@@ -92,6 +92,7 @@ async def create_feedback(req: dict = Body(...)):
 async def list_feedbacks(
     status: Optional[str] = Query(None),
     feedback_type: Optional[str] = Query(None, alias="feedback_type"),
+    order_id: Optional[int] = Query(None),
     keyword: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -105,6 +106,8 @@ async def list_feedbacks(
             conditions.append(ProductionFeedback.status == status)
         if feedback_type:
             conditions.append(ProductionFeedback.feedback_type == feedback_type)
+        if order_id is not None:
+            conditions.append(ProductionFeedback.order_id == order_id)
         if keyword:
             kw = f"%{keyword}%"
             conditions.append(
