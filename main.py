@@ -19,6 +19,7 @@ app = FastAPI(
 )
 
 # CORS
+# ⚠️ 生产环境：allow_origins 必须改为明确域名列表，禁止 "*" + credentials 同时使用
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

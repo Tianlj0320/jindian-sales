@@ -18,7 +18,7 @@ async def list_customers(
     page_size: int = Query(20, ge=1, le=100)
 ):
     async with async_session() as session:
-        conditions = []
+        conditions = [Customer.is_deleted == False]
         if keyword:
             kw = f"%{keyword}%"
             conditions.append(
@@ -28,7 +28,7 @@ async def list_customers(
         if customer_type:
             conditions.append(Customer.type == customer_type)
 
-        query = select(Customer)
+        query = select(Customer).where(and_(*conditions))
         if conditions:
             query = query.where(and_(*conditions))
 
@@ -137,6 +137,7 @@ async def delete_customer(customer_id: int):
         if not c:
             return CommonResponse(success=False, error="客户不存在")
 
-        await session.delete(c)
+        # 软删除（不物理删除，保留数据）
+        c.is_deleted = True
         await session.commit()
         return CommonResponse(success=True, data={"id": customer_id})

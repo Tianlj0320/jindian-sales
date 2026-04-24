@@ -1309,7 +1309,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
 
 
 </body>
-</html>
+<script>
 
 const {createApp,ref,computed,watch}=Vue;
 const {ElMessage}=ElementPlus;
@@ -1361,6 +1361,9 @@ const app=createApp({
     if(!currentUser.value){showLogin.value=true;}
     const loginForm=ref({phone:'',password:''});
     const drawerVisible=ref(false);
+    const sForm=ref({type:'',contact:'',phone:'',deliveryDays:3,address:'',payment:''});
+    const cuForm=ref({name:'',type:'零售',contact:'',phone:'',community:'',address:'',salespersonId:'',source:'',debtLimit:0,remark:''});
+    const empForm=ref({name:'',position:'',phone:'',idCard:'',joinDate:'',status:'在职',remark:''});
     const authToken=ref(LS('authToken')||'');
 
     const doLogin=async()=>{
@@ -1611,11 +1614,18 @@ const app=createApp({
     const filterPurchase=()=>{let list=purchases.value;if(purchaseSearch.value)list=list.filter(p=>(p.supplierName||'').includes(purchaseSearch.value)||(p.purchaseNo||'').includes(purchaseSearch.value)||(p.orderIds||'').includes(purchaseSearch.value));if(purchaseStatusF.value)list=list.filter(p=>p.status===purchaseStatusF.value);filteredPurchase.value=list;};
     const loadPurchases=async()=>{try{const d=await api('/api/purchase-orders');purchases.value=(d.items||[]).map(p=>({id:p.id,purchaseNo:p.po_no||'',supplierName:p.supplier_name||'',orderIds:p.order_ids||'',items:Array.isArray(p.items)?p.items.map(i=>i.product_name||'').join(', '):(p.items||''),status:p.status||'待采购',amount:(p.total_amount||p.amount||0),date:p.expected_date||''}));filterPurchase();}catch(e){console.error(e);}};
     const loadProduction=async()=>{try{const d=await api('/api/orders?status_key=processing');const arr=(d.data||[]).map(o=>({id:o.id,orderNo:o.order_no||'',customerName:o.customer_name||'',step:1,content:o.items?.map(i=>i.product_name||i.product||'').join(',')||''}));productionOrders.value=arr;filterProduction();}catch(e){console.error(e);}};
-    const loadInstallOrders=async()=>{try{const d=await api('/api/installation-orders');installOrders.value=(d.items||[]).map(i=>({id:i.id,insNo:i.ins_no||'',orderId:i.order_id,customerName:i.customer_name||'',address:i.address||'',scheduledDate:i.scheduled_date||'',status:i.status||'待分配',installerName:i.installer_name||''}));filterInstall();}catch(e){console.error(e);}};
+    /* 安装 */
+    const installOrders=ref([]);
+    const filteredInstall=ref([]);
+    const installSearch=ref('');
+    const installStatusF=ref('');
+    const filterInstall=()=>{let list=installOrders.value;if(installSearch.value)list=list.filter(i=>(i.customerName||'').includes(installSearch.value)||(i.address||'').includes(installSearch.value));if(installStatusF.value)list=list.filter(i=>i.status===installStatusF.value);filteredInstall.value=list;};
+    const confirmInstall=async row=>{row.status='已安装';try{const installRes=await api('/api/installer/tasks','GET');const t=(installRes.tasks||[]).find(t=>t.order_no===(row.orderNo||''));if(t)await api(`/api/installer/tasks/${t.id}/complete`,'POST',{completed_at:new Date().toISOString().slice(0,19).replace('T',' '),remark:''});await api(`/api/orders/${row.id}/status`,'PUT',{new_status_key:'installed'});}catch(e){console.error(e);}filterInstall();ElMessage.success('已确认安装完成');};
+    const loadInstallOrders=async()=>{try{const d=await api('/api/installation-orders');installOrders.value=(d.items||[]).map(i=>({id:i.id,insNo:i.ins_no||'',orderId:i.order_id,orderNo:i.order_no||'',customerName:i.customer_name||'',address:i.address||'',scheduledDate:i.scheduled_date||'',status:i.status||'待分配',installerName:i.installer_name||''}));filterInstall();}catch(e){console.error(e);}};
 
-    
     /* 生产（供应链） */
     const productionSteps=['订单接单审核','用料核定','报货','下料汇总','加工','完成审核'];
+    const prodStep=ref(1);
     const productionOrders=ref([]);
     const filteredProduction=ref([]);
     const prodStepF=ref('');
@@ -1627,8 +1637,36 @@ const app=createApp({
 
     /* 生产 */
 
-    const eicons=window.ElementPlusIconsVue;if(eicons){for(const[k,v]of Object.entries(eicons)){app.component(k,v);}}
-    app.use(ElementPlus);
-    app.mount('#app');
+    return{
+      page,activeMenu,pageTitle,switchPage,handleNav,switchPage2,
+      stats,alerts,
+      suppliers,filteredSuppliers,suppSearch,suppTypeF,categories,products,filteredProducts,prodSearch,prodSupplierF,prodCatF,
+      customers,filteredCustomers,customerSearch,customerTypeF,
+      employees,filteredEmployees,empSearch,empPositionF,
+      dictCats,dictCat,dictCatLabel,dictItems,dictMap,orderStatusAll,
+      orders,filteredOrders,selOrder,orderSearch,orderStatusF,orderTypeF,filterOrders,selectOrder,
+      purchases,
+      warehouses,
+      productionSteps,prodStep,productionOrders,prodStepNext,
+      filteredInstall,installOrders,installSearch,installStatusF,filterInstall,confirmInstall,
+      financeData,costBreakdown,
+      salesTrend,staffRank,topProducts,
+      dlgSupplier,sForm,editingSupplier,saveSupplier,openSupplierDlg,delSupplier,
+      dlgCategory,cForm,editingCategory,saveCategory,openCategoryDlg,
+      dlgProduct,pForm,editingProduct,supCategories,addProduct,openProductDlg,delProduct,
+      dlgCustomer,cuForm,editingCustomer,openCustomerDlg,saveCustomer,delCustomer,
+      dlgEmployee,empForm,editingEmp,openEmpDlg,saveEmployee,
+      dlgDictItem,diForm,editingDictItem,openDictItemDlg,saveDictItem,delDictItem,
+      showNewOrder,showEditOrder,orderF,autoDelivery,onProdSelect,onMaterialSelect,calcItem,calcMaterial,addOrderItem,addOrderMaterial,calcTotals,saveNewOrder,
+      getSupplierName,getCatName,
+      currentUser,isLoggedIn,loginForm,loginLoading,doLogin,logout,showLogin,drawerVisible,
+      rptYear,rptMonth,rptTab,loadReportData,reportOrders,
+    };
+  }
+});
+
+const eicons=window.ElementPlusIconsVue;if(eicons){for(const[k,v]of Object.entries(eicons)){app.component(k,v);}}
+app.use(ElementPlus);
+app.mount('#app');
 </script>
 </html>

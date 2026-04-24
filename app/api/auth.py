@@ -4,16 +4,13 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Header
 from pydantic import BaseModel
 from jose import jwt
+from app.core.config import SECRET_KEY, ALGORITHM
 from app.database import async_session
 from app.models import Employee
 from sqlalchemy import select
 
 router = APIRouter(prefix="/api/auth", tags=["认证"])
-
-SECRET_KEY = os.environ.get("JWT_SECRET", "jd软装-v2.2-secret-2026")
-ALGORITHM = "HS256"
 EXPIRE_HOURS = 72
-
 
 class LoginRequest(BaseModel):
     phone: str
@@ -48,9 +45,23 @@ def verify_token(token: str) -> dict:
         return None
 
 
+LOGIN_FAIL_COUNTER: dict[str, list] = {}  # phone -> [timestamp, ...]
+LOGIN_LOCK_DURATION = 300  # 5分钟内失败3次则封禁
+MAX_LOGIN_FAILS = 3
+
+
 @router.post("/login", response_model=LoginResponse)
 async def login(req: LoginRequest):
-    """员工登录：手机号+密码（demo密码统一jd8888）"""
+    """员工登录：手机号+密码"""
+    now = datetime.utcnow()
+
+    # 暴力破解防护：检查失败次数
+    fails = LOGIN_FAIL_COUNTER.get(req.phone, [])
+    fails = [t for t in fails if (now - t).total_seconds() < LOGIN_LOCK_DURATION]
+    if len(fails) >= MAX_LOGIN_FAILS:
+        remaining = LOGIN_LOCK_DURATION - int((now - fails[0]).total_seconds())
+        return LoginResponse(success=False, error=f"登录失败次数过多，请{remaining}秒后重试")
+
     async with async_session() as session:
         result = await session.execute(select(Employee).where(Employee.phone == req.phone))
         emp = result.scalar_one_or_none()
@@ -58,9 +69,21 @@ async def login(req: LoginRequest):
     if not emp:
         return LoginResponse(success=False, error="手机号未注册")
 
-    # demo用明文密码验证
-    if req.password and req.password != "jd8888":
-        return LoginResponse(success=False, error="密码错误")
+    # 验证密码
+    if not req.password:
+        return LoginResponse(success=False, error="请输入密码")
+
+    # 有 password_hash 则用 bcrypt 验证，否则拒绝
+    if emp.password_hash:
+        import bcrypt
+        if not bcrypt.checkpw(req.password.encode("utf-8"), emp.password_hash.encode("utf-8")):
+            LOGIN_FAIL_COUNTER[req.phone] = fails + [now]
+            return LoginResponse(success=False, error="密码错误")
+    else:
+        return LoginResponse(success=False, error="该账号未设置密码，请联系管理员")
+
+    # 验证通过，清除失败记录
+    LOGIN_FAIL_COUNTER.pop(req.phone, None)
 
     token = create_token(emp.id, emp.name, emp.position or "staff")
     role = "admin" if emp.position in ["老板", "经理"] else "staff"

@@ -3,8 +3,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from jose import jwt, JWTError
-
-SECRET_KEY = "jd软装-v2.2-secret-2026"
+from app.core.config import SECRET_KEY, ALGORITHM
 
 ALLOWED_PATHS = {
     "/",
@@ -43,7 +42,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 )
             token = auth_header[7:]
             try:
-                payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+                payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
                 request.state.user_id = int(payload.get("sub", 0))
                 request.state.user_name = payload.get("name", "")
                 request.state.user_role = payload.get("role", "staff")

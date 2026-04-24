@@ -57,6 +57,7 @@ class Customer(Base):
     source = Column(String(50))
     salesperson = Column(String(50))
     debt = Column(DECIMAL(12, 2), default=0)
+    is_deleted = Column(Boolean, default=False)  # 软删除标记
     created_at = Column(DateTime, default=datetime.now)
 
 
@@ -119,6 +120,7 @@ class Employee(Base):
     round_limit = Column(Integer, default=0)  # 抹零限制
     is_installer = Column(Boolean, default=False)  # V2.2 新增：标记安装工
     status = Column(String(20), default="启用")
+    password_hash = Column(String(200), nullable=True)  # 员工登录密码哈希
     created_at = Column(DateTime, default=datetime.now)
 
 
