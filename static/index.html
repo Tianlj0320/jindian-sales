@@ -1781,8 +1781,8 @@ const app=createApp({
 
     /* 订单 */
     const orders=ref([]);
-    const selOrder=ref({});
-    const selectOrder=(o)=>{Object.assign(selOrder.value,{id:o.id,orderNo:o.orderNo,customerName:o.customerName,orderType:o.orderType,salesperson:o.salesperson,orderDate:o.orderDate,deliveryDate:o.deliveryDate,deliveryMethod:o.deliveryMethod,amount:o.amount,received:o.received,debt:o.debt,roundAmount:o.roundAmount||0,status:o.status_label||o.status||STATUS_MAP[o.status_key]||'待确认',statusKey:o.status_key||o.statusKey||'created',statusColor:o.status_color||o.statusColor||'#909399',statusColorKey:o.status_key||o.statusKey||'created',history:o.history||[],items:(o.items||[]).map(i=>({product_name:i.product_name||i.product||'',unit_price:i.unit_price||i.price||0,item_type:i.is_material?'material':(i.item_type||'product'),room:i.room||'',width:i.width||'',height:i.height||'',qty:i.qty||0,discount:i.discount||1,amount:i.amount||0}))});};
+    const selOrder=reactive({});
+    const selectOrder=(o)=>{Object.assign(selOrder,{id:o.id,orderNo:o.orderNo,customerName:o.customerName,orderType:o.orderType,salesperson:o.salesperson,orderDate:o.orderDate,deliveryDate:o.deliveryDate,deliveryMethod:o.deliveryMethod,amount:o.amount,received:o.received,debt:o.debt,roundAmount:o.roundAmount||0,status:o.status_label||o.status||STATUS_MAP[o.status_key]||'待确认',statusKey:o.status_key||o.statusKey||'created',statusColor:o.status_color||o.statusColor||'#909399',statusColorKey:o.status_key||o.statusKey||'created',history:o.history||[],items:(o.items||[]).map(i=>({product_name:i.product_name||i.product||'',unit_price:i.unit_price||i.price||0,item_type:i.is_material?'material':(i.item_type||'product'),room:i.room||'',width:i.width||'',height:i.height||'',qty:i.qty||0,discount:i.discount||1,amount:i.amount||0}))});};
     const orderSearch=ref('');
     const orderStatusF=ref('');
     const orderTypeF=ref('');
@@ -1796,18 +1796,18 @@ const app=createApp({
     };
 
     const updateOrderStatusByKey=async()=>{
-      if(!selOrder.value)return;
-      const newKey=selOrder.value.statusKey;
+      if(!selOrder.id)return;
+      const newKey=selOrder.statusKey;
       const st=orderStatusAll.value.find(x=>x.k===newKey);
       if(!st)return;
       const newLabel=st.v;
       // update local
-      const old=orders.value.find(o=>o.id===selOrder.value.id);
-      if(old){old.status=newLabel;old.statusKey=newKey;old.statusColor=newKey;if(!old.history)old.history=[];old.history.push({s:old.status,s2:newLabel,c:newKey,time:new Date().toLocaleString()});Object.assign(selOrder.value,old);}
+      const old=orders.value.find(o=>o.id===selOrder.id);
+      if(old){old.status=newLabel;old.statusKey=newKey;old.statusColor=newKey;if(!old.history)old.history=[];old.history.push({s:old.status,s2:newLabel,c:newKey,time:new Date().toLocaleString()});Object.assign(selOrder,old);}
       // sync to API
-      try{await api(`/api/orders/${selOrder.value.id}/status`,'PUT',{new_status_key:newKey});}catch(e){console.error(e);}
+      try{await api(`/api/orders/${selOrder.id}/status`,'PUT',{new_status_key:newKey});}catch(e){console.error(e);}
     };
-    const delOrder=async()=>{const o=selOrder.value;if(!o)return;if(!confirm(`确定删除订单「${o.orderNo}」？此操作不可恢复！`))return;try{await api(`/api/orders/${o.id}`,'DELETE');orders.value=orders.value.filter(x=>x.id!==o.id);selOrder.value=null;filterOrders();ElMessage.success('已删除');}catch(e){ElMessage.error('删除失败：'+(e.message||''));}};
+    const delOrder=async()=>{const o=selOrder;if(!o)return;if(!confirm(`确定删除订单「${o.orderNo}」？此操作不可恢复！`))return;try{const oid=o.id;await api(`/api/orders/${oid}`,'DELETE');Object.keys(selOrder).forEach(k=>delete selOrder[k]);await loadOrders();ElMessage.success('已删除');}catch(e){ElMessage.error('删除失败：'+(e.message||''));}};
 
     /* 采购 */
     const purchases=ref([]);
