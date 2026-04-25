@@ -541,3 +541,20 @@ async def update_order(
 
         await session.commit()
         return CommonResponse(success=True, data={"id": order_id})
+
+
+@router.delete("/{order_id}", response_model=CommonResponse)
+async def delete_order(order_id: int = Path(...)):
+    """删除订单"""
+    async with async_session() as session:
+        result = await session.execute(select(Order).where(Order.id == order_id))
+        o = result.scalar_one_or_none()
+        if not o:
+            return CommonResponse(success=False, error="订单不存在")
+        # 删除关联的 OrderItem 记录
+        items_result = await session.execute(select(OrderItem).where(OrderItem.order_id == order_id))
+        for item in items_result.scalars().all():
+            await session.delete(item)
+        await session.delete(o)
+        await session.commit()
+        return CommonResponse(success=True, data={"id": order_id})

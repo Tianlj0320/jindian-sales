@@ -582,9 +582,12 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
                 <span :class="'status-dot s-'+(selOrder.statusKey||'created')+' '" style="margin-left:8px"></span>
                 <span style="font-size:13px">{{selOrder?.status||selOrder?.statusKey||'待确认'}}</span>
               </div>
-              <el-select v-model="selOrder.statusKey" size="small" style="width:120px" @change="updateOrderStatusByKey">
-                <el-option v-for="s in orderStatusAll" :key="s.k" :label="s.l" :value="s.k"/>
-              </el-select>
+              <div style="display:flex;gap:8px;align-items:center">
+                <el-select v-model="selOrder.statusKey" size="small" style="width:120px" @change="updateOrderStatusByKey">
+                  <el-option v-for="s in orderStatusAll" :key="s.k" :label="s.l" :value="s.k"/>
+                </el-select>
+                <el-button size="small" type="danger" @click="delOrder">删除</el-button>
+              </div>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
               <div><div style="font-size:11px;color:#999">客户</div><div style="font-size:13px;font-weight:500">{{selOrder.customerName}}</div></div>
