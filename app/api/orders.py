@@ -216,8 +216,17 @@ async def create_order(req: dict = Body(...)):
                 customer_name = c.name
                 customer_phone = c.phone
 
-        # 交货日期缺省：接单日+14天
-        order_date = req.get("order_date") or datetime.now().strftime("%Y-%m-%d")
+        # 交货日期缺省：接单日+14天（支持多种日期格式）
+        order_date_raw = req.get("order_date") or datetime.now().strftime("%Y-%m-%d")
+        # 统一转换为 YYYY-MM-DD
+        for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%d/%m/%Y", "%m/%d/%Y", "%Y%m%d"):
+            try:
+                order_date = datetime.strptime(order_date_raw, fmt).strftime("%Y-%m-%d")
+                break
+            except ValueError:
+                continue
+        else:
+            order_date = datetime.now().strftime("%Y-%m-%d")
         delivery_date = req.get("delivery_date")
         if not delivery_date:
             d = datetime.strptime(order_date, "%Y-%m-%d")
@@ -253,10 +262,19 @@ async def create_order(req: dict = Body(...)):
             salesperson=req.get("salesperson", ""),
             history=history,
             items=items,
-            install_address=req.get("install_address", ""),
-            install_date=req.get("install_date") or None,
-            install_time_slot=req.get("install_time_slot", ""),
         )
+
+        # 处理 install_date（转换为 Python date 对象）
+        install_date_val = None
+        install_date_raw = req.get("install_date")
+        if install_date_raw:
+            for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%d/%m/%Y", "%m/%d/%Y", "%Y%m%d"):
+                try:
+                    install_date_val = datetime.strptime(install_date_raw, fmt).date()
+                    break
+                except ValueError:
+                    continue
+        order.install_date = install_date_val
 
         session.add(order)
         await session.commit()
@@ -300,13 +318,22 @@ async def create_order(req: dict = Body(...)):
         await session.commit()
 
         # 如果有安装日期，创建安装任务
-        if req.get("install_date") and req.get("install_date") != "":
+        _install_date = None
+        _id_raw = req.get("install_date")
+        if _id_raw:
+            for _fmt in ("%Y-%m-%d", "%Y/%m/%d", "%d/%m/%Y", "%m/%d/%Y", "%Y%m%d"):
+                try:
+                    _install_date = datetime.strptime(_id_raw, _fmt).date()
+                    break
+                except ValueError:
+                    continue
+        if _install_date:
             install_task = InstallTask(
                 order_id=order.id,
                 order_no=order_no,
                 installer_id=req.get("installer_id"),
-                install_date=datetime.strptime(req.get("install_date"), "%Y-%m-%d").date(),
-                install_time_slot=req.get("install_time_slot", ""),
+                install_date=_install_date,
+                install_time_slot=req.get("install_time_slot") or "",
                 address=req.get("install_address", ""),
                 customer_name=customer_name,
                 customer_phone=customer_phone,
@@ -444,7 +471,18 @@ async def update_order(
                 setattr(o, field, req[field])
 
         if "install_date" in req:
-            o.install_date = datetime.strptime(req["install_date"], "%Y-%m-%d").date() if req["install_date"] else None
+            install_date_raw = req.get("install_date")
+            if install_date_raw:
+                for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%d/%m/%Y", "%m/%d/%Y", "%Y%m%d"):
+                    try:
+                        o.install_date = datetime.strptime(install_date_raw, fmt).date()
+                        break
+                    except ValueError:
+                        continue
+                else:
+                    o.install_date = None
+            else:
+                o.install_date = None
 
         if "received" in req:
             o.received = float(req["received"])
