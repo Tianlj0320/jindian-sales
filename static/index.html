@@ -1544,7 +1544,7 @@ const app=createApp({
     const page=ref('home');
     const activeMenu=ref('home');
     const pageTitle=computed(()=>({home:'首页概览',suppliers:'供应商管理',product:'产品资料',customer:'客户资料',employee:'员工资料',dict:'码表管理',order:'销售订单',purchase:'采购管理',warehouse:'仓库管理',production:'生产管理',install:'安装管理',finance:'财务结算',report:'统计报表'})[page.value]||'');
-    const switchPage=p=>{page.value=p;activeMenu.value=p==='basic'?'product':p;if(p==='purchase')loadPurchases();if(p==='production')loadProduction();if(p==='install')loadInstallOrders();if(p==='warehouse')loadWarehouse();if(p==='purchase'){loadPurchases();loadPurchaseOrdersForSplit();};};
+    const switchPage=p=>{page.value=p;activeMenu.value=p==='basic'?'product':p;if(p==='order')loadOrders();if(p==='purchase'){loadPurchases();loadPurchaseOrdersForSplit();};if(p==='production')loadProduction();if(p==='install')loadInstallOrders();if(p==='warehouse')loadWarehouse();};
 
     /* nav */
     const navMap={'home':'home','product':'product','customer':'customer','employee':'employee','dict':'dict','order':'order','purchase':'purchase','warehouse':'warehouse','production':'production','install':'install','finance':'finance','report':'report'};
