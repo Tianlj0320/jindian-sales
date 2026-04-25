@@ -1807,6 +1807,7 @@ const app=createApp({
       // sync to API
       try{await api(`/api/orders/${selOrder.value.id}/status`,'PUT',{new_status_key:newKey});}catch(e){console.error(e);}
     };
+    const delOrder=async()=>{const o=selOrder.value;if(!o)return;if(!confirm(`确定删除订单「${o.orderNo}」？此操作不可恢复！`))return;try{await api(`/api/orders/${o.id}`,'DELETE');orders.value=orders.value.filter(x=>x.id!==o.id);selOrder.value=null;filterOrders();ElMessage.success('已删除');}catch(e){ElMessage.error('删除失败：'+(e.message||''));}};
 
     /* 采购 */
     const purchases=ref([]);
