@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/orders", tags=["订单管理"])
 
 # ─── 订单状态12态映射（V3.0）────────────────────────────────────────────────
 ORDER_STATUS_MAP = {
-    "created":              {"label": "已创建",      "color": "#909399"},
+    "created":              {"label": "待确认",      "color": "#909399"},
     "confirmed":           {"label": "已确认",      "color": "#409eff"},
     "split":               {"label": "已拆分",      "color": "#7c3aed"},  # V3.0 采购拆分
     "purchasing":           {"label": "采购中",       "color": "#f59e0b"},  # V3.0

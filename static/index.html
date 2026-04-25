@@ -1608,7 +1608,7 @@ const app=createApp({
       }));
     };
 
-    const STATUS_MAP={created:'已创建',confirmed:'已确认',split:'已拆分',purchasing:'采购中',stocked:'已到货',processing:'生产中',production_exception:'生产异常',install_order_generated:'安装单已生成',shipped:'已发货',installed:'已安装',accepted:'已验收',completed:'已完成',cancelled:'已取消'};
+    const STATUS_MAP={created:'待确认',confirmed:'已确认',split:'已拆分',purchasing:'采购中',stocked:'已到货',processing:'生产中',production_exception:'生产异常',install_order_generated:'安装单已生成',shipped:'已发货',installed:'已安装',accepted:'已验收',completed:'已完成',cancelled:'已取消'};
 
     const initAll=async()=>{
       try{isLoading.value=true;
@@ -1662,7 +1662,7 @@ const app=createApp({
           content:o.content||'',amount:o.amount||0,quoteAmount:o.quote_amount||0,discountAmount:o.discount_amount||0,roundAmount:o.round_amount||0,
           received:o.received||0,debt:o.debt||0,
           status:o.status_label||STATUS_MAP[o.status_key]||'待确认',
-          statusColor:o.status_key||'created',
+          statusColorKey:o.status_key||'created',statusColor:o.status_color||'#909399',
           date:o.order_date||'',orderDate:o.order_date||'',deliveryDate:o.delivery_date||'',
           deliveryMethod:o.delivery_method||'上门安装',salesperson:o.salesperson||'',salespersonId:null,
           history:o.history||[],items:o.items||[]
@@ -1790,7 +1790,7 @@ const app=createApp({
     const filterOrders=()=>{
       let list=[...orders.value];
       if(orderSearch.value){const q=orderSearch.value.toLowerCase();list=list.filter(o=>o.orderNo.includes(orderSearch.value)||o.customerName.includes(q));}
-      if(orderStatusF.value)list=list.filter(o=>o.statusColor===orderStatusF.value);
+      if(orderStatusF.value)list=list.filter(o=>o.statusColorKey===orderStatusF.value);
       if(orderTypeF.value)list=list.filter(o=>o.orderType===orderTypeF.value);
       filteredOrders.value=list;
     };
