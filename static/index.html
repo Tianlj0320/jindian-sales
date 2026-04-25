@@ -1782,7 +1782,7 @@ const app=createApp({
     /* 订单 */
     const orders=ref([]);
     const selOrder=ref({});
-    const selectOrder=(o)=>{Object.assign(selOrder.value,{id:o.id,orderNo:o.orderNo,customerName:o.customerName,orderType:o.orderType,salesperson:o.salesperson,orderDate:o.orderDate,deliveryDate:o.deliveryDate,deliveryMethod:o.deliveryMethod,amount:o.amount,received:o.received,debt:o.debt,roundAmount:o.roundAmount,status:o.status,statusKey:o.status_key||o.statusKey||'created',statusColor:o.statusColor||o.status_key||'created',history:o.history||[],items:(o.items||[]).map(i=>({product_name:i.product_name||i.product||'',unit_price:i.unit_price||i.price||0,item_type:i.is_material?'material':(i.item_type||'product'),room:i.room||'',width:i.width||'',height:i.height||'',qty:i.qty||0,discount:i.discount||1,amount:i.amount||0}))});};
+    const selectOrder=(o)=>{Object.assign(selOrder.value,{id:o.id,orderNo:o.orderNo,customerName:o.customerName,orderType:o.orderType,salesperson:o.salesperson,orderDate:o.orderDate,deliveryDate:o.deliveryDate,deliveryMethod:o.deliveryMethod,amount:o.amount,received:o.received,debt:o.debt,roundAmount:o.roundAmount||0,status:o.status_label||o.status||STATUS_MAP[o.status_key]||'待确认',statusKey:o.status_key||o.statusKey||'created',statusColor:o.status_color||o.statusColor||'#909399',statusColorKey:o.status_key||o.statusKey||'created',history:o.history||[],items:(o.items||[]).map(i=>({product_name:i.product_name||i.product||'',unit_price:i.unit_price||i.price||0,item_type:i.is_material?'material':(i.item_type||'product'),room:i.room||'',width:i.width||'',height:i.height||'',qty:i.qty||0,discount:i.discount||1,amount:i.amount||0}))});};
     const orderSearch=ref('');
     const orderStatusF=ref('');
     const orderTypeF=ref('');
