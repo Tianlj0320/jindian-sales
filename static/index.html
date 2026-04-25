@@ -1579,7 +1579,7 @@ const app=createApp({
           localStorage.setItem('authToken',res.token);
           const u={id:res.user_id,name:res.name||'员工',role:res.role||'staff'};
           currentUser.value=u;localStorage.setItem('currentUser',JSON.stringify(u));
-          showLogin.value=false;isLoggedIn.value=true;initAll();loadPurchases();loadProduction();loadInstallOrders();loadPurchaseOrdersForSplit();ElMessage.success('登录成功');
+          showLogin.value=false;isLoggedIn.value=true;initAll();loadOrders();loadPurchases();loadProduction();loadInstallOrders();loadPurchaseOrdersForSplit();ElMessage.success('登录成功');
         }else{ElMessage.error(res.message||'登录失败');}
       }catch(e){ElMessage.error(typeof e==='string'?e:(e.message||'登录失败'));}
       finally{loginLoading.value=false;}
@@ -1815,7 +1815,8 @@ const app=createApp({
     const purchaseSearch=ref('');
     const purchaseStatusF=ref('');
     const filterPurchase=()=>{let list=purchases.value;if(purchaseSearch.value)list=list.filter(p=>(p.supplierName||'').includes(purchaseSearch.value)||(p.purchaseNo||'').includes(purchaseSearch.value)||(p.orderIds||'').includes(purchaseSearch.value));if(purchaseStatusF.value)list=list.filter(p=>p.status===purchaseStatusF.value);filteredPurchase.value=list;};
-    const loadPurchases=async()=>{try{const d=await api('/api/purchase-orders');purchases.value=(d.items||[]).map(p=>({id:p.id,purchaseNo:p.po_no||'',supplierId:p.supplier_id,supplierName:p.supplier_name||'',orderIds:p.order_ids||'',items:Array.isArray(p.items)?p.items.map(i=>i.product_name||'').join(', '):(p.items||''),itemsRaw:p.items||[],status:p.status||'待采购',amount:(p.total_amount||p.amount||0),date:p.expected_date||'',remark:p.remark||''}));filterPurchase();}catch(e){console.error(e);}};
+    const loadOrders=async()=>{try{const d=await api('/api/orders?page=1&page_size=200');orders.value=(d.items||[]).map(o=>({id:o.id,orderNo:o.order_no||'',customerName:o.customer_name||'',orderType:o.order_type||'窗帘',customerId:o.customer_id,salesperson:o.salesperson||'',amount:o.amount||0,received:o.received||0,debt:o.debt||0,roundAmount:o.round_amount||0,status:o.status_label||STATUS_MAP[o.status_key]||'待确认',statusKey:o.status_key||'created',statusColor:o.status_color||'#909399',statusColorKey:o.status_key||'created',orderDate:o.order_date||'',deliveryDate:o.delivery_date||'',deliveryMethod:o.delivery_method||'上门安装',history:o.history||[],items:o.items||[]}));filteredOrders.value=[...orders.value];filterOrders();}catch(e){console.error('loadOrders error:',e);}};
+    const loadPurchases=async()=>{try{const d=await api('/api/purchase-orders');}purchases.value=(d.items||[]).map(p=>({id:p.id,purchaseNo:p.po_no||'',supplierId:p.supplier_id,supplierName:p.supplier_name||'',orderIds:p.order_ids||'',items:Array.isArray(p.items)?p.items.map(i=>i.product_name||'').join(', '):(p.items||''),itemsRaw:p.items||[],status:p.status||'待采购',amount:(p.total_amount||p.amount||0),date:p.expected_date||'',remark:p.remark||''}));filterPurchase();}catch(e){console.error(e);}};
     const dlgPurchase=ref(false);const editingPurchase=ref(null);
     const purchaseForm=ref({supplierId:'',orderIds:'',expectedDate:'',status:'待采购',remark:''});
     const openPurchaseDlg=(row=null)=>{editingPurchase.value=row?{...row}:null;purchaseForm.value=row?{supplierId:row.supplierId?'s'+row.supplierId:'',orderIds:row.orderIds||'',expectedDate:row.date||'',status:row.status||'待采购',remark:row.remark||''}:{supplierId:suppliers.value[0]?'s'+suppliers.value[0].id:'',orderIds:'',expectedDate:'',status:'待采购',remark:''};dlgPurchase.value=true;};
