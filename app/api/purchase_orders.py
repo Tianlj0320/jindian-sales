@@ -159,18 +159,18 @@ async def split_order(
     # 权限检查（暂时跳过，正式环境从 header 验证）
     async with async_session() as session:
         # 检查订单状态
-        r = await session.execute(select(Order.status).where(Order.id == order_id))
+        r = await session.execute(select(Order.status_key).where(Order.id == order_id))
         order_status = r.scalar_one_or_none()
         if not order_status:
             raise HTTPException(status_code=404, detail="订单不存在")
 
-        # Bug #9: 订单未确认（created）时不能拆分，必须先"已确认"
-        if order_status != "已确认":
+        # 必须已确认（confirmed）才能拆分
+        if order_status != "confirmed":
             raise HTTPException(status_code=400, detail=f"订单状态为「{order_status}」，请先确认订单后再拆分")
 
-        # Bug #10: 已拆分的不能再拆
-        if "已拆分" in order_status or "采购中" in order_status:
-            raise HTTPException(status_code=400, detail=f"订单状态为「{order_status}」，不可重复拆分")
+        # 已拆分的不能再拆
+        if order_status == "split":
+            raise HTTPException(status_code=400, detail=f"订单已拆分，不可重复操作")
 
         pos = await split_order_to_purchase_orders(session, order_id)
 
@@ -498,4 +498,135 @@ async def get_purchase_orders_by_supplier(
                 }
                 for p in items
             ],
+        }
+
+
+@router.post("/batch-split")
+async def batch_split_orders(
+    order_ids: List[int] = Body(..., description="订单ID列表"),
+    authorization: str = Header(None),
+):
+    """
+    【批量拆分核心接口】
+    将多个已确认订单合并按供应商拆分生成采购单
+
+    逻辑：
+      1. 读取所有订单的明细（OrderItem），按 supplier_id 分组
+      2. 同一供应商 → 合并成一张采购单（汇总所有订单的物料）
+      3. 收集所有涉及的 order_ids
+      4. 各订单状态改为"已拆分"
+    """
+    if not order_ids:
+        raise HTTPException(status_code=400, detail="请至少选择一个订单")
+
+    async with async_session() as session:
+        # ── 读取所有订单的明细，按供应商分组 ──────────────────────────────
+        supplier_map: dict = {}  # supplier_id → {supplier_name, contact, phone, items: [], order_ids: set, delivery_date}
+
+        for order_id in order_ids:
+            # 检查订单状态
+            r = await session.execute(select(Order).where(Order.id == order_id))
+            order = r.scalar_one_or_none()
+            if not order:
+                continue
+            if order.status_key not in ("confirmed",):
+                raise HTTPException(status_code=400, detail=f"订单「{order.order_no}」状态为「{order.status_key}」，仅已确认订单可生成采购单")
+            if order.status_key == "split":
+                raise HTTPException(status_code=400, detail=f"订单「{order.order_no}」已生成采购单，不可重复操作")
+
+            # 读取订单明细
+            r = await session.execute(select(OrderItem).where(OrderItem.order_id == order_id))
+            items = r.scalars().all()
+
+            for item in items:
+                sid = item.supplier_id or 0
+                if sid not in supplier_map:
+                    sup_name, sup_contact, sup_phone = "", "", ""
+                    if sid > 0:
+                        sr = await session.execute(select(Supplier).where(Supplier.id == sid))
+                        sup = sr.scalar_one_or_none()
+                        if sup:
+                            sup_name = sup.name or ""
+                            sup_contact = sup.contact or ""
+                            sup_phone = sup.phone or ""
+                    supplier_map[sid] = {
+                        "supplier_id": sid,
+                        "supplier_name": sup_name,
+                        "contact": sup_contact,
+                        "phone": sup_phone,
+                        "items": [],
+                        "order_ids": set(),
+                        "delivery_date": parse_delivery_date(order.__dict__),
+                    }
+                supplier_map[sid]["items"].append({
+                    "product_id": None,
+                    "product_code": item.product_code or "",
+                    "product_name": item.product_name or "",
+                    "spec": f"{item.width or 0}x{item.height or 0}" if item.width or item.height else "",
+                    "qty": item.qty or 1,
+                    "unit_price": float(item.unit_price or 0),
+                    "amount": float(item.amount or 0),
+                    "material_type": getattr(item, "material_type", "主料"),
+                    "order_item_id": item.id,
+                    "source_order_no": order.order_no,
+                })
+                supplier_map[sid]["order_ids"].add(str(order_id))
+
+        # ── 生成采购单 ─────────────────────────────────────────────────
+        today_str = datetime.now().strftime("%Y%m%d")
+        seq_r = await session.execute(
+            select(func.count(PurchaseOrder.id)).where(PurchaseOrder.po_no.like(f"PO{today_str}%"))
+        )
+        base_seq = (seq_r.scalar() or 0)
+
+        purchase_orders = []
+        for idx, (sid, group) in enumerate(supplier_map.items()):
+            if not group["items"]:
+                continue
+            base_seq += 1
+            po_no = f"PO{today_str}{base_seq:03d}"
+            total = sum(float(i["amount"]) for i in group["items"])
+            order_ids_str = ",".join(sorted(group["order_ids"]))
+
+            po = PurchaseOrder(
+                po_no=po_no,
+                supplier_id=sid if sid > 0 else None,
+                supplier_name=group["supplier_name"],
+                contact=group["contact"],
+                phone=group["phone"],
+                total_amount=total,
+                paid_amount=0,
+                debt_amount=total,
+                status="待采购",
+                order_ids=order_ids_str,
+                expected_date=group["delivery_date"],
+                items=group["items"],
+                remark=f"由订单 {order_ids_str} 批量拆分生成",
+            )
+            session.add(po)
+
+            # 更新各订单状态
+            for oid in group["order_ids"]:
+                r = await session.execute(select(Order).where(Order.id == int(oid)))
+                o = r.scalar_one_or_none()
+                if o:
+                    o.status = "已拆分"
+                    o.status_key = "split"
+
+            purchase_orders.append({
+                "id": f"pending_{idx}",
+                "po_no": po_no,
+                "supplier_name": group["supplier_name"] or "未分配供应商",
+                "total_amount": total,
+                "status": "待采购",
+                "item_count": len(group["items"]),
+                "order_count": len(group["order_ids"]),
+            })
+
+        await session.commit()
+
+        return {
+            "success": True,
+            "message": f"成功生成 {len(purchase_orders)} 张采购单",
+            "purchase_orders": purchase_orders,
         }

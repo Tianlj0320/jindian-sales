@@ -683,8 +683,24 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
 
       <!-- ============ 采购管理 ============ -->
       <div v-if="page==='purchase'">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div class="page-title">采购管理 <span>（订单确认后按供应商自动拆分汇总）</span></div><div style="display:flex;gap:8px;flex-wrap:wrap"><el-input v-model="purchaseSearch" placeholder="搜索供应商/订单" size="small" style="width:180px" clearable @input="filterPurchase"/><el-select v-model="purchaseStatusF" size="small" placeholder="筛选状态" clearable style="width:120px" @change="filterPurchase"><el-option label="待采购" value="待采购"/><el-option label="已下单" value="已下单"/><el-option label="部分到货" value="部分到货"/><el-option label="全部到货" value="全部到货"/></el-select><el-button size="small" @click="loadPurchases">刷新</el-button></div></div>
-        <div class="card" style="overflow-x:auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <div class="page-title">采购管理</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <el-input v-model="purchaseSearch" placeholder="搜索供应商/订单" size="small" style="width:180px" clearable @input="filterPurchase"/>
+            <el-select v-model="purchaseStatusF" size="small" placeholder="筛选状态" clearable style="width:120px" @change="filterPurchase">
+              <el-option label="待采购" value="待采购"/><el-option label="已下单" value="已下单"/><el-option label="部分到货" value="部分到货"/><el-option label="全部到货" value="全部到货"/>
+            </el-select>
+            <el-button size="small" @click="loadPurchases">刷新采购单</el-button>
+            <el-button size="small" type="success" @click="loadPurchaseOrdersForSplit">刷新待采购</el-button>
+          </div>
+        </div>
+
+        <!-- 采购单列表 -->
+        <div class="card" style="margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <b style="color:#1a3a5c;font-size:14px">采购单列表</b>
+            <span style="font-size:12px;color:#999">{{filteredPurchase.length}} 张采购单</span>
+          </div>
           <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap">
             <thead><tr style="background:#f5f7fa">
               <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">采购单号</th>
@@ -711,7 +727,45 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
                 </td>
               </tr>
               <tr v-if="!filteredPurchase||filteredPurchase.length===0">
-                <td colspan="8" style="padding:20px;text-align:center;color:#ccc">暂无采购记录</td>
+                <td colspan="8" style="padding:20px;text-align:center;color:#ccc">暂无采购单</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 待采购订单（可勾选生成采购单） -->
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+            <b style="color:#1a3a5c;font-size:14px">待采购订单 <span style="font-size:12px;color:#999;font-weight:normal">（勾选后点击「生成采购单」）</span></b>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span style="font-size:12px;color:#999">已选 {{selectedSplitOrders.length}} 单</span>
+              <el-button size="small" type="primary" :disabled="selectedSplitOrders.length===0" @click="doBatchSplit">生成采购单</el-button>
+            </div>
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap">
+            <thead><tr style="background:#f5f7fa">
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600;width:40px"><input type="checkbox" :checked="selectedSplitOrders.length>0 && selectedSplitOrders.length===purchaseOrdersForSplit.length" @change="toggleAllSplitOrders"/></th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">订单号</th>
+              <th style="padding:8px 6px;text-align:left;color:#1a3a5c;font-weight:600">客户</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">订单类型</th>
+              <th style="padding:8px 6px;text-align:left;color:#1a3a5c;font-weight:600">内容</th>
+              <th style="padding:8px 6px;text-align:right;color:#1a3a5c;font-weight:600">金额</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">接单日期</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">交期</th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="row in purchaseOrdersForSplit" :key="row.id" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''" :style="selectedSplitOrders.includes(row.id)?'background:#e8f4e8':''">
+                <td style="padding:7px 6px;text-align:center"><input type="checkbox" :checked="selectedSplitOrders.includes(row.id)" @change="toggleSplitOrder(row.id)"/></td>
+                <td style="padding:7px 6px;text-align:center;color:#409eff;font-weight:bold">{{row.orderNo}}</td>
+                <td style="padding:7px 6px;text-align:left">{{row.customerName||'-'}}</td>
+                <td style="padding:7px 6px;text-align:center">{{row.orderType||'窗帘'}}</td>
+                <td style="padding:7px 6px;text-align:left;color:#666;font-size:12px">{{row.content||'-'}}</td>
+                <td style="padding:7px 6px;text-align:right;font-weight:bold;color:#f56c6c">¥{{Number(row.amount||0).toLocaleString()}}</td>
+                <td style="padding:7px 6px;text-align:center">{{row.orderDate||'-'}}</td>
+                <td style="padding:7px 6px;text-align:center;color:#e6a23c">{{row.deliveryDate||'-'}}</td>
+              </tr>
+              <tr v-if="!purchaseOrdersForSplit||purchaseOrdersForSplit.length===0">
+                <td colspan="8" style="padding:20px;text-align:center;color:#ccc">暂无待采购订单（所有已确认订单已生成采购单）</td>
               </tr>
             </tbody>
           </table>
@@ -1487,7 +1541,7 @@ const app=createApp({
     const page=ref('home');
     const activeMenu=ref('home');
     const pageTitle=computed(()=>({home:'首页概览',suppliers:'供应商管理',product:'产品资料',customer:'客户资料',employee:'员工资料',dict:'码表管理',order:'销售订单',purchase:'采购管理',warehouse:'仓库管理',production:'生产管理',install:'安装管理',finance:'财务结算',report:'统计报表'})[page.value]||'');
-    const switchPage=p=>{page.value=p;activeMenu.value=p==='basic'?'product':p;if(p==='purchase')loadPurchases();if(p==='production')loadProduction();if(p==='install')loadInstallOrders();if(p==='warehouse')loadWarehouse();};
+    const switchPage=p=>{page.value=p;activeMenu.value=p==='basic'?'product':p;if(p==='purchase')loadPurchases();if(p==='production')loadProduction();if(p==='install')loadInstallOrders();if(p==='warehouse')loadWarehouse();if(p==='purchase'){loadPurchases();loadPurchaseOrdersForSplit();};};
 
     /* nav */
     const navMap={'home':'home','product':'product','customer':'customer','employee':'employee','dict':'dict','order':'order','purchase':'purchase','warehouse':'warehouse','production':'production','install':'install','finance':'finance','report':'report'};
@@ -1522,7 +1576,7 @@ const app=createApp({
           localStorage.setItem('authToken',res.token);
           const u={id:res.user_id,name:res.name||'员工',role:res.role||'staff'};
           currentUser.value=u;localStorage.setItem('currentUser',JSON.stringify(u));
-          showLogin.value=false;isLoggedIn.value=true;initAll();loadPurchases();loadProduction();loadInstallOrders();ElMessage.success('登录成功');
+          showLogin.value=false;isLoggedIn.value=true;initAll();loadPurchases();loadProduction();loadInstallOrders();loadPurchaseOrdersForSplit();ElMessage.success('登录成功');
         }else{ElMessage.error(res.message||'登录失败');}
       }catch(e){ElMessage.error(typeof e==='string'?e:(e.message||'登录失败'));}
       finally{loginLoading.value=false;}
@@ -1764,6 +1818,11 @@ const app=createApp({
     const savePurchase=async()=>{try{const f=purchaseForm.value;const sid=parseInt(f.supplierId.replace('s',''))||null;const method=editingPurchase.value?'PUT':'POST';const url=editingPurchase.value?`/api/purchase-orders/${editingPurchase.value.id}`:'/api/purchase-orders';const payload={supplier_id:sid,order_ids:f.orderIds,expected_date:f.expectedDate,status:f.status,remark:f.remark};const d=await api(url,method,payload);if(editingPurchase.value){const idx=purchases.value.findIndex(p=>p.id===editingPurchase.value.id);if(idx>-1)purchases.value.splice(idx,1,{...purchases.value[idx],...d});}else{purchases.value.push({id:d.id,purchaseNo:d.po_no||'',supplierId:sid,supplierName:getSupplierName(sid)||'',orderIds:f.orderIds,items:'',itemsRaw:[],status:f.status,amount:0,date:f.expectedDate,remark:f.remark});}dlgPurchase.value=false;ElMessage.success('保存成功');loadPurchases();}catch(e){ElMessage.error('保存失败');}};
     const deletePurchase=async(row)=>{if(!confirm(`确定删除采购单「${row.purchaseNo}」？`))return;try{await api(`/api/purchase-orders/${row.id}`,'DELETE');purchases.value=purchases.value.filter(p=>p.id!==row.id);ElMessage.success('已删除');}catch(e){ElMessage.error('删除失败');}};
     const updatePurchaseStatus=async(row,newStatus)=>{try{await api(`/api/purchase-orders/${row.id}/status`,'PUT',{status:newStatus});row.status=newStatus;filterPurchase();ElMessage.success('状态已更新');}catch(e){ElMessage.error('更新失败');}};
+    const purchaseOrdersForSplit=ref([]);const selectedSplitOrders=ref([]);
+    const loadPurchaseOrdersForSplit=async()=>{try{const d=await api('/api/orders?status_key=confirmed');purchaseOrdersForSplit.value=(d.items||[]).map(o=>({id:o.id,orderNo:o.order_no||'',customerName:o.customer_name||'',orderType:o.order_type||'窗帘',content:o.content||'',amount:o.amount||0,orderDate:o.order_date||'',deliveryDate:o.delivery_date||''}));selectedSplitOrders.value=[]}catch(e){console.error(e);}};
+    const toggleSplitOrder=id=>{const idx=selectedSplitOrders.value.indexOf(id);if(idx>-1)selectedSplitOrders.value.splice(idx,1);else selectedSplitOrders.value.push(id);};
+    const toggleAllSplitOrders=()=>{if(selectedSplitOrders.value.length===purchaseOrdersForSplit.value.length){selectedSplitOrders.value=[]}else{selectedSplitOrders.value=purchaseOrdersForSplit.value.map(o=>o.id);}};
+    const doBatchSplit=async()=>{if(selectedSplitOrders.value.length===0){ElMessage.warning('请先勾选订单');return;}try{const d=await api('/api/purchase-orders/batch-split','POST',selectedSplitOrders.value);ElMessage.success(d.message||'采购单生成成功');selectedSplitOrders.value=[];loadPurchaseOrdersForSplit();loadPurchases();}catch(e){ElMessage.error('生成失败：'+e.message||'未知错误');}};
     const loadProduction=async()=>{try{const d=await api('/api/orders?status_key=processing');const arr=(d.items||[]).map(o=>({id:o.id,orderNo:o.order_no||'',customerName:o.customer_name||'',step:1,content:o.items?.map(i=>i.product_name||i.product||'').join(',')||''}));productionOrders.value=arr;filterProduction();}catch(e){console.error(e);}};
     /* 安装 */
     const installOrders=ref([]);
@@ -1847,6 +1906,7 @@ const deleteWarehouseRecord=async(id)=>{if(!confirm('确定删除该记录？'))
       orders,filteredOrders,selOrder,orderSearch,orderStatusF,orderTypeF,filterOrders,selectOrder,
       purchases,filteredPurchase,purchaseSearch,purchaseStatusF,filterPurchase,
       dlgPurchase,purchaseForm,editingPurchase,openPurchaseDlg,savePurchase,deletePurchase,updatePurchaseStatus,
+      purchaseOrdersForSplit,selectedSplitOrders,loadPurchaseOrdersForSplit,toggleSplitOrder,toggleAllSplitOrders,doBatchSplit,
       warehouses,warehouseRecords,
       dlgWarehouseRecord,warehouseForm,saveWarehouseRecord,deleteWarehouseRecord,
       productionSteps,prodStep,productionOrders,prodStepNext,

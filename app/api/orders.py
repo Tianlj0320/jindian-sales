@@ -1,7 +1,7 @@
 # app/api/orders.py
 from fastapi import APIRouter, Query, Path, Body
 from app.database import async_session
-from app.models import Order, InstallTask, Customer, Employee, Product, PurchaseOrder, InstallationOrder
+from app.models import Order, OrderItem, InstallTask, Customer, Employee, Product, PurchaseOrder, InstallationOrder
 from app.api.purchase_orders import split_order_to_purchase_orders
 from app.api.installation_orders import auto_generate_installation_order as _auto_gen_install
 from app.schemas import (
@@ -262,6 +262,43 @@ async def create_order(req: dict = Body(...)):
         await session.commit()
         await session.refresh(order)
 
+        # ── V3.0：为每个明细创建 OrderItem 记录（含供应商信息）───────────────
+        for item in items:
+            product_id = item.get("product_id")
+            supplier_id = None
+            material_type = item.get("material_type", "主料")
+            if product_id:
+                pr = await session.execute(select(Product).where(Product.id == product_id))
+                prod = pr.scalar_one_or_none()
+                if prod:
+                    supplier_id = prod.supplier_id
+            oi = OrderItem(
+                order_id=order.id,
+                item_type=item.get("product_type", "窗帘"),
+                room=item.get("room", ""),
+                category=item.get("category", ""),
+                product_name=item.get("product_name", ""),
+                product_code=item.get("product_code", ""),
+                width=item.get("width"),
+                height=item.get("height"),
+                fold_ratio=item.get("fold_ratio") or 2.0,
+                unit=item.get("unit", "米"),
+                unit_price=item.get("unit_price", item.get("price", 0)),
+                qty=item.get("qty", 1),
+                discount=item.get("discount", 1.0),
+                amount=item.get("amount", 0),
+                final_amount=item.get("final_amount", item.get("amount", 0)),
+                open_type=item.get("open_type", ""),
+                style_code=item.get("style_code", ""),
+                process_desc=item.get("process_desc", ""),
+                is_custom=item.get("is_custom", 1),
+                note=item.get("note", ""),
+                supplier_id=supplier_id,
+                material_type=material_type,
+            )
+            session.add(oi)
+        await session.commit()
+
         # 如果有安装日期，创建安装任务
         if req.get("install_date") and req.get("install_date") != "":
             install_task = InstallTask(
@@ -330,23 +367,9 @@ async def update_order_status(
         # ─── V3.0 订单流程联动 ───────────────────────────────────────────
         auto_action_msg = None
 
-        # 订单确认（confirmed）→ 自动触发采购拆分
+        # 订单确认（confirmed）→ 仅记录状态，采购单由采购管理手动生成
         if new_status_key == "confirmed":
-            try:
-                pos = await split_order_to_purchase_orders(session, order_id)
-                for po in pos:
-                    await session.flush()
-                if pos:
-                    auto_action_msg = f"已自动拆分为 {len(pos)} 张采购单"
-                    o.status_key = "split"
-                    o.status = "已拆分"
-                    o.status_color = ORDER_STATUS_MAP["split"]["color"]
-                    history = o.history or []
-                    history.append({"s": "已确认", "s2": "已拆分", "c": "split", "time": datetime.now().strftime("%Y-%m-%d %H:%M")})
-                    o.history = history
-                    await session.commit()
-            except Exception as e:
-                auto_action_msg = f"拆分失败：{str(e)}"
+            auto_action_msg = "订单已确认，请在采购管理中生成采购单"
 
         # 订单生产完成（completed）→ 自动生成安装单
         if new_status_key == "completed":
@@ -435,6 +458,48 @@ async def update_order(
             o.quote_amount = quote
             o.amount = max(0, quote - float(o.discount_amount or 0) - float(o.round_amount or 0))
             o.debt = max(0, float(o.amount or 0) - float(o.received or 0))
+            # ── 同步更新 OrderItem 记录 ─────────────────────────────────────
+            # 删除旧的
+            del_r = await session.execute(
+                select(OrderItem).where(OrderItem.order_id == order_id)
+            )
+            old_items = del_r.scalars().all()
+            for oi in old_items:
+                await session.delete(oi)
+            # 创建新的
+            for item in items:
+                product_id = item.get("product_id")
+                supplier_id = None
+                if product_id:
+                    pr = await session.execute(select(Product).where(Product.id == product_id))
+                    prod = pr.scalar_one_or_none()
+                    if prod:
+                        supplier_id = prod.supplier_id
+                oi = OrderItem(
+                    order_id=order_id,
+                    item_type=item.get("product_type", "窗帘"),
+                    room=item.get("room", ""),
+                    category=item.get("category", ""),
+                    product_name=item.get("product_name", ""),
+                    product_code=item.get("product_code", ""),
+                    width=item.get("width"),
+                    height=item.get("height"),
+                    fold_ratio=item.get("fold_ratio") or 2.0,
+                    unit=item.get("unit", "米"),
+                    unit_price=item.get("unit_price", item.get("price", 0)),
+                    qty=item.get("qty", 1),
+                    discount=item.get("discount", 1.0),
+                    amount=item.get("amount", 0),
+                    final_amount=item.get("final_amount", item.get("amount", 0)),
+                    open_type=item.get("open_type", ""),
+                    style_code=item.get("style_code", ""),
+                    process_desc=item.get("process_desc", ""),
+                    is_custom=item.get("is_custom", 1),
+                    note=item.get("note", ""),
+                    supplier_id=supplier_id,
+                    material_type=item.get("material_type", "主料"),
+                )
+                session.add(oi)
 
         await session.commit()
         return CommonResponse(success=True, data={"id": order_id})
