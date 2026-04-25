@@ -1342,7 +1342,7 @@ const app=createApp({
     const page=ref('home');
     const activeMenu=ref('home');
     const pageTitle=computed(()=>({home:'首页概览',suppliers:'供应商管理',product:'产品资料',customer:'客户资料',employee:'员工资料',dict:'码表管理',order:'销售订单',purchase:'采购管理',warehouse:'仓库管理',production:'生产管理',install:'安装管理',finance:'财务结算',report:'统计报表'})[page.value]||'');
-    const switchPage=p=>{page.value=p;activeMenu.value=p==='basic'?'product':p};
+    const switchPage=p=>{page.value=p;activeMenu.value=p==='basic'?'product':p;if(p==='purchase')loadPurchases();if(p==='production')loadProduction();if(p==='install')loadInstallOrders();if(p==='warehouse')loadWarehouse();};
 
     /* nav */
     const navMap={'home':'home','product':'product','customer':'customer','employee':'employee','dict':'dict','order':'order','purchase':'purchase','warehouse':'warehouse','production':'production','install':'install','finance':'finance','report':'report'};
@@ -1613,7 +1613,7 @@ const app=createApp({
     const purchaseStatusF=ref('');
     const filterPurchase=()=>{let list=purchases.value;if(purchaseSearch.value)list=list.filter(p=>(p.supplierName||'').includes(purchaseSearch.value)||(p.purchaseNo||'').includes(purchaseSearch.value)||(p.orderIds||'').includes(purchaseSearch.value));if(purchaseStatusF.value)list=list.filter(p=>p.status===purchaseStatusF.value);filteredPurchase.value=list;};
     const loadPurchases=async()=>{try{const d=await api('/api/purchase-orders');purchases.value=(d.items||[]).map(p=>({id:p.id,purchaseNo:p.po_no||'',supplierName:p.supplier_name||'',orderIds:p.order_ids||'',items:Array.isArray(p.items)?p.items.map(i=>i.product_name||'').join(', '):(p.items||''),status:p.status||'待采购',amount:(p.total_amount||p.amount||0),date:p.expected_date||''}));filterPurchase();}catch(e){console.error(e);}};
-    const loadProduction=async()=>{try{const d=await api('/api/orders?status_key=processing');const arr=(d.data||[]).map(o=>({id:o.id,orderNo:o.order_no||'',customerName:o.customer_name||'',step:1,content:o.items?.map(i=>i.product_name||i.product||'').join(',')||''}));productionOrders.value=arr;filterProduction();}catch(e){console.error(e);}};
+    const loadProduction=async()=>{try{const d=await api('/api/orders?status_key=processing');const arr=(d.items||[]).map(o=>({id:o.id,orderNo:o.order_no||'',customerName:o.customer_name||'',step:1,content:o.items?.map(i=>i.product_name||i.product||'').join(',')||''}));productionOrders.value=arr;filterProduction();}catch(e){console.error(e);}};
     /* 安装 */
     const installOrders=ref([]);
     const filteredInstall=ref([]);
@@ -1622,6 +1622,7 @@ const app=createApp({
     const filterInstall=()=>{let list=installOrders.value;if(installSearch.value)list=list.filter(i=>(i.customerName||'').includes(installSearch.value)||(i.address||'').includes(installSearch.value));if(installStatusF.value)list=list.filter(i=>i.status===installStatusF.value);filteredInstall.value=list;};
     const confirmInstall=async row=>{row.status='已安装';try{const installRes=await api('/api/installer/tasks','GET');const t=(installRes.tasks||[]).find(t=>t.order_no===(row.orderNo||''));if(t)await api(`/api/installer/tasks/${t.id}/complete`,'POST',{completed_at:new Date().toISOString().slice(0,19).replace('T',' '),remark:''});await api(`/api/orders/${row.id}/status`,'PUT',{new_status_key:'installed'});}catch(e){console.error(e);}filterInstall();ElMessage.success('已确认安装完成');};
     const loadInstallOrders=async()=>{try{const d=await api('/api/installation-orders');installOrders.value=(d.items||[]).map(i=>({id:i.id,insNo:i.ins_no||'',orderId:i.order_id,orderNo:i.order_no||'',customerName:i.customer_name||'',address:i.address||'',scheduledDate:i.scheduled_date||'',status:i.status||'待分配',installerName:i.installer_name||''}));filterInstall();}catch(e){console.error(e);}};
+    const loadWarehouse=async()=>{try{const d=await api('/api/warehouse/records');const all=d.items||[];const whMap={};all.forEach(r=>{const name=r.record_type==='in'?'成品库':r.record_type==='out'?'发货库':'在途库';if(!whMap[name])whMap[name]=[];whMap[name].push({name:r.product_name||r.product_code||'',stock:r.quantity||0,unit:r.unit||'米'});});warehouses.value=Object.entries(whMap).map(([name,items])=>({name,items}));}catch(e){console.error(e);}};
 
     /* 生产（供应链） */
     const productionSteps=['订单接单审核','用料核定','报货','下料汇总','加工','完成审核'];
