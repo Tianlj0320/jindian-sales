@@ -684,39 +684,64 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
       <!-- ============ 采购管理 ============ -->
       <div v-if="page==='purchase'">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div class="page-title">采购管理 <span>（订单确认后自动按供应商拆分）</span></div><div style="display:flex;gap:8px"><el-input v-model="purchaseSearch" placeholder="搜索供应商/订单" size="small" style="width:180px" clearable @input="filterPurchase"/><el-select v-model="purchaseStatusF" size="small" placeholder="筛选状态" clearable style="width:120px" @change="filterPurchase"><el-option label="待采购" value="待采购"/><el-option label="已下单" value="已下单"/><el-option label="部分到货" value="部分到货"/><el-option label="全部到货" value="全部到货"/></el-select><el-button size="small" @click="loadPurchases">刷新</el-button></div></div>
-        <div class="card">
-          <el-table :data="filteredPurchase" stripe size="small" style="font-size:13px">
-            <el-table-column prop="purchaseNo" label="采购单号" width="150"/>
-            <el-table-column prop="supplierName" label="供应商" width="120">
-              <template #default="{row}"><span :style="row.supplierName?'color:#1a3a5c':'color:#999'">{{row.supplierName||'(未分配)'}}</span></template>
-            </el-table-column>
-            <el-table-column prop="orderIds" label="来源订单" width="110"/>
-            <el-table-column prop="items" label="采购物料" min-width="260">
-              <template #default="{row}"><span style="color:#666;font-size:12px">{{row.items||'无'}}</span></template>
-            </el-table-column>
-            <el-table-column prop="status" label="状态" width="90">
-              <template #default="{row}"><span class="num-tag" :class="row.status==='全部到货'?'num-green':row.status==='部分到货'?'num-blue':row.status==='已下单'?'num-orange':'num-gray'">{{row.status}}</span></template>
-            </el-table-column>
-            <el-table-column label="金额" width="110" align="right">
-              <template #default="{row}"><b style="color:#f56c6c">¥{{Number(row.amount||0).toLocaleString()}}</b></template>
-            </el-table-column>
-            <el-table-column prop="date" label="预计到货" width="105"/>
-          </el-table>
+        <div class="card" style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap">
+            <thead><tr style="background:#f5f7fa">
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">采购单号</th>
+              <th style="padding:8px 6px;text-align:left;color:#1a3a5c;font-weight:600">供应商</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">来源订单</th>
+              <th style="padding:8px 6px;text-align:left;color:#1a3a5c;font-weight:600">采购物料</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">状态</th>
+              <th style="padding:8px 6px;text-align:right;color:#1a3a5c;font-weight:600">金额</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">预计到货</th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="row in filteredPurchase" :key="row.id" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
+                <td style="padding:7px 6px;text-align:center">{{row.purchaseNo}}</td>
+                <td style="padding:7px 6px;text-align:left;color:#1a3a5c">{{row.supplierName||'(未分配)'}}</td>
+                <td style="padding:7px 6px;text-align:center">{{row.orderIds||'-'}}</td>
+                <td style="padding:7px 6px;text-align:left;color:#666;font-size:12px">{{row.items||'无'}}</td>
+                <td style="padding:7px 6px;text-align:center"><span class="num-tag" :class="row.status==='全部到货'?'num-green':row.status==='部分到货'?'num-blue':row.status==='已下单'?'num-orange':'num-gray'">{{row.status}}</span></td>
+                <td style="padding:7px 6px;text-align:right"><b style="color:#f56c6c">¥{{Number(row.amount||0).toLocaleString()}}</b></td>
+                <td style="padding:7px 6px;text-align:center">{{row.date||'-'}}</td>
+              </tr>
+              <tr v-if="!filteredPurchase||filteredPurchase.length===0">
+                <td colspan="7" style="padding:20px;text-align:center;color:#ccc">暂无采购记录</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
       <!-- ============ 仓库管理 ============ -->
       <div v-if="page==='warehouse'">
         <div class="page-title">仓库管理 <span>（成品库/辅料库/在途库）</span></div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
-          <div v-for="wh in warehouses" :key="wh.name" class="wh-card">
-            <div class="wh-card-title">{{wh.name}} <span style="font-weight:normal;font-size:11px;color:#999">({{wh.items.length}}种物料)</span></div>
-            <div v-for="item in wh.items" :key="item.name" class="wh-item">
-              <span>{{item.name}}</span>
-              <span class="wh-qty">{{item.stock}}</span>
-            </div>
-            <div v-if="wh.items.length===0" style="font-size:12px;color:#ccc;text-align:center;padding:10px">暂无物料</div>
-          </div>
+        <div class="card" style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap">
+            <thead><tr style="background:#f5f7fa">
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">仓库</th>
+              <th style="padding:8px 6px;text-align:left;color:#1a3a5c;font-weight:600">物料名称</th>
+              <th style="padding:8px 6px;text-align:right;color:#1a3a5c;font-weight:600">库存</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">单位</th>
+            </tr></thead>
+            <tbody>
+              <template v-for="wh in warehouses" :key="wh.name">
+                <tr v-if="wh.items&&wh.items.length>0" v-for="item in wh.items" :key="item.name" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
+                  <td style="padding:7px 6px;text-align:center"><span class="num-tag num-blue">{{wh.name}}</span></td>
+                  <td style="padding:7px 6px;text-align:left">{{item.name||'-'}}</td>
+                  <td style="padding:7px 6px;text-align:right;color:#f56c6c;font-weight:bold">{{item.stock||0}}</td>
+                  <td style="padding:7px 6px;text-align:center">{{item.unit||'米'}}</td>
+                </tr>
+                <tr v-if="!wh.items||wh.items.length===0" style="border-bottom:1px solid #f0f0f0">
+                  <td style="padding:7px 6px;text-align:center"><span class="num-tag num-gray">{{wh.name}}</span></td>
+                  <td colspan="3" style="padding:7px 6px;text-align:center;color:#ccc">暂无物料</td>
+                </tr>
+              </template>
+              <tr v-if="!warehouses||warehouses.length===0">
+                <td colspan="4" style="padding:20px;text-align:center;color:#ccc">暂无仓库数据</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -737,56 +762,69 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
           </el-select>
           <el-button size="small" @click="loadProduction">刷新</el-button>
         </div>
-        <div class="card">
-          <el-table :data="filteredProduction" stripe size="small">
-            <el-table-column prop="orderNo" label="订单号" width="130"/>
-            <el-table-column prop="customerName" label="客户" width="100"/>
-            <el-table-column prop="step" label="当前阶段" width="120">
-              <template #default="{row}"><span class="num-tag num-blue">{{productionSteps[row.step-1]||'未知'}}</span></template>
-            </el-table-column>
-            <el-table-column prop="content" label="内容" min-width="160"/>
-            <el-table-column label="操作" width="160">
-              <template #default="{row}">
-                <el-button size="small" type="primary" v-if="row.step<6" @click="prodStepNext(row)">推进 →</el-button>
-                <el-button size="small" v-if="row.step<6" @click="row.step--">重置</el-button>
-                <span v-if="row.step>=6" style="color:#67c23a;font-size:12px">✅ 完成</span>
-              </template>
-            </el-table-column>
-          </el-table>
+        <div class="card" style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap">
+            <thead><tr style="background:#f5f7fa">
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">订单号</th>
+              <th style="padding:8px 6px;text-align:left;color:#1a3a5c;font-weight:600">客户</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">当前阶段</th>
+              <th style="padding:8px 6px;text-align:left;color:#1a3a5c;font-weight:600">内容</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">操作</th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="row in filteredProduction" :key="row.id" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
+                <td style="padding:7px 6px;text-align:center">{{row.orderNo}}</td>
+                <td style="padding:7px 6px;text-align:left">{{row.customerName||'-'}}</td>
+                <td style="padding:7px 6px;text-align:center"><span class="num-tag num-blue">{{productionSteps[row.step-1]||'未知'}}</span></td>
+                <td style="padding:7px 6px;text-align:left;color:#666;font-size:12px">{{row.content||'-'}}</td>
+                <td style="padding:7px 6px;text-align:center">
+                  <el-button size="small" type="primary" v-if="row.step<6" @click="prodStepNext(row)">推进 →</el-button>
+                  <el-button size="small" v-if="row.step<6" @click="row.step--">重置</el-button>
+                  <span v-if="row.step>=6" style="color:#67c23a;font-size:12px">✅ 完成</span>
+                </td>
+              </tr>
+              <tr v-if="!filteredProduction||filteredProduction.length===0">
+                <td colspan="5" style="padding:20px;text-align:center;color:#ccc">暂无生产中的订单</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
       <!-- ============ 安装管理 ============ -->
       <div v-if="page==='install'">
         <div class="page-title">安装管理</div>
-        <div style="margin-bottom:12px;display:flex;gap:10px;align-items:center">
-          <el-input v-model="installSearch" placeholder="搜索客户/地址" size="small" style="width:200px" clearable @input="filterInstall"/>
-          <el-select v-model="installStatusF" size="small" placeholder="筛选状态" clearable style="width:140px" @change="filterInstall">
-            <el-option label="待分配" value="待分配"/>
-            <el-option label="已分配" value="已分配"/>
-            <el-option label="已安装" value="已安装"/>
-            <el-option label="已验收" value="已验收"/>
-          </el-select>
-          <el-button size="small" @click="loadInstallOrders">刷新</el-button>
-        </div>
-        <div class="card">
-          <el-table :data="filteredInstall" stripe size="small">
-            <el-table-column prop="insNo" label="安装单号" width="150"/>
-            <el-table-column prop="orderId" label="订单ID" width="80"/>
-            <el-table-column prop="customerName" label="客户" width="100"/>
-            <el-table-column prop="address" label="安装地址" min-width="180"/>
-            <el-table-column prop="installerName" label="安装师傅" width="100"/>
-            <el-table-column prop="scheduledDate" label="预约日期" width="110"/>
-            <el-table-column label="状态" width="100">
-              <template #default="{row}"><span class="num-tag" :class="row.status==='已验收'?'num-green':row.status==='已安装'?'num-blue':'num-gray'">{{row.status}}</span></template>
-            </el-table-column>
-            <el-table-column label="操作" width="120">
-              <template #default="{row}">
-                <el-button size="small" type="primary" v-if="row.status==='待分配'" @click="confirmInstall(row)">分配</el-button>
-                <el-button size="small" type="success" v-if="row.status==='已分配'" @click="confirmInstall(row)">确认完成</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
+        <div class="card" style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap">
+            <thead><tr style="background:#f5f7fa">
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">安装单号</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">订单ID</th>
+              <th style="padding:8px 6px;text-align:left;color:#1a3a5c;font-weight:600">客户</th>
+              <th style="padding:8px 6px;text-align:left;color:#1a3a5c;font-weight:600">安装地址</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">安装师傅</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">预约日期</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">状态</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">操作</th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="row in filteredInstall" :key="row.id" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
+                <td style="padding:7px 6px;text-align:center">{{row.insNo}}</td>
+                <td style="padding:7px 6px;text-align:center">{{row.orderId||'-'}}</td>
+                <td style="padding:7px 6px;text-align:left">{{row.customerName||'-'}}</td>
+                <td style="padding:7px 6px;text-align:left;color:#666;font-size:12px">{{row.address||'-'}}</td>
+                <td style="padding:7px 6px;text-align:center">{{row.installerName||'-'}}</td>
+                <td style="padding:7px 6px;text-align:center">{{row.scheduledDate||'-'}}</td>
+                <td style="padding:7px 6px;text-align:center"><span class="num-tag" :class="row.status==='已验收'?'num-green':row.status==='已安装'?'num-blue':'num-gray'">{{row.status}}</span></td>
+                <td style="padding:7px 6px;text-align:center">
+                  <el-button size="small" type="primary" v-if="row.status==='待分配'" @click="confirmInstall(row)">分配</el-button>
+                  <el-button size="small" type="success" v-if="row.status==='已分配'" @click="confirmInstall(row)">确认完成</el-button>
+                </td>
+              </tr>
+              <tr v-if="!filteredInstall||filteredInstall.length===0">
+                <td colspan="8" style="padding:20px;text-align:center;color:#ccc">暂无安装记录</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -800,14 +838,23 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
           <div class="stat-card"><div class="stat-num" style="color:#e6a23c">¥{{financeData.totalDebt.toLocaleString()}}</div><div class="stat-label">总欠款</div></div>
           <div class="stat-card"><div class="stat-num" style="color:#9c27b0">{{financeData.pendingCommission.toFixed(0)}}</div><div class="stat-label">待结提成(元)</div></div>
         </div>
-        <div class="card">
+        <div class="card" style="overflow-x:auto">
           <div class="card-title">成本构成（本月）</div>
-          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;text-align:center">
-            <div v-for="c in costBreakdown" :key="c.label">
-              <div style="font-size:11px;color:#999">{{c.label}}</div>
-              <div style="font-size:15px;font-weight:bold;color:#f56c6c">¥{{c.amount.toLocaleString()}}</div>
-            </div>
-          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr style="background:#f5f7fa">
+              <th style="padding:8px 6px;text-align:left;color:#1a3a5c;font-weight:600">成本项目</th>
+              <th style="padding:8px 6px;text-align:right;color:#1a3a5c;font-weight:600">金额</th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="c in costBreakdown" :key="c.label" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
+                <td style="padding:8px 6px;text-align:left;color:#666">{{c.label}}</td>
+                <td style="padding:8px 6px;text-align:right;font-weight:bold;color:#f56c6c">¥{{c.amount.toLocaleString()}}</td>
+              </tr>
+              <tr v-if="!costBreakdown||costBreakdown.length===0">
+                <td colspan="2" style="padding:16px;text-align:center;color:#ccc">暂无成本数据</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -861,56 +908,83 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
             </div>
           </el-tab-pane>
           <el-tab-pane label="员工业绩" name="employee">
-            <div class="card">
+            <div class="card" style="overflow-x:auto">
               <div class="card-title">员工业绩明细 — {{rptYear}}年{{rptMonth}}月</div>
-              <el-table :data="staffRank" stripe size="small">
-                <el-table-column prop="name" label="员工" width="100"/>
-                <el-table-column prop="orders" label="签单数" width="80" align="center"/>
-                <el-table-column prop="amount" label="销售总额" align="right">
-                  <template #default="{row}"><b style="color:#1a3a5c">¥{{row.amount.toLocaleString()}}</b></template>
-                </el-table-column>
-                <el-table-column label="占总额比" width="100" align="center">
-                  <template #default="{row}">{{salesTrend.reduce((a,b)=>a+b,0)?(row.amount/salesTrend.reduce((a,b)=>a+b,0)*100).toFixed(1)+'%':'—'}}</template>
-                </el-table-column>
-              </el-table>
+              <table style="width:100%;border-collapse:collapse;font-size:13px">
+                <thead><tr style="background:#f5f7fa">
+                  <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">员工</th>
+                  <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">签单数</th>
+                  <th style="padding:8px 6px;text-align:right;color:#1a3a5c;font-weight:600">销售总额</th>
+                  <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">占总额比</th>
+                </tr></thead>
+                <tbody>
+                  <tr v-for="row in staffRank" :key="row.name||row" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
+                    <td style="padding:7px 6px;text-align:center">{{row.name||'-'}}</td>
+                    <td style="padding:7px 6px;text-align:center">{{row.orders||0}}</td>
+                    <td style="padding:7px 6px;text-align:right;font-weight:bold;color:#1a3a5c">¥{{(row.amount||0).toLocaleString()}}</td>
+                    <td style="padding:7px 6px;text-align:center">{{salesTrend.reduce((a,b)=>a+b,0)?(row.amount/salesTrend.reduce((a,b)=>a+b,0)*100).toFixed(1)+'%':'—'}}</td>
+                  </tr>
+                  <tr v-if="!staffRank||staffRank.length===0">
+                    <td colspan="4" style="padding:16px;text-align:center;color:#ccc">暂无数据</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </el-tab-pane>
           <el-tab-pane label="产品排行" name="product">
-            <div class="card">
+            <div class="card" style="overflow-x:auto">
               <div class="card-title">产品销售排行 — {{rptYear}}年{{rptMonth}}月</div>
-              <el-table :data="topProducts" stripe size="small">
-                <el-table-column type="index" label="排名" width="60" align="center"/>
-                <el-table-column prop="name" label="产品名称" min-width="140"/>
-                <el-table-column prop="times" label="销售数量(米)" width="110" align="right"/>
-                <el-table-column prop="amount" label="销售额" align="right">
-                  <template #default="{row}"><b style="color:#67c23a">¥{{row.amount.toLocaleString()}}</b></template>
-                </el-table-column>
-              </el-table>
+              <table style="width:100%;border-collapse:collapse;font-size:13px">
+                <thead><tr style="background:#f5f7fa">
+                  <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">排名</th>
+                  <th style="padding:8px 6px;text-align:left;color:#1a3a5c;font-weight:600">产品名称</th>
+                  <th style="padding:8px 6px;text-align:right;color:#1a3a5c;font-weight:600">销售数量(米)</th>
+                  <th style="padding:8px 6px;text-align:right;color:#1a3a5c;font-weight:600">销售额</th>
+                </tr></thead>
+                <tbody>
+                  <tr v-for="(row,i) in topProducts" :key="row.name||i" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
+                    <td style="padding:7px 6px;text-align:center"><span style="width:18px;height:18px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;background:#409eff;color:#fff">{{i+1}}</span></td>
+                    <td style="padding:7px 6px;text-align:left">{{row.name||'-'}}</td>
+                    <td style="padding:7px 6px;text-align:right">{{row.times||0}}</td>
+                    <td style="padding:7px 6px;text-align:right;font-weight:bold;color:#67c23a">¥{{(row.amount||0).toLocaleString()}}</td>
+                  </tr>
+                  <tr v-if="!topProducts||topProducts.length===0">
+                    <td colspan="4" style="padding:16px;text-align:center;color:#ccc">暂无数据</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </el-tab-pane>
           <el-tab-pane label="订单明细" name="orders">
-            <div class="card">
+            <div class="card" style="overflow-x:auto">
               <div class="card-title">订单明细 — {{rptYear}}年{{rptMonth}}月</div>
-              <el-table :data="reportOrders" stripe size="small">
-                <el-table-column prop="orderNo" label="订单号" width="130"/>
-                <el-table-column prop="customerName" label="客户" width="100"/>
-                <el-table-column prop="orderType" label="类型" width="80"/>
-                <el-table-column prop="amount" label="金额" width="90" align="right">
-                  <template #default="{row}"><b style="color:#1a3a5c">¥{{row.amount.toLocaleString()}}</b></template>
-                </el-table-column>
-                <el-table-column prop="received" label="已收" width="80" align="right">
-                  <template #default="{row}"><span style="color:#67c23a">¥{{row.received.toLocaleString()}}</span></template>
-                </el-table-column>
-                <el-table-column prop="debt" label="欠款" width="80" align="right">
-                  <template #default="{row}"><span :style="row.debt>0?'color:#f56c6c':'color:#67c23a'">¥{{row.debt.toLocaleString()}}</span></template>
-                </el-table-column>
-                <el-table-column prop="status" label="状态" width="90">
-                  <template #default="{row}">
-                    <span :class="'status-dot s-'+(row.statusColor||'pending').replace('#','')"></span>{{row.status}}
-                  </template>
-                </el-table-column>
-                <el-table-column prop="orderDate" label="日期" width="100"/>
-              </el-table>
+              <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap">
+                <thead><tr style="background:#f5f7fa">
+                  <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">订单号</th>
+                  <th style="padding:8px 6px;text-align:left;color:#1a3a5c;font-weight:600">客户</th>
+                  <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">类型</th>
+                  <th style="padding:8px 6px;text-align:right;color:#1a3a5c;font-weight:600">金额</th>
+                  <th style="padding:8px 6px;text-align:right;color:#1a3a5c;font-weight:600">已收</th>
+                  <th style="padding:8px 6px;text-align:right;color:#1a3a5c;font-weight:600">欠款</th>
+                  <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">状态</th>
+                  <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">日期</th>
+                </tr></thead>
+                <tbody>
+                  <tr v-for="row in reportOrders" :key="row.orderNo||row" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
+                    <td style="padding:7px 6px;text-align:center">{{row.orderNo||'-'}}</td>
+                    <td style="padding:7px 6px;text-align:left">{{row.customerName||'-'}}</td>
+                    <td style="padding:7px 6px;text-align:center">{{row.orderType||'-'}}</td>
+                    <td style="padding:7px 6px;text-align:right;font-weight:bold;color:#1a3a5c">¥{{(row.amount||0).toLocaleString()}}</td>
+                    <td style="padding:7px 6px;text-align:right;color:#67c23a">¥{{(row.received||0).toLocaleString()}}</td>
+                    <td style="padding:7px 6px;text-align:right" :style="(row.debt||0)>0?'color:#f56c6c':'color:#67c23a'">¥{{(row.debt||0).toLocaleString()}}</td>
+                    <td style="padding:7px 6px;text-align:center"><span :class="'status-dot s-'+(row.statusColor||'pending').replace('#','')"></span>{{row.status||'-'}}</td>
+                    <td style="padding:7px 6px;text-align:center">{{row.orderDate||'-'}}</td>
+                  </tr>
+                  <tr v-if="!reportOrders||reportOrders.length===0">
+                    <td colspan="8" style="padding:16px;text-align:center;color:#ccc">暂无数据</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </el-tab-pane>
         </el-tabs>
