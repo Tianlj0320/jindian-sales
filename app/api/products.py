@@ -59,6 +59,27 @@ async def create_supplier(req: dict = Body(...)):
         return CommonResponse(success=True, data={"id": supplier.id, "code": supplier.code})
 
 
+@router.put("/suppliers/{supplier_id}", response_model=CommonResponse)
+async def update_supplier(supplier_id: int, req: dict = Body(...)):
+    async with async_session() as session:
+        result = await session.execute(
+            select(Supplier).where(Supplier.id == supplier_id)
+        )
+        supplier = result.scalar_one_or_none()
+        if not supplier:
+            return CommonResponse(success=False, error="供应商不存在")
+        
+        if "name" in req: supplier.name = req["name"]
+        if "type" in req: supplier.type = req["type"]
+        if "contact" in req: supplier.contact = req["contact"]
+        if "phone" in req: supplier.phone = req["phone"]
+        if "delivery_days" in req: supplier.delivery_days = req["delivery_days"]
+        if "address" in req: supplier.address = req["address"]
+        
+        await session.commit()
+        return CommonResponse(success=True, data={"id": supplier.id})
+
+
 # ─── 布版/系列 ────────────────────────────────────────────────────────────────
 
 @router.get("/categories", response_model=dict)
