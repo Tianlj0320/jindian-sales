@@ -168,7 +168,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
         <div class="aside-logo-sub">销售管理系统 V2.1</div>
       </div>
     </div>
-    <el-menu :default-active="activeMenu" background-color="#1a3a5c" text-color="#bcc8d8" active-text-color="#fff" class="nav-menu" @select="handleNav">
+    <el-menu :default-active="activeMenuStr" background-color="#1a3a5c" text-color="#bcc8d8" active-text-color="#fff" class="nav-menu" @select="handleNav">
       <el-menu-item index="home"><el-icon><Shop/></el-icon>&nbsp;首页概览</el-menu-item>
       <el-sub-menu index="basic">
         <template #title><el-icon><folder/></el-icon>&nbsp;基础资料</template>
@@ -193,7 +193,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
     <template #title>
       <div style="color:#fff;font-size:15px;font-weight:bold">金典软装</div>
     </template>
-    <el-menu :default-active="activeMenu" background-color="#1a3a5c" text-color="#bcc8d8" active-text-color="#fff" @select="(k)=>{const pm={home:'home',suppliers:'suppliers',product:'product',customer:'customer',employee:'employee',dict:'dict',order:'order',purchase:'purchase',warehouse:'warehouse',production:'production',install:'install',finance:'finance',report:'report'};if(k!=='basic'&&k!=='basic2'){page.value=pm[k]||k;activeMenu.value=k;}else{page.value='product';activeMenu.value='product';}drawerVisible=false;}">
+    <el-menu :default-active="activeMenuStr" background-color="#1a3a5c" text-color="#bcc8d8" active-text-color="#fff" @select="(k)=>{const pm={home:'home',suppliers:'suppliers',product:'product',customer:'customer',employee:'employee',dict:'dict',order:'order',purchase:'purchase',warehouse:'warehouse',production:'production',install:'install',finance:'finance',report:'report'};if(k!=='basic'&&k!=='basic2'){page.value=pm[k]||k;activeMenu.value=k;}else{page.value='product';activeMenu.value='product';}drawerVisible=false;}">
       <el-menu-item index="home"><el-icon><Shop/></el-icon>&nbsp;首页概览</el-menu-item>
       <el-sub-menu index="basic2">
         <template #title><el-icon><folder/></el-icon>&nbsp;基础资料</template>
@@ -1743,7 +1743,7 @@ const app = createApp({
 
     return {
       page: { get: () => S.page, set: v => { S.page = v; } },
-      activeMenu: { get: () => S.activeMenu, set: v => { S.activeMenu = v; } },
+      activeMenuStr: computed(() => S.activeMenu || 'home'),
       pageTitle, switchPage, handleNav,
       currentUser: computed(() => S.currentUser),
       isLoggedIn: computed(() => S.isLoggedIn),
@@ -1751,7 +1751,8 @@ const app = createApp({
       loginLoading,
       doLogin, logout,
       showLogin,
-      drawerVisible: { get: () => S.drawerVisible, set: v => { S.drawerVisible = v; } },
+      drawerVisible: (() => { const dv = ref(S.drawerVisible); watch(() => S.drawerVisible, v => { dv.value = v; }); watch(dv, v => { S.drawerVisible = v; }); return dv; })(),
+      activeMenuVal: computed(() => S.activeMenu || 'home'),
       stats: computed(() => S.stats),
       alerts: computed(() => S.alerts),
       suppliers: computed(() => S.suppliers),
