@@ -67,7 +67,7 @@ window.__productModule__ = {
     let list = S.products;
     const q = (S.prodSearch || '').toLowerCase();
     if (q) list = list.filter(p =>
-      ((p.name || '') + (p.code || '') + (p.type || '') +
+      ((p.name || '') + (p.code || '') + (p.category || '') +
         __productModule__.getSupplierName(p.supplierId, S)).toLowerCase().includes(q)
     );
     if (S.prodSupplierF) list = list.filter(p => String(p.supplierId) === String(S.prodSupplierF));

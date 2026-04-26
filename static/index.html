@@ -330,9 +330,10 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
             <thead><tr style="background:#f5f7fa">
               <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">货号</th>
               <th style="padding:8px 6px;text-align:left;color:#1a3a5c;font-weight:600">名称</th>
-              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">分类</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">品类</th>
               <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">供应商</th>
-              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">布版系列</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">面料材质</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">产品形态</th>
               <th style="padding:8px 6px;text-align:right;color:#1a3a5c;font-weight:600">零售价</th>
               <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">单位</th>
               <th style="padding:8px 6px;text-align:right;color:#1a3a5c;font-weight:600">库存</th>
@@ -342,9 +343,10 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <tr v-for="row in filteredProducts" :key="row.id" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background=\'#f5f7fa\'" onmouseout="this.style.background=\'\'">
                 <td style="padding:7px 6px;text-align:center">{{row.code||'-'}}</td>
                 <td style="padding:7px 6px;text-align:left">{{row.name}}</td>
-                <td style="padding:7px 6px;text-align:center"><span class="num-tag" :class="row.type==='面料'?'num-blue':'num-gray'">{{row.type||'-'}}</span></td>
+                <td style="padding:7px 6px;text-align:center"><span class="num-tag" :class="row.category==='窗帘'?'num-blue':'num-gray'">{{row.category||'-'}}</span></td>
                 <td style="padding:7px 6px;text-align:center">{{getSupplierName(row.supplierId)}}</td>
-                <td style="padding:7px 6px;text-align:center">{{getCatName(row.categoryId)}}</td>
+                <td style="padding:7px 6px;text-align:center">{{row.material||'-'}}</td>
+                <td style="padding:7px 6px;text-align:center">{{row.classification||'-'}}</td>
                 <td style="padding:7px 6px;text-align:right;color:#67c23a">¥{{row.price||0}}/{{row.unit||'米'}}</td>
                 <td style="padding:7px 6px;text-align:center">{{row.unit||'-'}}</td>
                 <td style="padding:7px 6px;text-align:right" :style="(row.stock||0)>0?'color:#67c23a':'color:#f56c6c'">{{row.stock||0}}</td>
@@ -1199,10 +1201,10 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
         <el-option v-for="c in supCategories" :key="c.id" :label="c.name+'('+c.code+')'" :value="c.id"/>
       </el-select>
     </el-form-item>
-    <el-form-item label="分类"><el-radio-group v-model="pForm.type"><el-radio label="面料">面料</el-radio><el-radio label="辅料">辅料</el-radio></el-radio-group></el-form-item>
-    <el-form-item label="产品分类"><el-select v-model="pForm.classification" style="width:100%"><el-option label="定高" value="定高"/><el-option label="定宽" value="定宽"/><el-option label="配件" value="配件"/></el-select></el-form-item>
-    <el-form-item label="型号"><el-input v-model="pForm.model"/></el-form-item>
-    <el-form-item label="材质"><el-select v-model="pForm.mat" style="width:100%"><el-option v-for="m in ['雪尼尔','棉麻','绒布','高精密','丝绸']" :key="m" :label="m" :value="m"/></el-select></el-form-item>
+    <el-form-item label="商品品类"><el-select v-model="pForm.category" style="width:100%"><el-option label="窗帘" value="窗帘"/><el-option label="墙布" value="墙布"/><el-option label="墙纸" value="墙纸"/><el-option label="岩板" value="岩板"/><el-option label="全屋" value="全屋"/></el-select></el-form-item>
+    <el-form-item label="产品形态"><el-select v-model="pForm.classification" style="width:100%"><el-option label="帷幔" value="帷幔"/><el-option label="罗马帘" value="罗马帘"/><el-option label="蜂巢帘" value="蜂巢帘"/><el-option label="柔纱帘" value="柔纱帘"/><el-option label="基膜胶水" value="基膜胶水"/><el-option label="垂直帘" value="垂直帘"/><el-option label="软包" value="软包"/><el-option label="硬包" value="硬包"/><el-option label="岩板" value="岩板"/><el-option label="电动轨" value="电动轨"/><el-option label="铅块" value="铅块"/><el-option label="无纺布" value="无纺布"/><el-option label="配件" value="配件"/></el-select></el-form-item>
+    <el-form-item label="面料材质"><el-select v-model="pForm.material" style="width:100%"><el-option label="雪尼尔" value="雪尼尔"/><el-option label="棉麻" value="棉麻"/><el-option label="绒布" value="绒布"/><el-option label="高精密" value="高精密"/><el-option label="丝绸" value="丝绸"/><el-option label="亚麻" value="亚麻"/><el-option label="刺绣" value="刺绣"/><el-option label="提花" value="提花"/><el-option label="仿真丝" value="仿真丝"/><el-option label="无纺布" value="无纺布"/><el-option label="PVC" value="PVC"/></el-select></el-form-item>
+    <el-form-item label="型号"><el-input v-model="pForm.model" placeholder="如：F001"/></el-form-item>
     <el-form-item label="门幅(cm)"><el-input-number v-model="pForm.width" :min="0" style="width:100%"/></el-form-item>
     <el-form-item label="克重(g/㎡)"><el-input-number v-model="pForm.weight" :min="0" style="width:100%"/></el-form-item>
     <el-form-item label="单价(元)"><el-input-number v-model="pForm.price" :min="0" :precision="2" style="width:100%"/></el-form-item>
@@ -1367,9 +1369,9 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
             <thead>
               <tr style="background:#f5f7fa">
                 <th style="padding:8px 5px;text-align:center;color:#1a3a5c;font-weight:600;width:60px">位置</th>
-                <th style="padding:8px 5px;text-align:center;color:#1a3a5c;font-weight:600;width:50px">类型</th>
+                <th style="padding:8px 5px;text-align:center;color:#1a3a5c;font-weight:600;width:50px">品类</th>
+                <th style="padding:8px 5px;text-align:center;color:#1a3a5c;font-weight:600;width:60px">产品形态</th>
                 <th style="padding:8px 5px;text-align:center;color:#1a3a5c;font-weight:600;width:55px">款式</th>
-                <th style="padding:8px 5px;text-align:center;color:#1a3a5c;font-weight:600;width:55px">项目</th>
                 <th style="padding:8px 5px;text-align:left;color:#1a3a5c;font-weight:600;min-width:120px">货号/名称</th>
                 <th style="padding:8px 5px;text-align:center;color:#1a3a5c;font-weight:600;width:70px">尺寸</th>
                 <th style="padding:8px 5px;text-align:center;color:#1a3a5c;font-weight:600;width:50px">幅数</th>
@@ -1392,13 +1394,13 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
                   </select>
                 </td>
                 <td style="padding:5px 3px;text-align:center">
-                  <select v-model="row.style" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px">
-                    <option v-for="d in dictMap.process||[]" :key="d.k" :value="d.v">{{d.v}}</option>
+                  <select v-model="row.itemType" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px">
+                    <option v-for="d in dictMap.productForm||[]" :key="d.k" :value="d.v">{{d.v}}</option>
                   </select>
                 </td>
                 <td style="padding:5px 3px;text-align:center">
-                  <select v-model="row.itemName" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px">
-                    <option v-for="d in dictMap.orderType||[]" :key="d.k" :value="d.v">{{d.v}}</option>
+                  <select v-model="row.style" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px">
+                    <option v-for="d in dictMap.process||[]" :key="d.k" :value="d.v">{{d.v}}</option>
                   </select>
                 </td>
                 <td style="padding:5px 3px">
@@ -1444,7 +1446,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
           <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap">
             <thead>
               <tr style="background:#f5f7fa">
-                <th style="padding:8px 5px;text-align:center;color:#1a3a5c;font-weight:600;width:55px">分类</th>
+                <th style="padding:8px 5px;text-align:center;color:#1a3a5c;font-weight:600;width:80px">产品形态</th>
                 <th style="padding:8px 5px;text-align:left;color:#1a3a5c;font-weight:600;min-width:100px">货号/名称</th>
                 <th style="padding:8px 5px;text-align:center;color:#1a3a5c;font-weight:600;width:55px">型号</th>
                 <th style="padding:8px 5px;text-align:center;color:#1a3a5c;font-weight:600;width:50px">数量</th>
@@ -1457,8 +1459,8 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
             <tbody>
               <tr v-for="(row,idx) in orderF.materials" :key="idx" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
                 <td style="padding:5px 3px;text-align:center">
-                  <select v-model="row.category" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px">
-                    <option v-for="c in matCategories" :key="c" :value="c">{{c}}</option>
+                  <select v-model="row.itemType" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px">
+                    <option v-for="d in dictMap.productForm||[]" :key="d.k" :value="d.v">{{d.v}}</option>
                   </select>
                 </td>
                 <td style="padding:5px 3px">
@@ -1593,7 +1595,7 @@ const app = createApp({
     // 主料产品过滤（只显示面料）
     const filteredItemProducts = idx => {
       const kw = (itemProdSearch.value[idx] || '').toLowerCase().trim();
-      const prods = (S.products || []).filter(p => String(p.product_type) == '面料' || p.product_type == '面料');
+      const prods = (S.products || []).filter(p => String(p.category) == '窗帘' || p.category == '窗帘');
       if (!kw) return prods.slice(0, 30);
       return prods.filter(p =>
         (p.name || '').toLowerCase().includes(kw) ||
@@ -1606,7 +1608,7 @@ const app = createApp({
     // 辅料产品过滤（只显示辅料）
     const filteredMatProducts = idx => {
       const kw = (matProdSearch.value[idx] || '').toLowerCase().trim();
-      const prods = (S.products || []).filter(p => String(p.product_type) == '辅料' || p.product_type == '辅料');
+      const prods = (S.products || []).filter(p => String(p.category) == '辅料' || p.category == '辅料');
       if (!kw) return prods.slice(0, 30);
       return prods.filter(p =>
         (p.name || '').toLowerCase().includes(kw) ||

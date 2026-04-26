@@ -24,8 +24,8 @@ window.__orderFormModule__ = {
       itemsTotal: 0, materialsTotal: 0,
       quoteAmount: 0, discountAmount: 0, roundAmount: 0, amount: 0, received: 0,
     };
-    S.orderF.items.push({ productType: '窗帘', location: '客厅', style: '韩褶', itemName: '窗帘', productId: null, code: '', model: '', size: '', qty: 1, discount: 1, price: null, amount: null });
-    S.orderF.materials.push({ productId: null, code: '', name: '', model: '', qty: 1, unit: '米', price: null, amount: null, remark: '' });
+    S.orderF.items.push({ productType: '窗帘', itemType: '帷幔', location: '客厅', style: '韩褶', productId: null, code: '', model: '', size: '', qty: 1, discount: 1, price: null, amount: null });
+    S.orderF.materials.push({ itemType: '电动轨', productId: null, code: '', name: '', model: '', qty: 1, unit: '米', price: null, amount: null, remark: '' });
     S.showNewOrder = true;
     S.page = 'order';
   },
@@ -102,7 +102,7 @@ window.__orderFormModule__ = {
 
   addOrderItem(S) {
     S.orderF.items.push({
-      productType: '窗帘', location: '客厅', style: '韩褶', itemName: '窗帘',
+      productType: '窗帘', itemType: '帷幔', location: '客厅', style: '韩褶',
       productId: null, code: '', model: '', productName: '',
       size: '', qty: 1, discount: 1, price: null, amount: null,
     });
@@ -110,7 +110,7 @@ window.__orderFormModule__ = {
 
   addOrderMaterial(S) {
     S.orderF.materials.push({
-      productId: null, code: '', name: '', model: '',
+      itemType: '电动轨', productId: null, code: '', name: '', model: '',
       qty: 1, unit: '米', price: null, amount: null, remark: '',
     });
   },
@@ -198,12 +198,10 @@ window.__orderFormModule__ = {
         .map(i => ({
           product_id: i.productId,
           product_name: i.productName || (prods.find(p => String(p.id) === String(i.productId)) || {}).name || '',
-          product_type: i.productType || '窗帘',
+          item_type: i.itemType || '帷幔',
+          category: i.productType || '窗帘',
           room: i.location || '',
           style: i.style || '',
-          item_name: i.itemName || '',
-          width: i.width || '',
-          height: i.height || '',
           qty: i.qty || 1,
           discount: i.discount || 1,
           price: i.price || 0,
@@ -215,6 +213,7 @@ window.__orderFormModule__ = {
           product_id: i.productId,
           product_name: i.name || '',
           product_code: i.code || '',
+          item_type: i.itemType || '电动轨',
           model: i.model || '',
           qty: i.qty || 1,
           unit: i.unit || '米',

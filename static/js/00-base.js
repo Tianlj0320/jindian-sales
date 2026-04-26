@@ -220,7 +220,7 @@ window.__STATE__ = Vue.reactive({
   // 产品
   dlgProduct: false,
   editingProduct: null,
-  pForm: { code: '', name: '', supplierId: '', categoryId: '', type: '面料', classification: '定高', model: '', material: '', width: 280, weight: 0, cf: 0, price: 0, stock: 0, unit: '米', remark: '' },
+  pForm: { code: '', name: '', supplierId: '', categoryId: '', category: '窗帘', classification: '', model: '', material: '', width: 280, weight: 0, cf: 0, price: 0, stock: 0, unit: '米', remark: '' },
   // 客户
   dlgCustomer: false,
   editingCustomer: null,
