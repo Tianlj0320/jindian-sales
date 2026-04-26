@@ -8,6 +8,22 @@
 <script src="/static/lib/ep.js"></script>
 <script src="/static/lib/icons.js"></script>
 <link rel="stylesheet" href="/static/lib/ep.css">
+<!-- 模块化 JS（按顺序加载） -->
+<script src="/static/js/00-base.js"></script>
+<script src="/static/js/01-api.js"></script>
+<script src="/static/js/03-orders.js"></script>
+<script src="/static/js/04-purchase.js"></script>
+<script src="/static/js/05-product.js"></script>
+<script src="/static/js/06-customer.js"></script>
+<script src="/static/js/07-employee.js"></script>
+<script src="/static/js/08-home.js"></script>
+<script src="/static/js/09-report.js"></script>
+<script src="/static/js/10-warehouse.js"></script>
+<script src="/static/js/11-install.js"></script>
+<script src="/static/js/12-dict.js"></script>
+<script src="/static/js/13-order-form.js"></script>
+<script src="/static/js/14-dialogs.js"></script>
+<script src="/static/js/15-init.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;color:#333}
@@ -130,7 +146,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
 <div id="app">
 
     <!-- 登录遮罩（未登录时强制显示） -->
-    <div v-if="!isLoggedIn" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#1a3a5c 0%,#0d1f35 100%);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px">
+    <div id="login-overlay" v-if="!isLoggedIn" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#1a3a5c 0%,#0d1f35 100%);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px">
       <div style="color:#fff;font-size:28px;font-weight:bold;margin-bottom:8px">金典软装</div>
       <div style="background:#fff;border-radius:12px;padding:28px 32px;width:300px;text-align:center">
         <div style="color:#1a3a5c;font-size:16px;font-weight:bold;margin-bottom:20px">员工登录</div>
@@ -152,7 +168,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
       </div>
     </div>
     <el-menu :default-active="activeMenu" background-color="#1a3a5c" text-color="#bcc8d8" active-text-color="#fff" class="nav-menu" @select="handleNav">
-      <el-menu-item index="home"><el-icon><house-fill/></el-icon>&nbsp;首页概览</el-menu-item>
+      <el-menu-item index="home"><el-icon><Shop/></el-icon>&nbsp;首页概览</el-menu-item>
       <el-sub-menu index="basic">
         <template #title><el-icon><folder/></el-icon>&nbsp;基础资料</template>
         <el-menu-item index="suppliers">供应商管理</el-menu-item>
@@ -162,7 +178,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
         <el-menu-item index="dict">码表管理</el-menu-item>
       </el-sub-menu>
       <el-menu-item index="order"><el-icon><document/></el-icon>&nbsp;销售订单</el-menu-item>
-      <el-menu-item index="purchase"><el-icon><truck/></el-icon>&nbsp;采购管理</el-menu-item>
+      <el-menu-item index="purchase"><el-icon><box/></el-icon>&nbsp;采购管理</el-menu-item>
       <el-menu-item index="warehouse"><el-icon><box/></el-icon>&nbsp;仓库管理</el-menu-item>
       <el-menu-item index="production"><el-icon><setting/></el-icon>&nbsp;生产管理</el-menu-item>
       <el-menu-item index="install"><el-icon><tools/></el-icon>&nbsp;安装管理</el-menu-item>
@@ -177,7 +193,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
       <div style="color:#fff;font-size:15px;font-weight:bold">金典软装</div>
     </template>
     <el-menu :default-active="activeMenu" background-color="#1a3a5c" text-color="#bcc8d8" active-text-color="#fff" @select="(k)=>{const pm={home:'home',suppliers:'suppliers',product:'product',customer:'customer',employee:'employee',dict:'dict',order:'order',purchase:'purchase',warehouse:'warehouse',production:'production',install:'install',finance:'finance',report:'report'};if(k!=='basic'&&k!=='basic2'){page.value=pm[k]||k;activeMenu.value=k;}else{page.value='product';activeMenu.value='product';}drawerVisible=false;}">
-      <el-menu-item index="home"><el-icon><house-fill/></el-icon>&nbsp;首页概览</el-menu-item>
+      <el-menu-item index="home"><el-icon><Shop/></el-icon>&nbsp;首页概览</el-menu-item>
       <el-sub-menu index="basic2">
         <template #title><el-icon><folder/></el-icon>&nbsp;基础资料</template>
         <el-menu-item index="suppliers">供应商管理</el-menu-item>
@@ -187,7 +203,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
         <el-menu-item index="dict">码表管理</el-menu-item>
       </el-sub-menu>
       <el-menu-item index="order"><el-icon><document/></el-icon>&nbsp;销售订单</el-menu-item>
-      <el-menu-item index="purchase"><el-icon><truck/></el-icon>&nbsp;采购管理</el-menu-item>
+      <el-menu-item index="purchase"><el-icon><box/></el-icon>&nbsp;采购管理</el-menu-item>
       <el-menu-item index="warehouse"><el-icon><box/></el-icon>&nbsp;仓库管理</el-menu-item>
       <el-menu-item index="production"><el-icon><setting/></el-icon>&nbsp;生产管理</el-menu-item>
       <el-menu-item index="install"><el-icon><tools/></el-icon>&nbsp;安装管理</el-menu-item>
@@ -551,13 +567,13 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
           <el-button type="primary" size="small" @click="showNewOrder=true">+ 新建订单</el-button>
         </div>
         <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-          <el-input v-model="orderSearch" placeholder="订单号/客户名" size="small" style="width:180px" clearable @input="filterOrders">
+          <el-input v-model="orderSearch" placeholder="订单号/客户名" size="small" style="width:180px" clearable>
             <template #prefix><el-icon><search/></el-icon></template>
           </el-input>
-          <el-select v-model="orderStatusF" size="small" placeholder="筛选状态" clearable style="width:130px" @change="filterOrders">
+          <el-select v-model="orderStatusF" size="small" placeholder="筛选状态" clearable style="width:130px">
             <el-option v-for="s in orderStatusAll" :key="s.k" :label="s.v" :value="s.k"/>
           </el-select>
-          <el-select v-model="orderTypeF" size="small" placeholder="订单类型" clearable style="width:120px" @change="filterOrders">
+          <el-select v-model="orderTypeF" size="small" placeholder="订单类型" clearable style="width:120px">
             <el-option v-for="t in dictMap.orderType" :key="t.k" :label="t.v" :value="t.k"/>
           </el-select>
         </div>
@@ -689,8 +705,8 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
           <div class="page-title">采购管理</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <el-input v-model="purchaseSearch" placeholder="搜索供应商/订单" size="small" style="width:180px" clearable @input="filterPurchase"/>
-            <el-select v-model="purchaseStatusF" size="small" placeholder="筛选状态" clearable style="width:120px" @change="filterPurchase">
+            <el-input v-model="purchaseSearch" placeholder="搜索供应商/订单" size="small" style="width:180px" clearable>
+            <el-select v-model="purchaseStatusF" size="small" placeholder="筛选状态" clearable style="width:120px">
               <el-option label="待采购" value="待采购"/><el-option label="已下单" value="已下单"/><el-option label="部分到货" value="部分到货"/><el-option label="全部到货" value="全部到货"/>
             </el-select>
             <el-button size="small" @click="loadPurchases">刷新采购单</el-button>
@@ -866,8 +882,8 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
           <div class="page-title">安装管理</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <el-input v-model="installSearch" placeholder="搜索客户/地址" size="small" style="width:180px" clearable @input="filterInstall"/>
-            <el-select v-model="installStatusF" size="small" placeholder="筛选状态" clearable style="width:120px" @change="filterInstall">
+            <el-input v-model="installSearch" placeholder="搜索客户/地址" size="small" style="width:180px" clearable>
+            <el-select v-model="installStatusF" size="small" placeholder="筛选状态" clearable style="width:120px">
               <el-option label="待分配" value="待分配"/><el-option label="已分配" value="已分配"/><el-option label="已安装" value="已安装"/><el-option label="已验收" value="已验收"/>
             </el-select>
             <el-button size="small" @click="loadInstallOrders">刷新</el-button>
@@ -1512,429 +1528,381 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
 
 </body>
 <script>
+/**
+ * 金典软装销售系统 V2.2 · Vue 应用入口
+ *
+ * 所有业务逻辑已拆分到 /static/js/ 模块：
+ *   00-base   → 全局状态 __STATE__ + localStorage 工具
+ *   01-api    → 所有 API 调用
+ *   03~13     → 各功能模块
+ *   14-dialogs → 弹窗控制
+ *   15-init   → 初始化
+ *
+ * 模板引用规范：docs/API-FORMAT.md
+ */
 
-const {createApp,ref,computed,watch}=Vue;
-const {ElMessage}=ElementPlus;
+const { createApp, ref, computed, watch } = Vue;
+const { ElMessage } = ElementPlus;
 
-const LS=key=>{try{return JSON.parse(localStorage.getItem(key))}catch{return null}};
-// ?clear=1 forces localStorage reset (bypass cached HTML)
-if(new URLSearchParams(location.search).get('clear')==='1'){localStorage.clear();location.replace(location.pathname);}
-const SLS=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
-// 临时：显示所有菜单项（RBAC权限系统待完整实现）
-const menuVisible=(m)=>true;
+const app = createApp({
+  setup() {
+    const S = window.__STATE__;  // 已经是 Vue.observable() 创建的响应式对象
 
-const API='';
-const AUTH_TOKEN_KEY='authToken';
-let AUTH_TOKEN=localStorage.getItem(AUTH_TOKEN_KEY)||'';
-const api=async(u,m='GET',b=null)=>{
-  const headers={'Content-Type':'application/json'};
-  const _tok=localStorage.getItem('authToken')||'';
-  if(_tok)headers['Authorization']='Bearer '+_tok;
-  const r=await fetch(API+u,{method:m,headers,body:b?JSON.stringify(b):null});
-  if(!r.ok)throw new Error(u+r.status);
-  const d=await r.json();
-  if(!d.success)throw new Error(d.error||'api error');
-  return d.data??d;
-};
-const isLoading=ref(false);
+    // 需要读写的响应式状态，用 ref 包装以便在 return 中保持响应性
+    const loginLoading = ref(false);
+    const loginForm = ref({ phone: '', password: '' });
+    const showLogin = ref(false);
 
-const app=createApp({
-  setup(){
-    /* page */
-    const page=ref('home');
-    const activeMenu=ref('home');
-    const pageTitle=computed(()=>({home:'首页概览',suppliers:'供应商管理',product:'产品资料',customer:'客户资料',employee:'员工资料',dict:'码表管理',order:'销售订单',purchase:'采购管理',warehouse:'仓库管理',production:'生产管理',install:'安装管理',finance:'财务结算',report:'统计报表'})[page.value]||'');
-    const switchPage=p=>{page.value=p;activeMenu.value=p==='basic'?'product':p;if(p==='order')loadOrders();if(p==='purchase'){loadPurchases();loadPurchaseOrdersForSplit();};if(p==='production')loadProduction();if(p==='install')loadInstallOrders();if(p==='warehouse')loadWarehouse();};
+    // 将这些 ref 暴露给 __initModule__（在 setup() 运行时已定义）
+    if (window.__initModule__) {
+      window.__initModule__.loginLoading = loginLoading;
+      window.__initModule__.loginForm = loginForm;
+      window.__initModule__.showLogin = showLogin;
+    }
 
-    /* nav */
-    const navMap={'home':'home','product':'product','customer':'customer','employee':'employee','dict':'dict','order':'order','purchase':'purchase','warehouse':'warehouse','production':'production','install':'install','finance':'finance','report':'report'};
-    const handleNav=k=>{if(k!=='basic'){page.value=navMap[k]||k;activeMenu.value=k}else{page.value='product';activeMenu.value='product'}};
-    const switchPage2=p=>page.value=p;
+    const pageTitle = computed(() => ({
+      home:'首页概览', suppliers:'供应商管理', product:'产品资料',
+      customer:'客户资料', employee:'员工资料', dict:'码表管理',
+      order:'销售订单', purchase:'采购管理', warehouse:'仓库管理',
+      production:'生产管理', install:'安装管理', finance:'财务结算',
+      report:'统计报表',
+    })[S.page] || '');
 
-    /* =================== DATA =================== */
-
-    /* ── API初始化 ── */
-    /* Auth */
-    const showNewOrder=ref(false);const showEditOrder=ref(false);
-    const showLogin=ref(false);
-    const loginLoading=ref(false);
-    const _u=LS('currentUser');let _parsed=null;try{_parsed=JSON.parse(_u||'null');}catch(e){_parsed=null;}const currentUser=ref(_parsed);
-    const isLoggedIn=ref(!!currentUser.value);
-    if(!currentUser.value){showLogin.value=true;}
-    const loginForm=ref({phone:'',password:''});
-    const drawerVisible=ref(false);
-    const sForm=ref({type:'',contact:'',phone:'',deliveryDays:3,address:'',payment:''});
-    const cuForm=ref({name:'',type:'零售',contact:'',phone:'',community:'',address:'',salespersonId:'',source:'',debtLimit:0,remark:''});
-    const empForm=ref({name:'',position:'',phone:'',idCard:'',joinDate:'',status:'在职',remark:''});
-    const authToken=ref(LS('authToken')||'');
-
-    const doLogin=async()=>{
-      if(!loginForm.value.phone){ElMessage.warning('请输入手机号');return;}
-      try{
-        loginLoading.value=true;
-        const res=await api('/api/auth/login','POST',{phone:loginForm.value.phone,password:loginForm.value.password||''});
-        if(res.token){
-          AUTH_TOKEN=res.token;
-          authToken.value=res.token;
-          localStorage.setItem('authToken',res.token);
-          const u={id:res.user_id,name:res.name||'员工',role:res.role||'staff'};
-          currentUser.value=u;localStorage.setItem('currentUser',JSON.stringify(u));
-          showLogin.value=false;isLoggedIn.value=true;initAll();loadOrders();loadPurchases();loadProduction();loadInstallOrders();loadPurchaseOrdersForSplit();ElMessage.success('登录成功');
-        }else{ElMessage.error(res.message||'登录失败');}
-      }catch(e){ElMessage.error(typeof e==='string'?e:(e.message||'登录失败'));}
-      finally{loginLoading.value=false;}
-    };
-    const logout=()=>{showNewOrder.value=false;showEditOrder.value=false;AUTH_TOKEN='';currentUser.value=null;isLoggedIn.value=false;authToken.value='';localStorage.removeItem('authToken');localStorage.removeItem('currentUser');ElMessage.success('已退出');};
-
-    /* Report date range */
-    const rptYear=ref(new Date().getFullYear());
-    const rptMonth=ref(new Date().getMonth()+1);
-    const rptTab=ref('overview');
-    const loadReportData=async()=>{
-      const y=rptYear.value,m=rptMonth.value;
-      const [trend,empRpt,prodRpt,ordRpt]=await Promise.all([
-        api(`/api/reports/trend?year=${y}&month=${m}`).catch(()=>({items:[]})),
-        api(`/api/reports/employee-performance?year=${y}&month=${m}`).catch(()=>({items:[]})),
-        api(`/api/reports/product-rank?year=${y}&month=${m}`).catch(()=>({items:[]})),
-        api(`/api/orders?page=1&page_size=100&year=${y}&month=${m}`).catch(()=>({items:[],total:0})),
-      ]);
-      salesTrend.value=(trend.items||[]).filter(t=>t).map(t=>t.amount||0);
-      staffRank.value=(empRpt.items||[]).filter(e=>e).map(e=>({name:e.salesperson||'',amount:e.total_amount||0,orders:e.order_count||0}));
-      topProducts.value=(prodRpt.items||[]).filter(p=>p).map(p=>({name:p.product||'',times:p.qty||0,amount:p.amount||0}));
-      reportOrders.value=(ordRpt.items||[]).filter(o=>o).map(o=>({
-        orderNo:o.order_no,customerName:o.customer_name||'',orderType:o.order_type||'',
-        amount:o.amount||0,status:o.status_label||'',statusColor:o.status_color||'#999',
-        received:o.received||0,debt:o.debt||0,orderDate:o.order_date||''
-      }));
+    const switchPage = p => {
+      S.page = p;
+      S.activeMenu = (p === 'basic') ? 'product' : p;
+      if (p === 'order') __ordersModule__.loadOrders();
+      if (p === 'purchase') {
+        __purchaseModule__.loadPurchases();
+        __purchaseModule__.loadPurchaseOrdersForSplit();
+      }
+      if (p === 'warehouse') __warehouseModule__.loadWarehouse();
+      if (p === 'install') __installModule__.loadInstallOrders();
     };
 
-    const STATUS_MAP={created:'待确认',confirmed:'已确认',split:'已拆分',purchasing:'采购中',stocked:'已到货',processing:'生产中',production_exception:'生产异常',install_order_generated:'安装单已生成',shipped:'已发货',installed:'已安装',accepted:'已验收',completed:'已完成',cancelled:'已取消'};
-
-    const initAll=async()=>{
-      try{isLoading.value=true;
-        const [dash,sups,cats,prods,custs,emps,fin,ordData]=await Promise.all([
-          api('/api/dashboard').catch(()=>({})),
-          api('/api/products/suppliers').catch(()=>({items:[]})),
-          api('/api/products/categories').catch(()=>({items:[]})),
-          api('/api/products').catch(()=>({items:[]})),
-          api('/api/customers').catch(()=>({items:[]})),
-          api('/api/employees').catch(()=>({items:[]})),
-          api('/api/finance/summary').catch(()=>({})),
-          api('/api/orders?page=1&page_size=100').catch(()=>({items:[]})),
-        ]);
-        // stats
-        if(dash.today_orders!==undefined)stats.value={todayOrders:dash.today_orders||0,monthSales:dash.month_sales||0,pendingInstall:dash.pending_install||0,overdueOrders:dash.overdue_orders||0,pendingPayment:dash.pending_payment||0,totalCustomers:dash.total_customers||0};
-        // suppliers
-        suppliers.value=(sups.items||[]).map(s=>({id:s.id,code:s.code,name:s.name,type:s.type||'',contact:s.contact||'',phone:s.phone||'',deliveryDays:s.delivery_days||7,address:'',payment:''}));
-        // categories
-        categories.value=(cats.items||[]).map(c=>({id:c.id,code:c.code,name:c.name,supplierId:'s'+c.supplier_id,desc:c.description||''}));
-        // products
-        products.value=(prods.items||[]).map(p=>({id:p.id,code:p.code,name:p.name,supplierId:'s'+p.supplier_id,categoryId:'c'+p.category_id,type:p.product_type||'面料',classification:p.classification||'定高',model:p.model||'',mat:p.material||'',width:p.width||280,weight:p.weight||0,cf:0,price:p.unit_price||0,stock:p.stock||0,unit:p.unit||'米',remark:''}));
-        // customers
-        customers.value=(custs.items||[]).map(c=>({id:c.id,code:c.id,name:c.name,phone:c.phone,community:c.community||'',type:c.type||'零售',salesperson:c.salesperson||'',salespersonId:null,source:c.source||'',debt:c.debt||0,debtLimit:0,address:c.address||'',contact:'',remark:''}));
-        // employees
-        employees.value=(emps.items||[]).map(e=>({id:e.id,code:e.code,name:e.name,gender:e.gender||'男',phone:e.phone,position:e.position||'',dept:e.department||'',maxDiscount:e.max_discount||1,roundLimit:e.round_limit||0,status:e.status||'启用',hireDate:''}));
-        // finance
-        if(fin.data)financeData.value={monthRevenue:fin.data.month_receive||0,monthCost:fin.data.month_pay||0,monthProfit:(fin.data.month_receive||0)-(fin.data.month_pay||0),totalDebt:fin.data.total_debt||0,pendingCommission:0};
-        // reports
-        const today=new Date().toISOString().slice(0,10);
-        const [trend,empRpt,prodRpt,purchData]=await Promise.all([
-          api('/api/reports/trend').catch(()=>({items:[]})),
-          api('/api/reports/employee-performance').catch(()=>({items:[]})),
-          api('/api/reports/product-rank').catch(()=>({items:[]})),
-          api('/api/purchase-orders').catch(()=>({items:[]})),
-        ]).catch(()=>[{},{},{},{}]);
-        salesTrend.value=(trend.items||[]).filter(t=>t).map(t=>t.amount||0);
-        staffRank.value=(empRpt.items||[]).filter(e=>e).map(e=>({name:e.salesperson||'',amount:e.total_amount||0,orders:e.order_count||0}));
-        topProducts.value=(prodRpt.items||[]).filter(p=>p).map(p=>({name:p.product||'',times:p.qty||0,amount:p.amount||0}));
-        purchases.value=(purchData.items||[]).map(p=>({id:p.id,purchaseNo:p.po_no||'',supplierId:'s'+p.supplier_id,supplierName:p.supplier_name||'',items:Array.isArray(p.items)?p.items.map(i=>i.product_name||'').join(' '):p.items||'',status:p.status||'待采购',amount:(p.total_amount||p.amount||0),date:p.expected_date||p.order_date||'',orderIds:p.order_ids||''}));
-        // load report data for current month
-        await loadReportData();
-        // dictMap orderStatus - initialize from API or use defaults
-        dictMap.value.orderStatus=[
-          {k:'created',v:'待确认',c:'#909399'},{k:'confirmed',v:'已核单',c:'#409eff'},
-          {k:'measured',v:'已测量',c:'#67c23a'},{k:'stocked',v:'已备货',c:'#e6a23c'},
-          {k:'processing',v:'加工中',c:'#f56c6c'},{k:'install',v:'待安装',c:'#9c27b0'},
-          {k:'installed',v:'已安装',c:'#1a3a5c'},{k:'completed',v:'已完成',c:'#222'},
-        ];
-        orders.value=(ordData.items||[]).map(o=>({
-          id:o.id,orderNo:o.order_no,customerId:o.customer_id,customerName:o.customer_name||'',orderType:o.order_type||'窗帘',
-          content:o.content||'',amount:o.amount||0,quoteAmount:o.quote_amount||0,discountAmount:o.discount_amount||0,roundAmount:o.round_amount||0,
-          received:o.received||0,debt:o.debt||0,
-          status:o.status_label||STATUS_MAP[o.status_key]||'待确认',
-          statusColorKey:o.status_key||'created',statusColor:o.status_color||'#909399',
-          date:o.order_date||'',orderDate:o.order_date||'',deliveryDate:o.delivery_date||'',
-          deliveryMethod:o.delivery_method||'上门安装',salesperson:o.salesperson||'',salespersonId:null,
-          history:o.history||[],items:o.items||[]
-        }));
-        filteredOrders.value=[...orders.value];
-      }catch(e){console.error('initAll error:',e);}
-      finally{isLoading.value=false;}
+    const handleNav = k => {
+      const navMap = {
+        home:'home', product:'product', customer:'customer', employee:'employee',
+        dict:'dict', order:'order', purchase:'purchase', warehouse:'warehouse',
+        production:'production', install:'install', finance:'finance', report:'report',
+      };
+      if (k !== 'basic') {
+        S.page = navMap[k] || k;
+        S.activeMenu = k;
+      } else {
+        S.page = 'product';
+        S.activeMenu = 'product';
+      }
     };
 
-    /* 首页 */
-    const stats=ref({todayOrders:0,monthSales:0,pendingInstall:0,overdueOrders:0,pendingPayment:0,totalCustomers:0});
-    const alerts=ref([
-      {msg:'逾期订单 1 单，请尽快处理',icon:'⚠️',color:'#f56c6c'},
-      {msg:'本周到期交期 3 单',icon:'📅',color:'#e6a23c'},
-      {msg:'库存不足：婴儿绒雪尼尔 剩 5 米',icon:'📦',color:'#909399'},
-    ]);
+    const doLogin = () => __initModule__.doLogin();
+    const logout = () => __initModule__.logout();
 
-    /* 供应商 */
-    const suppliers=ref([]);
-    const suppSearch=ref('');
-    const suppTypeF=ref('');
-    const filteredSuppliers=computed(()=>{
-      const q=(suppSearch.value||'').toLowerCase();
-      let list=suppliers.value;
-      if(q)list=list.filter(s=>((s.name||'')+(s.code||'')+(s.contact||'')+(s.phone||'')).toLowerCase().includes(q));
-      if(suppTypeF.value)list=list.filter(s=>s.type===suppTypeF.value);
+    // 页面切换时按需加载
+    watch(() => S.page, p => {
+      if (p === 'home') __homeModule__.loadDashboard();
+      if (p === 'finance') __reportModule__.loadFinance();
+      if (p === 'report') __reportModule__.loadReportData();
+    });
+
+    const loadReportData = () => __reportModule__.loadReportData();
+    const getSupplierName = (id) => __productModule__.getSupplierName(id, S);
+    const getCatName = (id) => __productModule__.getCatName(id, S);
+    const supCategories = () => __productModule__.supCategories(S);
+    const filteredProductsFn = () => __productModule__.filteredProducts(S);
+
+    const dictCatLabel = computed(() => (S.dictCats.find(d => d.k === S.dictCat) || {}).l || '');
+    const dictItems = computed(() => S.dictMap[S.dictCat] || []);
+    const orderStatusAll = computed(() => S.dictMap.orderStatus || []);
+
+    const filteredOrders = computed(() => {
+      let list = [...S.orders];
+      if (S.orderSearch) {
+        const q = S.orderSearch.toLowerCase();
+        list = list.filter(o =>
+          (o.orderNo || '').includes(S.orderSearch) ||
+          (o.customerName || '').toLowerCase().includes(q)
+        );
+      }
+      if (S.orderStatusF) list = list.filter(o => o.statusKey === S.orderStatusF);
+      if (S.orderTypeF) list = list.filter(o => o.orderType === S.orderTypeF);
       return list;
     });
 
-    /* 布版 */
-    const categories=ref([]);
+    const filteredSuppliers = computed(() => {
+      let list = S.suppliers;
+      const q = (S.suppSearch || '').toLowerCase();
+      if (q) list = list.filter(s =>
+        ((s.name||'') + (s.code||'') + (s.contact||'') + (s.phone||'')).toLowerCase().includes(q)
+      );
+      if (S.suppTypeF) list = list.filter(s => s.type === S.suppTypeF);
+      return list;
+    });
 
-    /* 产品 */
-    const products=ref([]);
+    const filteredCustomers = computed(() => {
+      let list = S.customers;
+      const q = (S.customerSearch || '').toLowerCase();
+      if (q) list = list.filter(c =>
+        (c.name||'').toLowerCase().includes(q) ||
+        (c.phone||'').toLowerCase().includes(q) ||
+        (c.community||'').toLowerCase().includes(q)
+      );
+      if (S.customerTypeF) list = list.filter(c => c.type === S.customerTypeF);
+      return list;
+    });
 
-    /* 产品树 */
-    const productTree=computed(()=>{
-      return suppliers.value.map(s=>{
-        const scats=categories.value.filter(c=>String(c.supplierId)===String(s.id));
-        return {id:'s'+s.id,label:s.name,lv:1,
-          children:scats.map(c=>{
-            const cprods=products.value.filter(p=>String(p.categoryId)===String(c.id));
-            return {id:'c'+c.id,label:c.name,lv:2,
-              children:cprods.map(p=>({id:p.id,label:p.name,code:p.code||'',lv:3}))
+    const filteredEmployees = computed(() => {
+      let list = S.employees;
+      const q = (S.empSearch || '').toLowerCase();
+      if (q) list = list.filter(e =>
+        ((e.name||'') + (e.code||'') + (e.phone||'')).toLowerCase().includes(q)
+      );
+      if (S.empPositionF) list = list.filter(e => e.position === S.empPositionF);
+      return list;
+    });
+
+    const filteredPurchase = computed(() => {
+      let list = S.purchases;
+      if (S.purchaseSearch) list = list.filter(p =>
+        ((p.supplierName||'') + (p.purchaseNo||'') + (p.orderIds||'')).includes(S.purchaseSearch)
+      );
+      if (S.purchaseStatusF) list = list.filter(p => p.status === S.purchaseStatusF);
+      return list;
+    });
+
+    const filteredInstall = computed(() => {
+      let list = S.installOrders;
+      if (S.installSearch) list = list.filter(i =>
+        ((i.customerName||'') + (i.address||'')).includes(S.installSearch)
+      );
+      if (S.installStatusF) list = list.filter(i => i.status === S.installStatusF);
+      return list;
+    });
+
+    const filteredProduction = computed(() => {
+      let list = S.productionOrders;
+      const q = (S.prodSearch || '').toLowerCase();
+      if (q) list = list.filter(o =>
+        ((o.orderNo||'') + (o.customerName||'')).toLowerCase().includes(q)
+      );
+      if (S.prodStepF) list = list.filter(o => o.step === S.prodStepF);
+      return list;
+    });
+
+    const costBreakdown = computed(() => {
+      const monthCost = S.financeData.monthCost || 0;
+      return [
+        { label: '面料成本', amount: Math.round(monthCost * 0.6) },
+        { label: '辅料成本', amount: Math.round(monthCost * 0.15) },
+        { label: '人工费用', amount: Math.round(monthCost * 0.12) },
+        { label: '运营费用', amount: Math.round(monthCost * 0.13) },
+      ];
+    });
+
+    const productTree = computed(() => {
+      return S.suppliers.map(s => {
+        const scats = S.categories.filter(c => String(c.supplierId) === String(s.id));
+        return {
+          id: 's'+s.id, label: s.name, lv: 1,
+          children: scats.map(c => {
+            const cprods = S.products.filter(p => String(p.categoryId) === String(c.id));
+            return {
+              id: 'c'+c.id, label: c.name, lv: 2,
+              children: cprods.map(p => ({ id: p.id, label: p.name, code: p.code||'', lv: 3 })),
             };
-          })
+          }),
         };
       });
     });
 
-    const prodSearch=ref('');
-    const prodSupplierF=ref('');
-    const prodCatF=ref('');
-    const filteredProducts=computed(()=>{
-      const q=(prodSearch.value||'').toLowerCase();
-      let list=products.value;
-      if(q)list=list.filter(p=>((p.name||'')+(p.code||'')+(p.type||'')+getSupplierName(p.supplierId)).toLowerCase().includes(q));
-      if(prodSupplierF.value)list=list.filter(p=>String(p.supplierId)===String(prodSupplierF.value));
-      if(prodCatF.value)list=list.filter(p=>String(p.categoryId)===String(prodCatF.value));
-      return list;
-    });
+    const onCustomerSelect = () => __orderFormModule__.onCustomerSelect(S);
+    const autoDelivery = () => __orderFormModule__.autoDelivery(S);
+    const addOrderItem = () => __orderFormModule__.addOrderItem(S);
+    const addOrderMaterial = () => __orderFormModule__.addOrderMaterial(S);
+    const calcItem = row => __orderFormModule__.calcItem(row, S);
+    const calcMaterial = row => __orderFormModule__.calcMaterial(row, S);
+    const calcTotals = () => __orderFormModule__.calcTotals(S);
+    const saveNewOrder = () => __orderFormModule__.saveNewOrder(S);
 
-    /* 客户 */
-    const customerSearch=ref('');
-    const customerTypeF=ref('');
-    const customers=ref([]);
-    const filteredCustomers=computed(()=>{
-      let list=customers.value;
-      if(customerSearch.value){
-        const q=customerSearch.value.toLowerCase();
-        list=list.filter(c=>c.name.toLowerCase().includes(q)||(c.phone||'').toLowerCase().includes(q)||(c.community||'').toLowerCase().includes(q));
-      }
-      if(customerTypeF.value)list=list.filter(c=>c.type===customerTypeF.value);
-      return list;
-    });
-
-    /* 员工 */
-    const employees=ref([]);
-    const empSearch=ref('');
-    const empPositionF=ref('');
-    const filteredEmployees=computed(()=>{
-      const q=(empSearch.value||'').toLowerCase();
-      let list=employees.value;
-      if(q)list=list.filter(e=>((e.name||'')+(e.code||'')+(e.phone||'')).toLowerCase().includes(q));
-      if(empPositionF.value)list=list.filter(e=>e.position===empPositionF.value);
-      return list;
-    });
-
-    /* 码表 */
-    const dictCats=[
-      {k:'orderStatus',l:'订单状态'},{k:'orderType',l:'订单类型'},{k:'deliveryMethod',l:'提货方式'},
-      {k:'supplierType',l:'供应商类型'},{k:'productType',l:'产品分类'},{k:'customerType',l:'客户类型'},
-      {k:'installPosition',l:'安装位置'},{k:'finishType',l:'成品类型'},{k:'style',l:'款式'},
-      {k:'process',l:'工艺'},{k:'paymentType',l:'收款类型'},{k:'orderExpenseType',l:'订单费用类型'},
-      {k:'warehouseType',l:'仓库分类'},{k:'department',l:'部门'},{k:'position',l:'职务'},
-    ];
-    const dictMap=ref(Object.assign({},LS('dictMap')||{
-      orderStatus:[
-        {k:'created',v:'已创建',c:'#909399'},{k:'confirmed',v:'已确认',c:'#409eff'},
-        {k:'split',v:'已拆分',c:'#7c3aed'},{k:'purchasing',v:'采购中',c:'#f59e0b'},
-        {k:'stocked',v:'已到货',c:'#10b981'},{k:'processing',v:'生产中',c:'#f97316'},
-        {k:'production_exception',v:'生产异常',c:'#ef4444'},{k:'install_order_generated',v:'安装单已生成',c:'#8b5cf6'},
-        {k:'shipped',v:'已发货',c:'#06b6d4'},{k:'installed',v:'已安装',c:'#1a3a5c'},
-        {k:'accepted',v:'已验收',c:'#059669'},{k:'completed',v:'已完成',c:'#6366f1'},
-        {k:'cancelled',v:'已取消',c:'#d9d9d9'},
-      ],
-      orderType:[{k:'curtain',v:'窗帘'},{k:'wallpaper',v:'墙布'},{k:'hardsheet',v:'硬包'},{k:'rockboard',v:'岩板'},{k:'wholehouse',v:'全屋'}],
-      deliveryMethod:[{k:'install',v:'上门安装'},{k:'pickup',v:'自提'}],
-    }));
-// dictMap now reactive ref, populated from API in initAll
-
-    const dictCat=ref('orderStatus');
-    const dictCatLabel=computed(()=>dictCats.find(d=>d.k===dictCat.value)?.l||'');
-    const dictItems=computed(()=>dictMap.value[dictCat.value]||[]);
-    const orderStatusAll=computed(()=>dictMap.value.orderStatus||[]);
-
-    /* 订单 */
-    const orders=ref([]);
-    const selOrder=ref({});
-    const selectOrder=(o)=>{Object.assign(selOrder.value,{id:o.id,orderNo:o.orderNo,customerName:o.customerName,orderType:o.orderType,salesperson:o.salesperson,orderDate:o.orderDate,deliveryDate:o.deliveryDate,deliveryMethod:o.deliveryMethod,amount:o.amount,received:o.received,debt:o.debt,roundAmount:o.roundAmount||0,status:o.status_label||o.status||STATUS_MAP[o.status_key]||'待确认',statusKey:o.status_key||o.statusKey||'created',statusColor:o.status_color||o.statusColor||'#909399',statusColorKey:o.status_key||o.statusKey||'created',history:o.history||[],items:(o.items||[]).map(i=>({product_name:i.product_name||i.product||'',unit_price:i.unit_price||i.price||0,item_type:i.is_material?'material':(i.item_type||'product'),room:i.room||'',width:i.width||'',height:i.height||'',qty:i.qty||0,discount:i.discount||1,amount:i.amount||0}))});};
-    const orderSearch=ref('');
-    const orderStatusF=ref('');
-    const orderTypeF=ref('');
-    const filteredOrders=ref([...orders.value]);
-    const filterOrders=()=>{
-      let list=[...orders.value];
-      if(orderSearch.value){const q=orderSearch.value.toLowerCase();list=list.filter(o=>o.orderNo.includes(orderSearch.value)||o.customerName.includes(q));}
-      if(orderStatusF.value)list=list.filter(o=>o.statusColorKey===orderStatusF.value);
-      if(orderTypeF.value)list=list.filter(o=>o.orderType===orderTypeF.value);
-      filteredOrders.value=list;
+    const loadProduction = () => {
+      api('/api/orders?page=1&page_size=100').then(d => {
+        S.productionOrders = ((d.items||[])).map(o => ({
+          id: o.id, orderNo: o.order_no||'', customerName: o.customer_name||'',
+          step: 1, content: o.content||'',
+        }));
+      }).catch(() => {});
     };
 
-    const updateOrderStatusByKey=async()=>{
-      if(!selOrder.value.id)return;
-      const newKey=selOrder.value?.statusKey;
-      const st=orderStatusAll.value.find(x=>x.k===newKey);
-      if(!st)return;
-      const newLabel=st.v;
-      // update local
-      const old=orders.value.find(o=>o.id===selOrder.id);
-      if(old){old.status=newLabel;old.statusKey=newKey;old.statusColor=old.statusColor||newKey;if(!old.history)old.history=[];old.history.push({s:old.status,s2:newLabel,c:newKey,time:new Date().toLocaleString()});Object.assign(selOrder.value,old);}
-      // sync to API
-      try{await api(`/api/orders/${selOrder.id}/status`,'PUT',{new_status_key:newKey});}catch(e){console.error(e);}
-    };
-    const delOrder=async()=>{const o=selOrder.value;if(!o||!o.id)return;if(!confirm(`确定删除订单「${o.orderNo}」？此操作不可恢复！`))return;try{const oid=o.id;await api(`/api/orders/${oid}`,'DELETE');selOrder.value={};await loadOrders();ElMessage.success('已删除');}catch(e){ElMessage.error('删除失败：'+(e.message||''));}};
-
-    /* 采购 */
-    const purchases=ref([]);
-    const filteredPurchase=ref([]);
-    const purchaseSearch=ref('');
-    const purchaseStatusF=ref('');
-    const filterPurchase=()=>{let list=purchases.value;if(purchaseSearch.value)list=list.filter(p=>(p.supplierName||'').includes(purchaseSearch.value)||(p.purchaseNo||'').includes(purchaseSearch.value)||(p.orderIds||'').includes(purchaseSearch.value));if(purchaseStatusF.value)list=list.filter(p=>p.status===purchaseStatusF.value);filteredPurchase.value=list;};
-    const loadOrders=async()=>{try{const d=await api('/api/orders?page=1&page_size=100');orders.value=(d.items||[]).map(o=>({id:o.id,orderNo:o.order_no||'',customerName:o.customer_name||'',orderType:o.order_type||'窗帘',customerId:o.customer_id,salesperson:o.salesperson||'',amount:o.amount||0,received:o.received||0,debt:o.debt||0,roundAmount:o.round_amount||0,status:o.status_label||STATUS_MAP[o.status_key]||'待确认',statusKey:o.status_key||'created',statusColor:o.status_color||'#909399',statusColorKey:o.status_key||'created',orderDate:o.order_date||'',deliveryDate:o.delivery_date||'',deliveryMethod:o.delivery_method||'上门安装',history:o.history||[],items:o.items||[]}));filteredOrders.value=[...orders.value];filterOrders();}catch(e){console.error('loadOrders error:',e);}};
-    const loadPurchases=async()=>{try{const d=await api('/api/purchase-orders');purchases.value=(d.items||[]).map(p=>({id:p.id,purchaseNo:p.po_no||'',supplierId:p.supplier_id,supplierName:p.supplier_name||'',orderIds:p.order_ids||'',items:Array.isArray(p.items)?p.items.map(i=>i.product_name||'').join(', '):(p.items||''),itemsRaw:p.items||[],status:p.status||'待采购',amount:(p.total_amount||p.amount||0),date:p.expected_date||'',remark:p.remark||''}));filterPurchase();}catch(e){console.error(e);}};
-    const dlgPurchase=ref(false);const editingPurchase=ref(null);
-    const purchaseForm=ref({supplierId:'',orderIds:'',expectedDate:'',status:'待采购',remark:''});
-    const openPurchaseDlg=(row=null)=>{editingPurchase.value=row?{...row}:null;purchaseForm.value=row?{supplierId:row.supplierId?'s'+row.supplierId:'',orderIds:row.orderIds||'',expectedDate:row.date||'',status:row.status||'待采购',remark:row.remark||''}:{supplierId:suppliers.value[0]?'s'+suppliers.value[0].id:'',orderIds:'',expectedDate:'',status:'待采购',remark:''};dlgPurchase.value=true;};
-    const savePurchase=async()=>{try{const f=purchaseForm.value;const sid=parseInt(f.supplierId.replace('s',''))||null;const method=editingPurchase.value?'PUT':'POST';const url=editingPurchase.value?`/api/purchase-orders/${editingPurchase.value.id}`:'/api/purchase-orders';const payload={supplier_id:sid,order_ids:f.orderIds,expected_date:f.expectedDate,status:f.status,remark:f.remark};const d=await api(url,method,payload);if(editingPurchase.value){const idx=purchases.value.findIndex(p=>p.id===editingPurchase.value.id);if(idx>-1)purchases.value.splice(idx,1,{...purchases.value[idx],...d});}else{purchases.value.push({id:d.id,purchaseNo:d.po_no||'',supplierId:sid,supplierName:getSupplierName(sid)||'',orderIds:f.orderIds,items:'',itemsRaw:[],status:f.status,amount:0,date:f.expectedDate,remark:f.remark});}dlgPurchase.value=false;ElMessage.success('保存成功');loadPurchases();}catch(e){ElMessage.error('保存失败');}};
-    const deletePurchase=async(row)=>{if(!confirm(`确定删除采购单「${row.purchaseNo}」？`))return;try{await api(`/api/purchase-orders/${row.id}`,'DELETE');purchases.value=purchases.value.filter(p=>p.id!==row.id);ElMessage.success('已删除');}catch(e){ElMessage.error('删除失败');}};
-    const updatePurchaseStatus=async(row,newStatus)=>{try{await api(`/api/purchase-orders/${row.id}/status`,'PUT',{status:newStatus});row.status=newStatus;filterPurchase();ElMessage.success('状态已更新');}catch(e){ElMessage.error('更新失败');}};
-    const purchaseOrdersForSplit=ref([]);const selectedSplitOrders=ref([]);
-    const loadPurchaseOrdersForSplit=async()=>{try{const d=await api('/api/orders?status_key=confirmed');purchaseOrdersForSplit.value=(d.items||[]).map(o=>({id:o.id,orderNo:o.order_no||'',customerName:o.customer_name||'',orderType:o.order_type||'窗帘',content:o.content||'',amount:o.amount||0,orderDate:o.order_date||'',deliveryDate:o.delivery_date||''}));selectedSplitOrders.value=[]}catch(e){console.error(e);}};
-    const toggleSplitOrder=id=>{const idx=selectedSplitOrders.value.indexOf(id);if(idx>-1)selectedSplitOrders.value.splice(idx,1);else selectedSplitOrders.value.push(id);};
-    const toggleAllSplitOrders=()=>{if(selectedSplitOrders.value.length===purchaseOrdersForSplit.value.length){selectedSplitOrders.value=[]}else{selectedSplitOrders.value=purchaseOrdersForSplit.value.map(o=>o.id);}};
-    const doBatchSplit=async()=>{if(selectedSplitOrders.value.length===0){ElMessage.warning('请先勾选订单');return;}try{const d=await api('/api/purchase-orders/batch-split','POST',selectedSplitOrders.value);ElMessage.success(d.message||'采购单生成成功');selectedSplitOrders.value=[];loadPurchaseOrdersForSplit();loadPurchases();}catch(e){ElMessage.error('生成失败：'+e.message||'未知错误');}};
-    const loadProduction=async()=>{try{const d=await api('/api/orders?status_key=processing');const arr=(d.items||[]).map(o=>({id:o.id,orderNo:o.order_no||'',customerName:o.customer_name||'',step:1,content:o.items?.map(i=>i.product_name||i.product||'').join(',')||''}));productionOrders.value=arr;filterProduction();}catch(e){console.error(e);}};
-    /* 安装 */
-    const installOrders=ref([]);
-    const filteredInstall=ref([]);
-    const installSearch=ref('');
-    const installStatusF=ref('');
-    const filterInstall=()=>{let list=installOrders.value;if(installSearch.value)list=list.filter(i=>(i.customerName||'').includes(installSearch.value)||(i.address||'').includes(installSearch.value));if(installStatusF.value)list=list.filter(i=>i.status===installStatusF.value);filteredInstall.value=list;};
-    const confirmInstall=async row=>{row.status='已安装';try{const installRes=await api('/api/installer/tasks','GET');const t=(installRes.tasks||[]).find(t=>t.order_no===(row.orderNo||''));if(t)await api(`/api/installer/tasks/${t.id}/complete`,'POST',{completed_at:new Date().toISOString().slice(0,19).replace('T',' '),remark:''});await api(`/api/orders/${row.id}/status`,'PUT',{new_status_key:'installed'});}catch(e){console.error(e);}filterInstall();ElMessage.success('已确认安装完成');};
-    const loadInstallOrders=async()=>{try{const d=await api('/api/installation-orders');installOrders.value=(d.items||[]).map(i=>({id:i.id,insNo:i.ins_no||'',orderId:i.order_id,orderNo:i.order_no||'',customerName:i.customer_name||'',address:i.address||'',scheduledDate:i.scheduled_date||'',status:i.status||'待分配',installerName:i.installer_name||''}));filterInstall();}catch(e){console.error(e);}};
-    const loadWarehouse=async()=>{try{const d=await api('/api/warehouse/records');const all=d.items||[];warehouseRecords.value=all;const whMap={};all.forEach(r=>{const name=r.record_type==='in'?'成品库':r.record_type==='out'?'发货库':'在途库';if(!whMap[name])whMap[name]=[];whMap[name].push({recordId:r.id,name:r.product_name||r.product_code||'',stock:r.quantity||0,unit:r.unit||'米',recordType:r.record_type});});warehouses.value=Object.entries(whMap).map(([name,items])=>({name,items}));}catch(e){console.error(e);}};
-const dlgWarehouseRecord=ref(false);const warehouseForm=ref({recordType:'in',productName:'',quantity:1,unit:'米',remark:''});
-const saveWarehouseRecord=async()=>{try{const f=warehouseForm.value;const payload={record_type:f.recordType,product_name:f.productName,quantity:parseFloat(f.quantity)||0,unit:f.unit,remark:f.remark||''};await api('/api/warehouse/records','POST',payload);dlgWarehouseRecord.value=false;ElMessage.success('登记成功');loadWarehouse();}catch(e){ElMessage.error('登记失败');}};
-const deleteWarehouseRecord=async(id)=>{if(!confirm('确定删除该记录？'))return;try{await api(`/api/warehouse/records/${id}`,'DELETE');ElMessage.success('已删除');loadWarehouse();}catch(e){ElMessage.error('删除失败');}};
-
-    /* 生产（供应链） */
-    const productionSteps=['订单接单审核','用料核定','报货','下料汇总','加工','完成审核'];
-    const prodStep=ref(1);
-    const productionOrders=ref([]);
-    const filteredProduction=ref([]);
-    const prodStepF=ref('');
-    const filterProduction=()=>{let list=productionOrders.value;if(prodSearch.value)list=list.filter(o=>(o.orderNo||'').includes(prodSearch.value)||(o.customerName||'').includes(prodSearch.value));if(prodStepF.value)list=list.filter(o=>o.step===prodStepF.value);filteredProduction.value=list;};
-    const prodStepNext=row=>{if(row.step<6)row.step++;filterProduction();};
-
-    /* 仓库 */
-    const warehouses=ref([]);const warehouseRecords=ref([]);
-
-    /* 新建订单 */
-    const orderF=ref({customerId:null,orderType:'窗帘',orderDate:'',deliveryDate:'',deliveryMethod:'上门安装',salespersonId:'',items:[],materials:[],quoteAmount:0,discountAmount:0,roundAmount:0,amount:0,received:0,itemsTotal:0,materialsTotal:0});
-    const autoDelivery=()=>{if(!orderF.value.orderDate)return;const d=new Date(orderF.value.orderDate);d.setDate(d.getDate()+14);orderF.value.deliveryDate=d.toISOString().slice(0,10);};
-    const onCustomerSelect=()=>{const c=customers.value.find(x=>x.id===orderF.value.customerId);if(c){orderF.value.customerPhone=c.phone||'';orderF.value.installAddress=c.address||'';}};
-    const onProdSelect=(row)=>{const p=(products.value||[]).find(x=>x.id===row.productId);if(p){row.price=p.price;calcItem(row);}calcTotals();};
-    const calcItem=row=>{try{if(row&&row.price&&row.qty)row.amount=Math.round(row.price*row.qty*(row.discount||1)*100)/100;calcTotals();}catch(e){console.error('calcItem error',e);}};
-    const addOrderItem=()=>{orderF.value.items.push({productType:'窗帘',location:'客厅',style:'001挂钩',itemName:'窗帘',productId:null,size:'',qty:1,discount:1,price:null,amount:null});};
-    const addOrderMaterial=()=>{orderF.value.materials.push({category:'布料',productId:null,model:'',qty:1,unit:'米',price:null,amount:null,remark:''});};
-    const onMaterialSelect=(row)=>{const p=(products.value||[]).find(x=>x.id===row.productId);if(p){row.price=p.price;calcMaterial(row);}calcTotals();};
-    const calcMaterial=row=>{try{if(row&&row.price&&row.qty)row.amount=Math.round(row.price*row.qty*100)/100;const mats=(orderF.value.materials||[]);orderF.value.materialsTotal=mats.reduce((s,r)=>s+((r&&r.amount)||0),0);calcTotals();}catch(e){console.error('calcMaterial error',e);}};
-    const calcTotals=()=>{try{const items=(orderF.value.items||[]);const mats=(orderF.value.materials||[]);const itemsTotal=items.reduce((s,r)=>s+((r&&r.amount)||0),0);const materialsTotal=mats.reduce((s,r)=>s+((r&&r.amount)||0),0);orderF.value.itemsTotal=itemsTotal;orderF.value.materialsTotal=materialsTotal;orderF.value.quoteAmount=itemsTotal+materialsTotal;orderF.value.amount=Math.max(0,orderF.value.quoteAmount-(orderF.value.discountAmount||0)-(orderF.value.roundAmount||0));}catch(e){console.error('calcTotals error',e);}};
-    const saveNewOrder=async()=>{if(!orderF.value.customerId){ElMessage.warning('请选择客户');return;}const customer=customers.value.find(c=>c.id===orderF.value.customerId);const today=new Date().toISOString().slice(0,10);const amount=Math.max(0,(orderF.value.items||[]).reduce((s,r)=>s+((r&&r.amount)||0),0)-(orderF.value.discountAmount||0)-(orderF.value.roundAmount||0));const payload={customer_id:orderF.value.customerId,customer_name:customer?.name||'',customer_phone:customer?.phone||'',order_type:orderF.value.orderType,content:orderF.value.items.map(i=>products.value.find(p=>p.id===i.productId)?.name||'').filter(Boolean).join('+')||'窗帘',quote_amount:orderF.value.quoteAmount,discount_amount:orderF.value.discountAmount||0,round_amount:orderF.value.roundAmount||0,amount,received:orderF.value.received||0,order_date:orderF.value.orderDate||today,delivery_date:orderF.value.deliveryDate||'',delivery_method:orderF.value.deliveryMethod,salesperson_id:orderF.value.salespersonId||null,items:orderF.value.items.filter(i=>i.productId).map(i=>({product_id:i.productId,product_name:products.value.find(p=>p.id===i.productId)?.name||'',product_type:i.productType||'窗帘',room:i.location||'',style:i.style||'',item_name:i.itemName||'',width:i.width||'',height:i.height||'',qty:i.qty||1,discount:i.discount||1,price:i.price||0,amount:i.amount||0})),install_address:orderF.value.installAddress||'',install_date:orderF.value.installDate||''};try{const d=await api('/api/orders','POST',payload);orders.value.unshift({id:d.id,orderNo:d.order_no||'',customerName:customer?.name||'',orderType:orderF.value.orderType,salesperson:employees.value.find(e=>e.id===orderF.value.salespersonId)?.name||'',orderDate:orderF.value.orderDate||today,deliveryDate:orderF.value.deliveryDate||'',deliveryMethod:orderF.value.deliveryMethod,amount,received:orderF.value.received||0,debt:amount-(orderF.value.received||0),items:payload.items,status:'待确认',statusKey:'created',history:[]});showNewOrder.value=false;orderF.value={customerId:null,orderType:'窗帘',orderDate:'',deliveryDate:'',deliveryMethod:'上门安装',salespersonId:'',items:[],materials:[],quoteAmount:0,discountAmount:0,roundAmount:0,amount:0,received:0,itemsTotal:0,materialsTotal:0};filterOrders();ElMessage.success('订单已创建');}catch(e){ElMessage.error('创建失败');}};
-    const getSupplierName=id=>suppliers.value.find(s=>s.id===id)?.name||'';
-    const getCatName=id=>categories.value.find(c=>c.id===id)?.name||'';
-
-    /* 报表 */
-    const reportOrders=ref([]);
-
-    /* 财务数据（首页概览） */
-    const financeData=ref({monthRevenue:0,monthCost:0,monthProfit:0,totalDebt:0,pendingCommission:0});
-    const costBreakdown=ref([]);
-    const salesTrend=ref([]);
-    const staffRank=ref([]);
-    const topProducts=ref([]);
-
-    /* 弹窗变量 */
-    const dlgSupplier=ref(false);const editingSupplier=ref(null);
-    const dlgCategory=ref(false);const editingCategory=ref(null);
-    const cForm=ref({code:'',name:'',supplierId:'',desc:''});
-    const saveCategory=async()=>{try{const d=await api(editingCategory.value?`/api/products/categories/${editingCategory.value.id}`:'/api/products/categories','POST',{code:cForm.value.code,name:cForm.value.name,supplier_id:parseInt(cForm.value.supplierId.replace('s',''))||0,description:cForm.value.desc||''});if(editingCategory.value){const idx=categories.value.findIndex(c=>c.id===editingCategory.value.id);if(idx>-1)categories.value.splice(idx,1,{...d});}else{categories.value.push({id:d.id,code:d.code,name:d.name,supplierId:'s'+(d.supplier_id||0),desc:d.description||''});}dlgCategory.value=false;ElMessage.success('保存成功');}catch(e){ElMessage.error('保存失败');}};const openCategoryDlg=(row=null)=>{editingCategory.value=row?{...row}:null;cForm.value=row?{code:row.code||'',name:row.name||'',supplierId:row.supplierId||'',desc:row.desc||''}:{code:'',name:'',supplierId:'',desc:''};dlgCategory.value=true;};
-    const dlgProduct=ref(false);const editingProduct=ref(null);
-    const pForm=ref({code:'',name:'',supplierId:'',categoryId:'',type:'面料',classification:'定高',model:'',material:'',width:280,weight:0,cf:0,price:0,stock:0,unit:'米',remark:''});
-    const supCategories=computed(()=>{const m={};categories.value.forEach(c=>{if(!m[c.supplierId])m[c.supplierId]=[];m[c.supplierId].push(c);});return m;});
-    const addProduct=()=>{const f=pForm.value;if(!f.name){ElMessage.warning('请填写产品名称');return;}api('/api/products','POST',{code:f.code,name:f.name,supplier_id:parseInt(f.supplierId.replace('s',''))||0,category_id:parseInt(f.categoryId.replace('c',''))||0,product_type:f.type,classification:f.classification,model:f.model,material:f.material,width:f.width,weight:f.weight,cf:f.cf,unit_price:f.price,stock:f.stock,unit:f.unit,remark:f.remark}).then(d=>{products.value.push({id:d.id,code:d.code,name:d.name,supplierId:'s'+d.supplier_id,categoryId:'c'+d.category_id,type:d.product_type||'面料',classification:d.classification||'定高',model:d.model||'',mat:d.material||'',width:d.width||280,weight:d.weight||0,cf:0,price:d.unit_price||0,stock:d.stock||0,unit:d.unit||'米',remark:''});dlgProduct.value=false;ElMessage.success('添加成功');}).catch(()=>ElMessage.error('添加失败'));};
-    const openProductDlg=(row=null)=>{editingProduct.value=row;if(row){pForm.value={code:row.code||'',name:row.name||'',supplierId:row.supplierId||'',categoryId:row.categoryId||'',type:row.type||'面料',classification:row.classification||'定高',model:row.model||'',material:row.mat||'',width:row.width||280,weight:row.weight||0,cf:row.cf||0,price:row.price||0,stock:row.stock||0,unit:row.unit||'米',remark:row.remark||''};}else{pForm.value={code:'',name:'',supplierId:suppliers.value[0]?.id?'s'+suppliers.value[0].id:'',categoryId:'',type:'面料',classification:'定高',model:'',material:'',width:280,weight:0,cf:0,price:0,stock:0,unit:'米',remark:''};}dlgProduct.value=true;};
-    const delProduct=async(row)=>{if(!confirm(`确定删除产品「${row.name}」？`))return;try{await api(`/api/products/${row.id}`,'DELETE');products.value=products.value.filter(p=>p.id!==row.id);ElMessage.success('已删除');}catch(e){ElMessage.error('删除失败');}};
-    const dlgCustomer=ref(false);const editingCustomer=ref(null);
-    const saveCustomer=async()=>{try{const d=await api(editingCustomer.value?`/api/customers/${editingCustomer.value.id}`:'/api/customers','POST',{name:cuForm.value.name,type:cuForm.value.type||'零售',contact:cuForm.value.contact||'',phone:cuForm.value.phone||'',community:cuForm.value.community||'',address:cuForm.value.address||'',salesperson:cuForm.value.salesperson||'',source:cuForm.value.source||'',debt_limit:cuForm.value.debtLimit||0,remark:cuForm.value.remark||''});if(editingCustomer.value){const idx=customers.value.findIndex(c=>c.id===editingCustomer.value.id);if(idx>-1)customers.value.splice(idx,1,{...d});}else{customers.value.push({id:d.id,code:d.id,name:d.name,phone:d.phone,community:d.community||'',type:d.type||'零售',salesperson:d.salesperson||'',salespersonId:null,source:d.source||'',debt:0,debtLimit:0,address:d.address||'',contact:cuForm.value.contact||'',remark:''});}dlgCustomer.value=false;ElMessage.success('保存成功');}catch(e){ElMessage.error('保存失败');}};const openCustomerDlg=(row=null,idx=null)=>{editingCustomer.value=row?{...row,idx}:null;cuForm.value=row?{name:row.name||'',type:row.type||'零售',contact:row.contact||'',phone:row.phone||'',community:row.community||'',address:row.address||'',salesperson:row.salesperson||'',salespersonId:row.salespersonId||'',source:row.source||'',debtLimit:row.debtLimit||0,remark:row.remark||''}:{name:'',type:'零售',contact:'',phone:'',community:'',address:'',salespersonId:'',source:'',debtLimit:0,remark:''};dlgCustomer.value=true;};const delCustomer=async(row)=>{if(!confirm(`确定删除客户「${row.name}」？`))return;try{await api(`/api/customers/${row.id}`,'DELETE');customers.value=customers.value.filter(c=>c.id!==row.id);ElMessage.success('已删除');}catch(e){ElMessage.error('删除失败');}};
-    const dlgEmployee=ref(false);const editingEmp=ref(null);
-    const saveEmployee=async()=>{try{const d=await api(editingEmp.value?`/api/employees/${editingEmp.value.id}`:'/api/employees','POST',{name:empForm.value.name,position:empForm.value.position||'',phone:empForm.value.phone||'',id_card:empForm.value.idCard||'',join_date:empForm.value.joinDate||'',status:empForm.value.status||'在职',remark:empForm.value.remark||''});if(editingEmp.value){const idx=employees.value.findIndex(e=>e.id===editingEmp.value.id);if(idx>-1)employees.value.splice(idx,1,{...d});}else{employees.value.push({id:d.id,code:d.code,name:d.name,gender:'男',phone:d.phone,position:d.position||'',dept:d.department||'',maxDiscount:1,roundLimit:0,status:d.status||'启用',hireDate:d.join_date||''});}dlgEmployee.value=false;ElMessage.success('保存成功');}catch(e){ElMessage.error('保存失败');}};const openEmpDlg=(row=null,idx=null)=>{editingEmp.value=row?{...row,idx}:null;empForm.value=row?{name:row.name||'',position:row.position||'',phone:row.phone||'',idCard:row.idCard||'',joinDate:row.hireDate||'',status:row.status||'在职',remark:row.remark||''}:{name:'',position:'',phone:'',idCard:'',joinDate:'',status:'在职',remark:''};dlgEmployee.value=true;};
-    const dlgDictItem=ref(false);const editingDictItem=ref(null);
-    const diForm=ref({k:'',v:'',c:'#409eff'});
-    const openDictItemDlg=(row=null,idx=null)=>{editingDictItem.value=row?{...row,idx}:null;diForm.value=row?{k:row.k||'',v:row.v||'',c:row.c||'#409eff'}:{k:dictCat.value,v:'',c:'#409eff'};dlgDictItem.value=true;};const saveDictItem=async()=>{if(!editingDictItem.value){const cat=dictCat.value;const items=dictMap.value[cat]||[];const newK=diForm.value.k||('i'+(items.length+1));dictMap.value[cat]=[...items,{k:newK,v:diForm.value.v,c:diForm.value.c}];SLS('dictMap',dictMap.value);}else{const cat=dictCat.value;const items=dictMap.value[cat]||[];const idx=editingDictItem.value.idx;if(idx>-1){items[idx]={k:editingDictItem.value.k,v:diForm.value.v,c:diForm.value.c};dictMap.value[cat]=[...items];SLS('dictMap',dictMap.value);}}dlgDictItem.value=false;ElMessage.success('保存成功');};const delDictItem=async(row)=>{const cat=dictCat.value;const items=dictMap.value[cat]||[];dictMap.value[cat]=items.filter(i=>i.k!==row.k);SLS('dictMap',dictMap.value);ElMessage.success('已删除');};
-    const saveSupplier=async()=>{try{const d=await api(editingSupplier.value?`/api/products/suppliers/${editingSupplier.value.id}`:'/api/products/suppliers','POST',{code:sForm.value.code,name:sForm.value.name,type:sForm.value.type||'布艺',contact:sForm.value.contact||'',phone:sForm.value.phone||'',deliveryDays:sForm.value.deliveryDays||7,address:sForm.value.address||'',payment:sForm.value.payment||''});if(editingSupplier.value){const idx=suppliers.value.findIndex(s=>s.id===editingSupplier.value.id);if(idx>-1)suppliers.value.splice(idx,1,{...d});}else{suppliers.value.push({id:d.id,code:d.code,name:sForm.value.name,type:sForm.value.type||'布艺',contact:sForm.value.contact||'',phone:sForm.value.phone||'',deliveryDays:sForm.value.deliveryDays||7,address:'',payment:''});}dlgSupplier.value=false;ElMessage.success('保存成功');}catch(e){ElMessage.error('保存失败');}};const openSupplierDlg=(row=null)=>{editingSupplier.value=row?{...row}:null;sForm.value=row?{code:row.code||'',name:row.name||'',type:row.type||'布艺',contact:row.contact||'',phone:row.phone||'',deliveryDays:row.deliveryDays||7,address:row.address||'',payment:row.payment||''}:{code:'',name:'',type:'布艺',contact:'',phone:'',deliveryDays:7,address:'',payment:''};dlgSupplier.value=true;};const delSupplier=async(row)=>{if(!confirm(`确定删除供应商「${row.name}」？`))return;try{await api(`/api/products/suppliers/${row.id}`,'DELETE');suppliers.value=suppliers.value.filter(s=>s.id!==row.id);ElMessage.success('已删除');}catch(e){ElMessage.error('删除失败');}};
-
-    /* 生产 */
-    watch(page,(newPage)=>{if(newPage==='purchase')loadPurchases();if(newPage==='production')loadProduction();if(newPage==='install')loadInstallOrders();if(newPage==='warehouse')loadWarehouse();});
-
-    return{
-      page,activeMenu,pageTitle,switchPage,handleNav,switchPage2,
-      stats,alerts,
-      suppliers,filteredSuppliers,suppSearch,suppTypeF,categories,products,filteredProducts,prodSearch,prodSupplierF,prodCatF,
-      customers,filteredCustomers,customerSearch,customerTypeF,
-      employees,filteredEmployees,empSearch,empPositionF,
-      dictCats,dictCat,dictCatLabel,dictItems,dictMap,orderStatusAll,
-      orders,filteredOrders,selOrder,orderSearch,orderStatusF,orderTypeF,filterOrders,selectOrder,updateOrderStatusByKey,delOrder,
-      purchases,filteredPurchase,purchaseSearch,purchaseStatusF,filterPurchase,
-      dlgPurchase,purchaseForm,editingPurchase,openPurchaseDlg,savePurchase,deletePurchase,updatePurchaseStatus,
-      purchaseOrdersForSplit,selectedSplitOrders,loadPurchaseOrdersForSplit,toggleSplitOrder,toggleAllSplitOrders,doBatchSplit,
-      warehouses,warehouseRecords,
-      dlgWarehouseRecord,warehouseForm,saveWarehouseRecord,deleteWarehouseRecord,
-      productionSteps,prodStep,productionOrders,prodStepNext,
-      filteredInstall,installOrders,installSearch,installStatusF,filterInstall,confirmInstall,
-      financeData,costBreakdown,
-      salesTrend,staffRank,topProducts,
-      dlgSupplier,sForm,editingSupplier,saveSupplier,openSupplierDlg,delSupplier,
-      dlgCategory,cForm,editingCategory,saveCategory,openCategoryDlg,
-      dlgProduct,pForm,editingProduct,supCategories,addProduct,openProductDlg,delProduct,
-      dlgCustomer,cuForm,editingCustomer,openCustomerDlg,saveCustomer,delCustomer,
-      dlgEmployee,empForm,editingEmp,openEmpDlg,saveEmployee,
-      dlgDictItem,diForm,editingDictItem,openDictItemDlg,saveDictItem,delDictItem,
-      showNewOrder,showEditOrder,orderF,autoDelivery,onProdSelect,onMaterialSelect,calcItem,calcMaterial,addOrderItem,addOrderMaterial,calcTotals,saveNewOrder,
-      getSupplierName,getCatName,
-      currentUser,isLoggedIn,loginForm,loginLoading,doLogin,logout,showLogin,drawerVisible,
-      rptYear,rptMonth,rptTab,loadReportData,reportOrders,
+    return {
+      page: computed(() => S.page),
+      activeMenu: computed(() => S.activeMenu),
+      pageTitle, switchPage, handleNav,
+      currentUser: computed(() => S.currentUser),
+      isLoggedIn: computed(() => S.isLoggedIn),
+      loginForm,
+      loginLoading,
+      doLogin, logout,
+      showLogin,
+      drawerVisible: computed(() => S.drawerVisible),
+      stats: computed(() => S.stats),
+      alerts: computed(() => S.alerts),
+      suppliers: computed(() => S.suppliers),
+      filteredSuppliers,
+      suppSearch: computed(() => S.suppSearch),
+      suppTypeF: computed(() => S.suppTypeF),
+      openSupplierDlg: row => __dialogsModule__.openSupplierDlg(row, S),
+      saveSupplier: () => __dialogsModule__.saveSupplier(S),
+      delSupplier: row => __dialogsModule__.delSupplier(row, S),
+      categories: computed(() => S.categories),
+      openCategoryDlg: row => __dialogsModule__.openCategoryDlg(row, S),
+      saveCategory: () => __dialogsModule__.saveCategory(S),
+      products: computed(() => S.products),
+      productTree,
+      filteredProducts: computed(() => filteredProductsFn()),
+      prodSearch: computed(() => S.prodSearch),
+      prodSupplierF: computed(() => S.prodSupplierF),
+      prodCatF: computed(() => S.prodCatF),
+      openProductDlg: row => __dialogsModule__.openProductDlg(row, S),
+      addProduct: () => __dialogsModule__.addProduct(S),
+      delProduct: row => __dialogsModule__.delProduct(row, S),
+      getSupplierName, getCatName, supCategories,
+      customers: computed(() => S.customers),
+      filteredCustomers,
+      customerSearch: computed(() => S.customerSearch),
+      customerTypeF: computed(() => S.customerTypeF),
+      openCustomerDlg: row => {
+        S.dlgCustomer = true;
+        S.editingCustomer = row ? {...row} : null;
+        S.cuForm = row ? { name:row.name, type:row.type||'零售', contact:row.contact||'', phone:row.phone||'', community:row.community||'', address:row.address||'', salespersonId:row.salespersonId||'', source:row.source||'', debtLimit:row.debtLimit||0, remark:row.remark||'' }
+                       : { name:'', type:'零售', contact:'', phone:'', community:'', address:'', salespersonId:'', source:'', debtLimit:0, remark:'' };
+      },
+      saveCustomer: () => __customerModule__.saveCustomer(S.editingCustomer, S),
+      delCustomer: row => __customerModule__.deleteCustomer(row, S),
+      employees: computed(() => S.employees),
+      filteredEmployees,
+      empSearch: computed(() => S.empSearch),
+      empPositionF: computed(() => S.empPositionF),
+      openEmpDlg: row => {
+        S.dlgEmployee = true;
+        S.editingEmp = row ? {...row} : null;
+        S.empForm = row ? { name:row.name, position:row.position||'', phone:row.phone||'', idCard:row.idCard||'', joinDate:row.hireDate||'', status:row.status||'在职', remark:row.remark||'' }
+                       : { name:'', position:'', phone:'', idCard:'', joinDate:'', status:'在职', remark:'' };
+      },
+      saveEmployee: () => __employeeModule__.saveEmployee(S.editingEmp, S),
+      dictCats: computed(() => S.dictCats),
+      dictCat: computed(() => S.dictCat),
+      dictCatLabel, dictItems, dictMap: computed(() => S.dictMap),
+      orderStatusAll,
+      openDictItemDlg: (row=null) => {
+        S.dlgDictItem = true;
+        S.editingDictItem = row ? {...row} : null;
+        S.diForm = row ? { k:row.k||'', v:row.v||'', c:row.c||'#409eff' } : { k:S.dictCat, v:'', c:'#409eff' };
+      },
+      saveDictItem: () => __dictModule__.saveDictItem(S.editingDictItem, S),
+      delDictItem: row => __dictModule__.delDictItem(row, S),
+      orders: computed(() => S.orders),
+      filteredOrders,
+      selOrder: computed(() => S.selOrder),
+      orderSearch: computed(() => S.orderSearch),
+      orderStatusF: computed(() => S.orderStatusF),
+      orderTypeF: computed(() => S.orderTypeF),
+      selectOrder: o => __ordersModule__.selectOrder(o),
+      updateOrderStatusByKey: () => __ordersModule__.updateOrderStatusByKey(),
+      delOrder: () => __ordersModule__.delOrder(),
+      showNewOrder: computed(() => S.showNewOrder),
+      purchases: computed(() => S.purchases),
+      filteredPurchase,
+      purchaseSearch: computed(() => S.purchaseSearch),
+      purchaseStatusF: computed(() => S.purchaseStatusF),
+      dlgPurchase: computed(() => S.dlgPurchase),
+      editingPurchase: computed(() => S.editingPurchase),
+      purchaseForm: computed(() => S.purchaseForm),
+      openPurchaseDlg: row => __dialogsModule__.openPurchaseDlg(row, S),
+      savePurchase: () => __dialogsModule__.savePurchase(S),
+      deletePurchase: row => __purchaseModule__.deletePurchase(row),
+      updatePurchaseStatus: (row, s) => __purchaseModule__.updateStatus(row, s),
+      purchaseOrdersForSplit: computed(() => S.purchaseOrdersForSplit),
+      selectedSplitOrders: computed(() => S.selectedSplitOrders),
+      loadPurchaseOrdersForSplit: () => __purchaseModule__.loadPurchaseOrdersForSplit(),
+      toggleSplitOrder: id => __purchaseModule__.toggleSplitOrder(id),
+      toggleAllSplitOrders: () => __purchaseModule__.toggleAllSplitOrders(),
+      doBatchSplit: () => __purchaseModule__.doBatchSplit(),
+      warehouses: computed(() => S.warehouses),
+      dlgWarehouseRecord: computed(() => S.dlgWarehouseRecord),
+      warehouseForm: computed(() => S.warehouseForm),
+      saveWarehouseRecord: () => __warehouseModule__.saveRecord(S),
+      deleteWarehouseRecord: id => __warehouseModule__.deleteRecord(id),
+      productionSteps: computed(() => S.productionSteps),
+      productionOrders: computed(() => S.productionOrders),
+      filteredProduction,
+      prodStep: computed(() => S.prodStep),
+      prodSearch: computed(() => S.prodSearch),
+      prodStepF: computed(() => S.prodStepF),
+      loadProduction,
+      prodStepNext: row => { if (row.step < 6) row.step++; },
+      installOrders: computed(() => S.installOrders),
+      filteredInstall,
+      installSearch: computed(() => S.installSearch),
+      installStatusF: computed(() => S.installStatusF),
+      confirmInstall: row => __installModule__.confirmInstall(row),
+      financeData: computed(() => S.financeData),
+      costBreakdown,
+      salesTrend: computed(() => S.salesTrend),
+      staffRank: computed(() => S.staffRank),
+      topProducts: computed(() => S.topProducts),
+      reportOrders: computed(() => S.reportOrders),
+      rptYear: computed(() => S.rptYear),
+      rptMonth: computed(() => S.rptMonth),
+      rptTab: computed(() => S.rptTab),
+      loadReportData,
+      dlgSupplier: computed(() => S.dlgSupplier),
+      sForm: computed(() => S.sForm),
+      editingSupplier: computed(() => S.editingSupplier),
+      dlgCategory: computed(() => S.dlgCategory),
+      cForm: computed(() => S.cForm),
+      editingCategory: computed(() => S.editingCategory),
+      dlgProduct: computed(() => S.dlgProduct),
+      pForm: computed(() => S.pForm),
+      editingProduct: computed(() => S.editingProduct),
+      dlgCustomer: computed(() => S.dlgCustomer),
+      cuForm: computed(() => S.cuForm),
+      editingCustomer: computed(() => S.editingCustomer),
+      dlgEmployee: computed(() => S.dlgEmployee),
+      empForm: computed(() => S.empForm),
+      editingEmp: computed(() => S.editingEmp),
+      dlgDictItem: computed(() => S.dlgDictItem),
+      diForm: computed(() => S.diForm),
+      editingDictItem: computed(() => S.editingDictItem),
+      orderF: computed(() => S.orderF),
+      onCustomerSelect, autoDelivery,
+      addOrderItem, addOrderMaterial,
+      calcItem, calcMaterial, calcTotals, saveNewOrder,
     };
   }
 });
 
-const eicons=window.ElementPlusIconsVue;if(eicons){for(const[k,v]of Object.entries(eicons)){app.component(k,v);}}
+const eicons = window.ElementPlusIconsVue;
+if (eicons) {
+  for (const [k, v] of Object.entries(eicons)) {
+    app.component(k, v);
+  }
+}
 app.use(ElementPlus);
+window.__vueApp = app;   // 供其他模块强制刷新 Vue 用
 app.mount('#app');
+
+// 登录后自动初始化
+const S = window.__STATE__;
+const storedUser = window.LS('currentUser');
+if (storedUser) {
+  S.currentUser = storedUser;
+  S.isLoggedIn = true;
+  S.showLogin = false;
+  __initModule__.initAll().catch(e => console.error('[initAll error]', e));
+} else {
+  S.showLogin = true;
+}
 </script>
+
+
 </html>
