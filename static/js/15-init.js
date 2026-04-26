@@ -179,7 +179,9 @@ window.__initModule__ = {
         localStorage.setItem('currentUser', JSON.stringify(u));
         M.loginLoading.value = false;
         S.isLoggedIn = true;
+        S.page = 'home';
         S.showNewOrder = false;
+        S.activeMenu = 'home';
         M.showLogin.value = false;
         try { ElMsg?.success('登录成功'); } catch(e) {}
         try { document.getElementById('login-overlay').style.display = 'none'; } catch(e) {}

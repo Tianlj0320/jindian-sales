@@ -193,7 +193,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
     <template #title>
       <div style="color:#fff;font-size:15px;font-weight:bold">金典软装</div>
     </template>
-    <el-menu :default-active="activeMenuStr" background-color="#1a3a5c" text-color="#bcc8d8" active-text-color="#fff" @select="(k)=>{const pm={home:'home',suppliers:'suppliers',product:'product',customer:'customer',employee:'employee',dict:'dict',order:'order',purchase:'purchase',warehouse:'warehouse',production:'production',install:'install',finance:'finance',report:'report'};if(k!=='basic'&&k!=='basic2'){page.value=pm[k]||k;activeMenu.value=k;}else{page.value='product';activeMenu.value='product';}drawerVisible=false;}">
+    <el-menu :default-active="activeMenuStr" background-color="#1a3a5c" text-color="#bcc8d8" active-text-color="#fff" @select="handleNav">
       <el-menu-item index="home"><el-icon><Shop/></el-icon>&nbsp;首页概览</el-menu-item>
       <el-sub-menu index="basic2">
         <template #title><el-icon><folder/></el-icon>&nbsp;基础资料</template>
@@ -1742,7 +1742,7 @@ const app = createApp({
     };
 
     return {
-      page: { get: () => S.page, set: v => { S.page = v; } },
+      page: (() => { const pg = ref(S.page); watch(() => S.page, v => { if (pg.value !== v) pg.value = v; }); watch(pg, v => { S.page = v; }); return pg; })(),
       activeMenuStr: computed(() => S.activeMenu || 'home'),
       pageTitle, switchPage, handleNav,
       currentUser: computed(() => S.currentUser),
@@ -1751,7 +1751,7 @@ const app = createApp({
       loginLoading,
       doLogin, logout,
       showLogin,
-      drawerVisible: (() => { const dv = ref(S.drawerVisible); watch(() => S.drawerVisible, v => { dv.value = v; }); watch(dv, v => { S.drawerVisible = v; }); return dv; })(),
+      drawerVisible: ref(false),
       activeMenuVal: computed(() => S.activeMenu || 'home'),
       stats: computed(() => S.stats),
       alerts: computed(() => S.alerts),
@@ -1908,6 +1908,8 @@ try {
   if (storedUser) {
     S.currentUser = storedUser;
     S.isLoggedIn = true;
+    S.page = 'home';
+    S.activeMenu = 'home';
     if (window.__initModule__?.showLogin) window.__initModule__.showLogin.value = false;
     __initModule__.initAll().catch(e => console.error('[initAll error]', e));
   } else {
