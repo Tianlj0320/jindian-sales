@@ -522,7 +522,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
         <div class="card">
           <div class="dict-layout">
             <div class="dict-cats">
-              <el-menu :default-active="dictCat" @select="dictCat=$event" background-color="transparent" text-color="#333" active-text-color="#1a3a5c">
+              <el-menu :default-active="dictCatStr" @select="setDictCat($event)" background-color="transparent" text-color="#333" active-text-color="#1a3a5c">
                 <el-menu-item v-for="c in dictCats" :key="c.k" :index="c.k"><el-icon><document/></el-icon>&nbsp;{{c.l}}</el-menu-item>
               </el-menu>
             </div>
@@ -1800,6 +1800,8 @@ const app = createApp({
       saveEmployee: () => __employeeModule__.saveEmployee(S.editingEmp, S),
       dictCats: computed(() => S.dictCats),
       dictCat: { get: () => S.dictCat, set: v => { S.dictCat = v; } },
+      dictCatStr: computed(() => S.dictCat || ''),
+      setDictCat: k => { S.dictCat = k; },
       dictCatLabel, dictItems, dictMap: computed(() => S.dictMap),
       orderStatusAll,
       openDictItemDlg: (row=null) => {
