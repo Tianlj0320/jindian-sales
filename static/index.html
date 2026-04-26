@@ -5,25 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>金典软装销售管理系统 V2.2</title>
 <script src="/static/lib/vue.js?v=prod1430"></script>
-<script src="/static/lib/ep.js"></script>
-<script src="/static/lib/icons.js"></script>
+<script src="/static/lib/ep.js?v=3.0"></script>
+<script src="/static/lib/icons.js?v=3.0"></script>
 <link rel="stylesheet" href="/static/lib/ep.css">
 <!-- 模块化 JS（按顺序加载） -->
-<script src="/static/js/00-base.js"></script>
-<script src="/static/js/01-api.js"></script>
-<script src="/static/js/03-orders.js"></script>
-<script src="/static/js/04-purchase.js"></script>
-<script src="/static/js/05-product.js"></script>
-<script src="/static/js/06-customer.js"></script>
-<script src="/static/js/07-employee.js"></script>
-<script src="/static/js/08-home.js"></script>
-<script src="/static/js/09-report.js"></script>
-<script src="/static/js/10-warehouse.js"></script>
-<script src="/static/js/11-install.js"></script>
-<script src="/static/js/12-dict.js"></script>
-<script src="/static/js/13-order-form.js"></script>
-<script src="/static/js/14-dialogs.js"></script>
-<script src="/static/js/15-init.js"></script>
+<script src="/static/js/00-base.js?v=3.0"></script>
+<script src="/static/js/01-api.js?v=3.0"></script>
+<script src="/static/js/03-orders.js?v=3.0"></script>
+<script src="/static/js/04-purchase.js?v=3.0"></script>
+<script src="/static/js/05-product.js?v=3.0"></script>
+<script src="/static/js/06-customer.js?v=3.0"></script>
+<script src="/static/js/07-employee.js?v=3.0"></script>
+<script src="/static/js/08-home.js?v=3.0"></script>
+<script src="/static/js/09-report.js?v=3.0"></script>
+<script src="/static/js/10-warehouse.js?v=3.0"></script>
+<script src="/static/js/11-install.js?v=3.0"></script>
+<script src="/static/js/12-dict.js?v=3.0"></script>
+<script src="/static/js/13-order-form.js?v=3.0"></script>
+<script src="/static/js/14-dialogs.js?v=3.0"></script>
+<script src="/static/js/15-init.js?v=3.0"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;color:#333}
@@ -171,11 +171,11 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
       <el-menu-item index="home"><el-icon><Shop/></el-icon>&nbsp;首页概览</el-menu-item>
       <el-sub-menu index="basic">
         <template #title><el-icon><folder/></el-icon>&nbsp;基础资料</template>
-        <el-menu-item index="suppliers">供应商管理</el-menu-item>
-        <el-menu-item index="product">产品资料</el-menu-item>
-        <el-menu-item index="customer">客户资料</el-menu-item>
-        <el-menu-item index="employee">员工资料</el-menu-item>
-        <el-menu-item index="dict">码表管理</el-menu-item>
+        <el-menu-item index="suppliers" @click="page.value='suppliers'"><el-icon><Shop/></el-icon>&nbsp;供应商管理</el-menu-item>
+        <el-menu-item index="product" @click="page.value='product'"><el-icon><Shop/></el-icon>&nbsp;产品资料</el-menu-item>
+        <el-menu-item index="customer" @click="page.value='customer'"><el-icon><Shop/></el-icon>&nbsp;客户资料</el-menu-item>
+        <el-menu-item index="employee" @click="page.value='employee'"><el-icon><Shop/></el-icon>&nbsp;员工资料</el-menu-item>
+        <el-menu-item index="dict" @click="page.value='dict'"><el-icon><Shop/></el-icon>&nbsp;码表管理</el-menu-item>
       </el-sub-menu>
       <el-menu-item index="order"><el-icon><document/></el-icon>&nbsp;销售订单</el-menu-item>
       <el-menu-item index="purchase"><el-icon><box/></el-icon>&nbsp;采购管理</el-menu-item>
@@ -196,11 +196,11 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
       <el-menu-item index="home"><el-icon><Shop/></el-icon>&nbsp;首页概览</el-menu-item>
       <el-sub-menu index="basic2">
         <template #title><el-icon><folder/></el-icon>&nbsp;基础资料</template>
-        <el-menu-item index="suppliers">供应商管理</el-menu-item>
-        <el-menu-item index="product">产品资料</el-menu-item>
-        <el-menu-item index="customer">客户资料</el-menu-item>
-        <el-menu-item index="employee">员工资料</el-menu-item>
-        <el-menu-item index="dict">码表管理</el-menu-item>
+        <el-menu-item index="suppliers" @click="page.value='suppliers';drawerVisible=false;"><el-icon><Shop/></el-icon>&nbsp;供应商管理</el-menu-item>
+        <el-menu-item index="product" @click="page.value='product';drawerVisible=false;"><el-icon><Shop/></el-icon>&nbsp;产品资料</el-menu-item>
+        <el-menu-item index="customer" @click="page.value='customer';drawerVisible=false;"><el-icon><Shop/></el-icon>&nbsp;客户资料</el-menu-item>
+        <el-menu-item index="employee" @click="page.value='employee';drawerVisible=false;"><el-icon><Shop/></el-icon>&nbsp;员工资料</el-menu-item>
+        <el-menu-item index="dict" @click="page.value='dict';drawerVisible=false;"><el-icon><Shop/></el-icon>&nbsp;码表管理</el-menu-item>
       </el-sub-menu>
       <el-menu-item index="order"><el-icon><document/></el-icon>&nbsp;销售订单</el-menu-item>
       <el-menu-item index="purchase"><el-icon><box/></el-icon>&nbsp;采购管理</el-menu-item>
@@ -1741,8 +1741,8 @@ const app = createApp({
     };
 
     return {
-      page: computed(() => S.page),
-      activeMenu: computed(() => S.activeMenu),
+      page: { get: () => S.page, set: v => { S.page = v; } },
+      activeMenu: { get: () => S.activeMenu, set: v => { S.activeMenu = v; } },
       pageTitle, switchPage, handleNav,
       currentUser: computed(() => S.currentUser),
       isLoggedIn: computed(() => S.isLoggedIn),
@@ -1750,7 +1750,7 @@ const app = createApp({
       loginLoading,
       doLogin, logout,
       showLogin,
-      drawerVisible: computed(() => S.drawerVisible),
+      drawerVisible: { get: () => S.drawerVisible, set: v => { S.drawerVisible = v; } },
       stats: computed(() => S.stats),
       alerts: computed(() => S.alerts),
       suppliers: computed(() => S.suppliers),
@@ -1797,7 +1797,7 @@ const app = createApp({
       },
       saveEmployee: () => __employeeModule__.saveEmployee(S.editingEmp, S),
       dictCats: computed(() => S.dictCats),
-      dictCat: computed(() => S.dictCat),
+      dictCat: { get: () => S.dictCat, set: v => { S.dictCat = v; } },
       dictCatLabel, dictItems, dictMap: computed(() => S.dictMap),
       orderStatusAll,
       openDictItemDlg: (row=null) => {
