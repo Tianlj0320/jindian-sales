@@ -148,7 +148,11 @@ window.__orderFormModule__ = {
         statusKey: 'created',
         history: [],
       });
-      S.showNewOrder = false;
+      const closeForm = () => {
+        if (window.__initModule__?.showNewOrder) window.__initModule__.showNewOrder.value = false;
+        else S.showNewOrder = false;
+      };
+      closeForm();
       S.orderF = {
         customerId: null, orderType: '窗帘', orderDate: '', deliveryDate: '',
         deliveryMethod: '上门安装', salespersonId: '',

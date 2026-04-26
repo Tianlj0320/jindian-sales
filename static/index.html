@@ -216,8 +216,12 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
   <div class="right-area">
     <div class="top-bar">
       <div class="top-bar-title">{{ pageTitle }}</div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <el-button size="small" class="hide-mobile" style="background:#1a3a5c;color:#fff;border:none" @click="showLogin=true">
+      <div style="display:flex;align-items:center;gap:8px">
+        <template v-if="isLoggedIn">
+          <span style="font-size:13px;color:#fff;opacity:0.8">{{ currentUser?.name }}</span>
+          <el-button size="small" style="border:none;background:#c0392b;color:#fff" @click="logout">退出</el-button>
+        </template>
+        <el-button v-else size="small" class="hide-mobile" style="background:#1a3a5c;color:#fff;border:none" @click="showLogin=true">
           <el-icon><user/></el-icon>&nbsp;<span class="hide-mobile">{{ currentUser?.name||'登录' }}</span>
         </el-button>
         <el-button size="small" style="border:none;font-size:16px" @click="drawerVisible=true" class="mobile-hamburger">☰</el-button>
@@ -842,8 +846,8 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
           <div v-if="prodStep>6" style="background:#67c23a;color:#fff;padding:8px 16px;border-radius:6px;font-size:13px">✅ 已完成</div>
         </div>
         <div style="margin-bottom:12px;display:flex;gap:10px;align-items:center">
-          <el-input v-model="prodSearch" placeholder="搜索订单号/客户" size="small" style="width:200px" clearable @input="filterProduction"/>
-          <el-select v-model="prodStepF" size="small" placeholder="筛选阶段" clearable style="width:140px" @change="filterProduction">
+          <el-input v-model="prodSearch" placeholder="搜索订单号/客户" size="small" style="width:200px" clearable/>
+          <el-select v-model="prodStepF" size="small" placeholder="筛选阶段" clearable>
             <el-option v-for="(s,i) in productionSteps" :key="i" :label="s" :value="i+1"/>
           </el-select>
           <el-button size="small" @click="loadProduction">刷新</el-button>
@@ -1552,12 +1556,15 @@ const app = createApp({
     const loginLoading = ref(false);
     const loginForm = ref({ phone: '', password: '' });
     const showLogin = ref(false);
+    const showNewOrder = ref(false);
 
     // 将这些 ref 暴露给 __initModule__（在 setup() 运行时已定义）
     if (window.__initModule__) {
       window.__initModule__.loginLoading = loginLoading;
       window.__initModule__.loginForm = loginForm;
       window.__initModule__.showLogin = showLogin;
+      window.__initModule__.showNewOrder = showNewOrder;
+      window.__initModule__.openNewOrder = () => { showNewOrder.value = true; S.page = 'order'; };
     }
 
     const pageTitle = computed(() => ({
@@ -1759,9 +1766,9 @@ const app = createApp({
       products: computed(() => S.products),
       productTree,
       filteredProducts: computed(() => filteredProductsFn()),
-      prodSearch: computed(() => S.prodSearch),
-      prodSupplierF: computed(() => S.prodSupplierF),
-      prodCatF: computed(() => S.prodCatF),
+      prodSearch: { get: () => S.prodSearch, set: v => { S.prodSearch = v; } },
+      prodSupplierF: { get: () => S.prodSupplierF, set: v => { S.prodSupplierF = v; } },
+      prodCatF: { get: () => S.prodCatF, set: v => { S.prodCatF = v; } },
       openProductDlg: row => __dialogsModule__.openProductDlg(row, S),
       addProduct: () => __dialogsModule__.addProduct(S),
       delProduct: row => __dialogsModule__.delProduct(row, S),
@@ -1809,7 +1816,7 @@ const app = createApp({
       selectOrder: o => __ordersModule__.selectOrder(o),
       updateOrderStatusByKey: () => __ordersModule__.updateOrderStatusByKey(),
       delOrder: () => __ordersModule__.delOrder(),
-      showNewOrder: computed(() => S.showNewOrder),
+      showNewOrder,
       purchases: computed(() => S.purchases),
       filteredPurchase,
       purchaseSearch: computed(() => S.purchaseSearch),
@@ -1836,8 +1843,8 @@ const app = createApp({
       productionOrders: computed(() => S.productionOrders),
       filteredProduction,
       prodStep: computed(() => S.prodStep),
-      prodSearch: computed(() => S.prodSearch),
-      prodStepF: computed(() => S.prodStepF),
+      prodSearch: { get: () => S.prodSearch, set: v => { S.prodSearch = v; } },
+      prodStepF: { get: () => S.prodStepF, set: v => { S.prodStepF = v; } },
       loadProduction,
       prodStepNext: row => { if (row.step < 6) row.step++; },
       installOrders: computed(() => S.installOrders),
@@ -1874,6 +1881,7 @@ const app = createApp({
       diForm: computed(() => S.diForm),
       editingDictItem: computed(() => S.editingDictItem),
       orderF: computed(() => S.orderF),
+      newOrderNo: computed(() => S.orderF.orderNo || ''),
       onCustomerSelect, autoDelivery,
       addOrderItem, addOrderMaterial,
       calcItem, calcMaterial, calcTotals, saveNewOrder,
