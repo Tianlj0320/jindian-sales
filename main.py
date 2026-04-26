@@ -6,7 +6,7 @@ import os
 
 from app.database import init_db
 from app.middleware import AuthMiddleware
-from app.api import track, installer, sms, orders, customers, products, employees, dashboard, purchase, warehouse, finance, reports, auth, print_api
+from app.api import track, installer, sms, orders, customers, products, employees, dashboard, purchase, warehouse, finance, reports, auth, print_api, dicts
 from app.api import purchase_orders, production_feedback, installation_orders
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -49,6 +49,7 @@ app.include_router(print_api.router)
 app.include_router(purchase_orders.router)
 app.include_router(production_feedback.router)
 app.include_router(installation_orders.router)
+app.include_router(dicts.router)
 
 
 @app.on_event("startup")

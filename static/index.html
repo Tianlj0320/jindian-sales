@@ -1296,25 +1296,28 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
     <div style="display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;background:#f8f9fc;border-radius:8px;padding:10px 14px">
       <div style="display:flex;align-items:center;gap:4px">
         <span style="font-size:12px;color:#606266;width:42px;text-align:right">订单号</span>
-        <input v-model="newOrderNo" disabled style="background:#f5f7fa;width:100px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:4px;font-size:12px"/>
+        <input v-model="orderF.orderNo" disabled style="background:#f5f7fa;width:110px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:4px;font-size:12px"/>
       </div>
       <div style="display:flex;align-items:center;gap:4px">
         <span style="color:#f56c6c;font-size:12px">*</span>
-        <select v-model="orderF.customerId" @change="onCustomerSelect" style="width:200px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:4px;font-size:12px">
-          <option value="">选客户</option>
-          <option v-for="c in customers" :key="c.id" :value="c.id">{{c.name}} {{c.phone}}</option>
-        </select>
+        <div style="position:relative">
+          <input v-model="customerSearchKw" @focus="customerDropdownShown=true" @input="customerDropdownShown=true" @blur="setTimeout(()=>customerDropdownShown=false,200)" placeholder="搜索客户名/手机" style="width:200px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:4px;font-size:12px"/>
+          <div v-if="customerDropdownShown" style="position:absolute;top:100%;left:0;z-index:9999;background:#fff;border:1px solid #dcdfe6;border-radius:4px;width:220px;max-height:200px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
+            <div v-for="c in filteredCustomersForOrder" :key="c.id" @mousedown="selectCustomer(c)" style="padding:8px 10px;cursor:pointer;font-size:12px;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">{{c.name}} <span style="color:#999">{{c.phone}}</span></div>
+            <div v-if="filteredCustomersForOrder.length===0" style="padding:10px;color:#999;font-size:12px;text-align:center">无匹配客户</div>
+          </div>
+        </div>
       </div>
       <div style="display:flex;align-items:center;gap:4px">
         <span style="font-size:12px;color:#606266">类型</span>
         <select v-model="orderF.orderType" style="width:80px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:4px;font-size:12px">
-          <option value="窗帘">窗帘</option><option value="墙布">墙布</option><option value="硬包">硬包</option><option value="岩板">岩板</option><option value="全屋">全屋</option>
+          <option v-for="d in dictMap.orderType||[]" :key="d.k" :value="d.v">{{d.v}}</option>
         </select>
       </div>
       <div style="display:flex;align-items:center;gap:4px">
         <span style="font-size:12px;color:#606266">来源</span>
         <select v-model="orderF.customerSource" style="width:80px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:4px;font-size:12px">
-          <option value="抖音">抖音</option><option value="店面">店面</option><option value="小区">小区</option><option value="推荐">推荐</option>
+          <option v-for="d in dictMap.paymentType||[]" :key="d.k" :value="d.v">{{d.v}}</option>
         </select>
       </div>
       <div style="display:flex;align-items:center;gap:4px">
@@ -1332,7 +1335,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
       <div style="display:flex;align-items:center;gap:4px">
         <span style="font-size:12px;color:#606266">提货</span>
         <select v-model="orderF.deliveryMethod" style="width:100px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:4px;font-size:12px">
-          <option value="上门安装">上门安装</option><option value="自提">自提</option>
+          <option v-for="d in dictMap.deliveryMethod||[]" :key="d.k" :value="d.v">{{d.v}}</option>
         </select>
       </div>
       <div style="display:flex;align-items:center;gap:4px">
@@ -1380,28 +1383,32 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <tr v-for="(row,idx) in orderF.items" :key="idx" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
                 <td style="padding:5px 3px;text-align:center">
                   <select v-model="row.location" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px">
-                    <option value="客厅">客厅</option><option value="主卧">主卧</option><option value="次卧">次卧</option><option value="书房">书房</option><option value="厨房">厨房</option><option value="卫生间">卫生间</option>
+                    <option v-for="d in dictMap.installPosition||[]" :key="d.k" :value="d.v">{{d.v}}</option>
                   </select>
                 </td>
                 <td style="padding:5px 3px;text-align:center">
                   <select v-model="row.productType" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px">
-                    <option value="窗帘">窗帘</option><option value="墙布">墙布</option><option value="硬包">硬包</option>
+                    <option v-for="d in dictMap.orderType||[]" :key="d.k" :value="d.v">{{d.v}}</option>
                   </select>
                 </td>
                 <td style="padding:5px 3px;text-align:center">
                   <select v-model="row.style" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px">
-                    <option value="001挂钩">001挂钩</option><option value="韩褶">韩褶</option><option value="穿杆">穿杆</option>
+                    <option v-for="d in dictMap.process||[]" :key="d.k" :value="d.v">{{d.v}}</option>
                   </select>
                 </td>
                 <td style="padding:5px 3px;text-align:center">
                   <select v-model="row.itemName" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px">
-                    <option value="窗帘">窗帘</option><option value="配纱">配纱</option><option value="帷幔">帷幔</option><option value="罗马帘">罗马帘</option>
+                    <option v-for="d in dictMap.orderType||[]" :key="d.k" :value="d.v">{{d.v}}</option>
                   </select>
                 </td>
                 <td style="padding:5px 3px">
-                  <select v-model="row.productId" @change="()=>{const p=(products.value||[]).find(x=>x.id===row.productId);if(p){row.price=p.price;calcItem(row);}calcTotals();}" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px">
-                    <option v-for="p in products" :key="p.id" :value="p.id">{{p.name}} ({{p.code}})</option>
-                  </select>
+                  <div style="position:relative">
+                    <input :value="row.productId ? ((products||[]).find(x=>String(x.id)===String(row.productId))||{}).name+' '+((products||[]).find(x=>String(x.id)===String(row.productId))||{}).code : itemProdSearch[idx]||''" @focus="itemProdSearch[idx]='';itemProdDropdown[idx]=true" @input="itemProdSearch[idx]=$event.target.value;itemProdDropdown[idx]=true" @blur="setTimeout(()=>itemProdDropdown[idx]=false,200)" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px" placeholder="搜索货号/名称"/>
+                    <div v-if="itemProdDropdown[idx]" style="position:absolute;top:100%;left:0;z-index:999;background:#fff;border:1px solid #dcdfe6;border-radius:4px;width:200px;max-height:180px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
+                      <div v-for="p in filteredItemProducts(idx)" :key="p.id" @mousedown="selectItemProduct(idx,p)" style="padding:7px 9px;cursor:pointer;font-size:12px;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">{{p.name}} <span style="color:#999">({{p.code}})</span></div>
+                      <div v-if="filteredItemProducts(idx).length===0" style="padding:8px;color:#999;font-size:12px;text-align:center">无匹配产品</div>
+                    </div>
+                  </div>
                 </td>
                 <td style="padding:5px 3px;text-align:center">
                   <input v-model="row.size" placeholder="2.3×2.5" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px;text-align:center"/>
@@ -1451,13 +1458,17 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <tr v-for="(row,idx) in orderF.materials" :key="idx" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
                 <td style="padding:5px 3px;text-align:center">
                   <select v-model="row.category" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px">
-                    <option value="布料">布料</option><option value="轨道">轨道</option><option value="辅料">辅料</option><option value="花边">花边</option>
+                    <option v-for="c in matCategories" :key="c" :value="c">{{c}}</option>
                   </select>
                 </td>
                 <td style="padding:5px 3px">
-                  <select v-model="row.productId" @change="()=>{const p=(products.value||[]).find(x=>x.id===row.productId);if(p){row.price=p.price;calcMaterial(row);}calcTotals();}" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px">
-                    <option v-for="p in products" :key="p.id" :value="p.id">{{p.name}} ({{p.code}})</option>
-                  </select>
+                  <div style="position:relative">
+                    <input :value="row.productId ? ((products||[]).find(x=>String(x.id)===String(row.productId))||{}).name+' '+((products||[]).find(x=>String(x.id)===String(row.productId))||{}).code : matProdSearch[idx]||''" @focus="matProdSearch[idx]='';matProdDropdown[idx]=true" @input="matProdSearch[idx]=$event.target.value;matProdDropdown[idx]=true" @blur="setTimeout(()=>matProdDropdown[idx]=false,200)" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px" placeholder="搜索货号/名称"/>
+                    <div v-if="matProdDropdown[idx]" style="position:absolute;top:100%;left:0;z-index:999;background:#fff;border:1px solid #dcdfe6;border-radius:4px;width:200px;max-height:180px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
+                      <div v-for="p in filteredMatProducts(idx)" :key="p.id" @mousedown="selectMatProduct(idx,p)" style="padding:7px 9px;cursor:pointer;font-size:12px;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">{{p.name}} <span style="color:#999">({{p.code}})</span></div>
+                      <div v-if="filteredMatProducts(idx).length===0" style="padding:8px;color:#999;font-size:12px;text-align:center">无匹配产品</div>
+                    </div>
+                  </div>
                 </td>
                 <td style="padding:5px 3px;text-align:center">
                   <input v-model="row.model" placeholder="型号" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px;text-align:center"/>
@@ -1559,13 +1570,83 @@ const app = createApp({
     const showLogin = ref(false);
     const showNewOrder = ref(false);
 
-    // 将这些 ref 暴露给 __initModule__（在 setup() 运行时已定义）
+    // ── 新建订单表单相关 ────────────────────────────────────────
+    const customerSearchKw = ref('');
+    const customerDropdownShown = ref(false);
+    const itemProdSearch = ref({});
+    const itemProdDropdown = ref({});
+    const matProdSearch = ref({});
+    const matProdDropdown = ref({});
+
+    // 客户搜索过滤
+    const filteredCustomersForOrder = computed(() => {
+      const kw = customerSearchKw.value.toLowerCase().trim();
+      const list = S.customers || [];
+      if (!kw) return list.slice(0, 20);
+      return list.filter(c =>
+        (c.name || '').toLowerCase().includes(kw) ||
+        (c.phone || '').includes(kw) ||
+        (c.contact || '').toLowerCase().includes(kw)
+      ).slice(0, 20);
+    });
+
+    // 主料产品过滤（只显示面料）
+    const filteredItemProducts = idx => {
+      const kw = (itemProdSearch.value[idx] || '').toLowerCase().trim();
+      const prods = (S.products || []).filter(p => String(p.product_type) == '面料' || p.product_type == '面料');
+      if (!kw) return prods.slice(0, 30);
+      return prods.filter(p =>
+        (p.name || '').toLowerCase().includes(kw) ||
+        (p.code || '').toLowerCase().includes(kw) ||
+        (p.model || '').toLowerCase().includes(kw) ||
+        (p.classification || '').toLowerCase().includes(kw)
+      ).slice(0, 30);
+    };
+
+    // 辅料产品过滤（只显示辅料）
+    const filteredMatProducts = idx => {
+      const kw = (matProdSearch.value[idx] || '').toLowerCase().trim();
+      const prods = (S.products || []).filter(p => String(p.product_type) == '辅料' || p.product_type == '辅料');
+      if (!kw) return prods.slice(0, 30);
+      return prods.filter(p =>
+        (p.name || '').toLowerCase().includes(kw) ||
+        (p.code || '').toLowerCase().includes(kw) ||
+        (p.classification || '').toLowerCase().includes(kw)
+      ).slice(0, 30);
+    };
+
+    // 辅料分类选项（从产品classification提取）
+    const matCategories = computed(() => {
+      const cats = new Set();
+      (S.products || []).filter(p => String(p.product_type) === '辅料').forEach(p => {
+        if (p.classification) cats.add(p.classification);
+      });
+      return Array.from(cats).sort();
+    });
+
+    const selectCustomer = c => {
+      customerSearchKw.value = '';
+      customerDropdownShown.value = false;
+      __orderFormModule__.onCustomerSelect(S, c.id);
+    };
+    const selectItemProduct = (idx, p) => {
+      itemProdSearch.value[idx] = '';
+      itemProdDropdown.value[idx] = false;
+      __orderFormModule__.onItemProductSelect(S, idx, p.id);
+    };
+    const selectMatProduct = (idx, p) => {
+      matProdSearch.value[idx] = '';
+      matProdDropdown.value[idx] = false;
+      __orderFormModule__.onMatProductSelect(S, idx, p.id);
+    };
+
+    // ── 暴露给 __initModule__ ─────────────────────────────────
     if (window.__initModule__) {
       window.__initModule__.loginLoading = loginLoading;
       window.__initModule__.loginForm = loginForm;
       window.__initModule__.showLogin = showLogin;
       window.__initModule__.showNewOrder = showNewOrder;
-      window.__initModule__.openNewOrder = () => { showNewOrder.value = true; S.page = 'order'; };
+      window.__initModule__.openNewOrder = () => { __orderFormModule__.openNewOrder(S); };
     }
 
     const pageTitle = computed(() => ({
@@ -1887,6 +1968,10 @@ const app = createApp({
       orderF: computed(() => S.orderF),
       newOrderNo: computed(() => S.orderF.orderNo || ''),
       onCustomerSelect, autoDelivery,
+      customerSearchKw, customerDropdownShown, filteredCustomersForOrder, selectCustomer,
+      itemProdSearch, itemProdDropdown, filteredItemProducts, selectItemProduct,
+      matProdSearch, matProdDropdown, filteredMatProducts, selectMatProduct,
+      matCategories,
       addOrderItem, addOrderMaterial,
       calcItem, calcMaterial, calcTotals, saveNewOrder,
     };

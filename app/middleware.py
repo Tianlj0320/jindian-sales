@@ -22,6 +22,8 @@ def is_public_path(path: str) -> bool:
         return True
     if path == "/api/auth/send-code":
         return True
+    if path == "/api/dicts":
+        return True
     return False
 
 class AuthMiddleware(BaseHTTPMiddleware):

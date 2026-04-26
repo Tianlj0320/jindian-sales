@@ -152,6 +152,18 @@ window.__initModule__ = {
         { k: 'completed', v: '已完成', c: '#222' },
       ];
 
+      // 码表：从API加载所有分类
+      try {
+        const allDicts = await apiDicts.list();
+        for (const [cat, items] of Object.entries(allDicts)) {
+          if (!S.dictMap[cat]) S.dictMap[cat] = [];
+          S.dictMap[cat] = items.map(it => ({ k: it.k, v: it.v, c: it.c || '' }));
+        }
+        localStorage.setItem('dictMap', JSON.stringify(S.dictMap));
+      } catch(e) {
+        console.warn('[dict] load failed, using cache', e);
+      }
+
       // 报表当前月
       await __reportModule__.loadReportData();
 

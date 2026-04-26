@@ -15,6 +15,8 @@ const api = async (u, m = 'GET', b = null) => {
   const r = await fetch(API + u, { method: m, headers, body: b ? JSON.stringify(b) : null });
   if (!r.ok) throw new Error(u + ' → HTTP ' + r.status);
   const d = await r.json();
+  // 兼容直接返回数据（无 success 包装）的格式，如 /api/dicts
+  if (d.success === undefined) return d;  // 直接返回
   if (!d.success) throw new Error(d.error || 'API 错误');
   return d.data ?? d;
 };
@@ -117,4 +119,9 @@ window.apiReports = {
     api(`/api/reports/employee-performance?year=${year}&month=${month}`),
   productRank: (year, month) =>
     api(`/api/reports/product-rank?year=${year}&month=${month}`),
+};
+
+// ── 码表 ──────────────────────────────────────────────────
+window.apiDicts = {
+  list: () => api('/api/dicts'),
 };
