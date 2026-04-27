@@ -180,7 +180,7 @@ window.__initModule__ = {
     const ElMsg = (window.ElementPlus || {}).ElMessage;
     // 模块未就绪时显示提示
     if (!M || !M.loginForm) {
-      ElMsg?.error('页面加载中，请稍后刷新再试');
+      ElMsg?.error('页面加载中，请稍后刷新再试'); window.alert('页面加载中，请稍后刷新再试');
       console.error('[doLogin] __initModule__ not ready, loginForm:', M?.loginForm);
       return;
     }
@@ -212,7 +212,7 @@ window.__initModule__ = {
         M.loginLoading.value = false;
         const errMsg = res?.message || res?.error || '';
         if (errMsg.includes('401') || errMsg.includes('账号') || errMsg.includes('密码') || errMsg.includes('无效')) {
-          ElMsg?.error('手机号或密码错误');
+          ElMsg?.error('手机号或密码错误'); window.alert('手机号或密码错误');
         } else if (errMsg) {
           ElMsg?.error(errMsg);
         } else {
@@ -223,13 +223,13 @@ window.__initModule__ = {
       M.loginLoading.value = false;
       const msg = e?.message || String(e) || '';
       if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('network') || msg.includes('ERR_')) {
-        ElMsg?.error('网络连接失败，请检查网络或服务器状态');
+        ElMsg?.error('网络连接失败，请检查网络或服务器状态'); window.alert('网络连接失败，请检查网络或服务器状态');
       } else if (msg.includes('401') || msg.includes('Unauthorized')) {
-        ElMsg?.error('手机号或密码错误');
+        ElMsg?.error('手机号或密码错误'); window.alert('手机号或密码错误');
       } else if (msg.includes('timeout') || msg.includes('Timeout')) {
-        ElMsg?.error('请求超时，请重试');
+        ElMsg?.error('请求超时，请重试'); window.alert('请求超时，请重试');
       } else {
-        ElMsg?.error('登录异常: ' + (msg || '未知错误'));
+        ElMsg?.error('登录异常: ' + (msg || '未知错误')); window.alert('登录异常: ' + (msg || '未知错误'));
       }
     }
   },
