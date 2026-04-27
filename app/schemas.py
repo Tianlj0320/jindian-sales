@@ -339,6 +339,8 @@ class SupplierListItem(BaseModel):
     contact: str
     phone: str
     delivery_days: int
+    address: str = ''
+    payment: str = ''
 
 class SupplierListResponse(BaseModel):
     success: bool

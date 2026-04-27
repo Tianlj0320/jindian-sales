@@ -22,7 +22,7 @@ window.__dialogsModule__ = {
     const payload = {
       code: f.code, name: f.name, type: f.type || '布艺',
       contact: f.contact || '', phone: f.phone || '',
-      deliveryDays: f.deliveryDays || 7, address: f.address || '',
+      delivery_days: f.deliveryDays || 7, address: f.address || '',
       payment: f.payment || '',
     };
     try {
@@ -30,19 +30,26 @@ window.__dialogsModule__ = {
       if (S.editingSupplier) {
         d = await apiProducts.updateSupplier(S.editingSupplier.id, payload);
         const idx = S.suppliers.findIndex(s => s.id === S.editingSupplier.id);
-        if (idx > -1) S.suppliers.splice(idx, 1, { ...S.suppliers[idx], ...d });
+        if (idx > -1) S.suppliers.splice(idx, 1, {
+          ...S.suppliers[idx],
+          code: f.code, name: f.name, type: f.type || '布艺',
+          contact: f.contact || '', phone: f.phone || '',
+          deliveryDays: f.deliveryDays || 7,
+          address: f.address || '', payment: f.payment || '',
+        });
       } else {
         d = await apiProducts.createSupplier(payload);
         S.suppliers.push({
-          id: d.id, code: d.code, name: d.name,
-          type: d.type || '布艺', contact: d.contact || '',
-          phone: d.phone || '', deliveryDays: d.delivery_days || 7,
-          address: '', payment: '',
+          id: d.id, code: d.code || f.code, name: f.name,
+          type: f.type || '布艺', contact: f.contact || '',
+          phone: f.phone || '', deliveryDays: f.deliveryDays || 7,
+          address: f.address || '', payment: f.payment || '',
         });
       }
       S.dlgSupplier = false;
       ElementPlus.ElMessage.success('保存成功');
     } catch (e) {
+      console.error('[saveSupplier] error:', e, 'payload:', payload);
       ElementPlus.ElMessage.error('保存失败');
     }
   },

@@ -26,7 +26,8 @@ async def list_suppliers():
             SupplierListItem(
                 id=s.id, code=s.code or "", name=s.name or "",
                 type=s.type or "", contact=s.contact or "",
-                phone=s.phone or "", delivery_days=s.delivery_days or 7
+                phone=s.phone or "", delivery_days=s.delivery_days or 7,
+                address=s.address or "", payment=s.payment or ""
             )
             for s in suppliers
         ]
@@ -51,7 +52,8 @@ async def create_supplier(req: dict = Body(...)):
             contact=req.get("contact", ""),
             phone=req.get("phone", ""),
             delivery_days=req.get("delivery_days", 7),
-            address=req.get("address", "")
+            address=req.get("address", ""),
+            payment=req.get("payment", ""),
         )
         session.add(supplier)
         await session.commit()
@@ -75,7 +77,8 @@ async def update_supplier(supplier_id: int, req: dict = Body(...)):
         if "phone" in req: supplier.phone = req["phone"]
         if "delivery_days" in req: supplier.delivery_days = req["delivery_days"]
         if "address" in req: supplier.address = req["address"]
-        
+        if "payment" in req: supplier.payment = req["payment"]
+
         await session.commit()
         return CommonResponse(success=True, data={"id": supplier.id})
 

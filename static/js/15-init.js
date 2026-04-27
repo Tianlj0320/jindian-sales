@@ -38,7 +38,7 @@ window.__initModule__ = {
         id: s.id, code: s.code || '', name: s.name || '',
         type: s.type || '', contact: s.contact || '',
         phone: s.phone || '', deliveryDays: s.delivery_days || 7,
-        address: '', payment: '',
+        address: s.address || '', payment: s.payment || '',
       }));
 
       // 布版

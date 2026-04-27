@@ -10,7 +10,23 @@
 
 const api = async (u, m = 'GET', b = null) => {
   const headers = { 'Content-Type': 'application/json' };
-  const _tok = localStorage.getItem('authToken') || '';
+  // 优先从 cookie 读 token（后端 HttpOnly cookie），fallback 到 localStorage
+  let _tok = localStorage.getItem('authToken') || '';
+  if (!_tok) {
+    // 兼容两种 cookie 格式：authToken=xxx 或直接存 token 值
+    const cookieStr = document.cookie;
+    if (cookieStr.startsWith('eyJ')) {
+      _tok = cookieStr;  // cookie 直接是 token 值
+    } else {
+      const cookies = Object.fromEntries(
+        cookieStr.split('; ').map(c => {
+          const eqIdx = c.indexOf('=');
+          return eqIdx >= 0 ? [c.slice(0, eqIdx), c.slice(eqIdx+1)] : [c, ''];
+        })
+      );
+      _tok = cookies.authToken || cookies.token || '';
+    }
+  }
   if (_tok) headers['Authorization'] = 'Bearer ' + _tok;
   const r = await fetch(API + u, { method: m, headers, body: b ? JSON.stringify(b) : null });
   if (!r.ok) throw new Error(u + ' → HTTP ' + r.status);
@@ -62,7 +78,7 @@ window.apiProducts = {
   createSupplier: (payload) =>
     api('/api/products/suppliers', 'POST', payload),
   updateSupplier: (id, payload) =>
-    api(`/api/products/suppliers/${id}`, 'POST', payload),
+    api(`/api/products/suppliers/${id}`, 'PUT', payload),
   deleteSupplier: (id) => api(`/api/products/suppliers/${id}`, 'DELETE'),
 
   categories: () => api('/api/products/categories'),

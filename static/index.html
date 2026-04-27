@@ -4,26 +4,26 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>金典软装销售管理系统 V3.0</title>
-<script src="/static/lib/vue.js?v=3.0"></script>
-<script src="/static/lib/ep.js?v=3.0"></script>
-<script src="/static/lib/icons.js?v=3.0"></script>
+<script src="/static/lib/vue.js?v=3.3"></script>
+<script src="/static/lib/ep.js?v=3.3"></script>
+<script src="/static/lib/icons.js?v=3.3"></script>
 <link rel="stylesheet" href="/static/lib/ep.css">
 <!-- 模块化 JS（按顺序加载） -->
-<script src="/static/js/00-base.js?v=3.0"></script>
-<script src="/static/js/01-api.js?v=3.0"></script>
-<script src="/static/js/03-orders.js?v=3.0"></script>
-<script src="/static/js/04-purchase.js?v=3.0"></script>
-<script src="/static/js/05-product.js?v=3.0"></script>
-<script src="/static/js/06-customer.js?v=3.0"></script>
-<script src="/static/js/07-employee.js?v=3.0"></script>
-<script src="/static/js/08-home.js?v=3.0"></script>
-<script src="/static/js/09-report.js?v=3.0"></script>
-<script src="/static/js/10-warehouse.js?v=3.0"></script>
-<script src="/static/js/11-install.js?v=3.0"></script>
-<script src="/static/js/12-dict.js?v=3.0"></script>
-<script src="/static/js/13-order-form.js?v=3.0"></script>
-<script src="/static/js/14-dialogs.js?v=3.0"></script>
-<script src="/static/js/15-init.js?v=3.0"></script>
+<script src="/static/js/00-base.js?v=3.3"></script>
+<script src="/static/js/01-api.js?v=3.3"></script>
+<script src="/static/js/03-orders.js?v=3.3"></script>
+<script src="/static/js/04-purchase.js?v=3.3"></script>
+<script src="/static/js/05-product.js?v=3.3"></script>
+<script src="/static/js/06-customer.js?v=3.3"></script>
+<script src="/static/js/07-employee.js?v=3.3"></script>
+<script src="/static/js/08-home.js?v=3.3"></script>
+<script src="/static/js/09-report.js?v=3.3"></script>
+<script src="/static/js/10-warehouse.js?v=3.3"></script>
+<script src="/static/js/11-install.js?v=3.3"></script>
+<script src="/static/js/12-dict.js?v=3.3"></script>
+<script src="/static/js/13-order-form.js?v=3.3"></script>
+<script src="/static/js/14-dialogs.js?v=3.3"></script>
+<script src="/static/js/15-init.js?v=3.3"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;color:#333}
@@ -479,9 +479,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <template #prefix><el-icon><search/></el-icon></template>
             </el-input>
             <el-select v-model="suppTypeF" placeholder="类型" size="small" style="width:100px" clearable>
-              <el-option label="成品" value="成品"/>
-              <el-option label="布艺" value="布艺"/>
-              <el-option label="辅料" value="辅料"/>
+              <el-option v-for="t in (dictMap.supplierType||[])" :key="t.k" :label="t.v" :value="t.k"/>
             </el-select>
             <span style="color:#888;font-size:12px">共{{filteredSuppliers.length}}条</span>
           </div>
@@ -499,7 +497,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">操作</th>
             </tr></thead>
             <tbody>
-              <tr v-for="row in filteredSuppliers" :key="row.id" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
+              <tr v-for="(row, idx) in filteredSuppliers" :key="row.id ?? 's-'+idx" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
                 <td style="padding:7px 6px;text-align:center">{{row.code||'-'}}</td>
                 <td style="padding:7px 6px;text-align:left">{{row.name}}</td>
                 <td style="padding:7px 6px;text-align:center"><span class="num-tag" :class="row.type==='成品'?'num-blue':row.type==='布艺'?'num-green':'num-gray'">{{row.type||'-'}}</span></td>
@@ -1105,7 +1103,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
     <el-form-item label="名称"><el-input v-model="sForm.name" placeholder="如：杭州诺雅布业"/></el-form-item>
     <el-form-item label="类型">
       <el-select v-model="sForm.type" style="width:100%">
-        <el-option label="成品（窗帘）" value="成品"/><el-option label="布艺（布/纱）" value="布艺"/><el-option label="配件" value="配件"/>
+        <el-option v-for="t in (dictMap.supplierType||[])" :key="t.k" :label="t.v" :value="t.k"/>
       </el-select>
     </el-form-item>
     <el-form-item label="联系人"><el-input v-model="sForm.contact"/></el-form-item>
@@ -1840,8 +1838,14 @@ const app = createApp({
       alerts: computed(() => S.alerts),
       suppliers: computed(() => S.suppliers),
       filteredSuppliers,
-      suppSearch: computed(() => S.suppSearch),
-      suppTypeF: computed(() => S.suppTypeF),
+      suppSearch: {
+        get: () => S.suppSearch,
+        set: v => { S.suppSearch = v; }
+      },
+      suppTypeF: {
+        get: () => S.suppTypeF,
+        set: v => { S.suppTypeF = v; }
+      },
       openSupplierDlg: row => __dialogsModule__.openSupplierDlg(row, S),
       saveSupplier: () => __dialogsModule__.saveSupplier(S),
       delSupplier: row => __dialogsModule__.delSupplier(row, S),
@@ -1949,7 +1953,10 @@ const app = createApp({
       rptMonth: computed(() => S.rptMonth),
       rptTab: computed(() => S.rptTab),
       loadReportData,
-      dlgSupplier: computed(() => S.dlgSupplier),
+      dlgSupplier: {
+        get: () => S.dlgSupplier,
+        set: v => { S.dlgSupplier = v; }
+      },
       sForm: computed(() => S.sForm),
       editingSupplier: computed(() => S.editingSupplier),
       dlgCategory: computed(() => S.dlgCategory),
@@ -1993,7 +2000,30 @@ app.mount('#app');
 // 登录后自动初始化
 const S = window.__STATE__;
 try {
-  const storedUser = typeof window.LS === 'function' ? window.LS('currentUser') : null;
+  let storedUser = typeof window.LS === 'function' ? window.LS('currentUser') : null;
+
+  // 如果 localStorage 没有 currentUser，尝试从 cookie 读取 authToken
+  if (!storedUser) {
+    const cookieStr = document.cookie;
+    if (cookieStr.startsWith('eyJ')) {
+      // cookie 直接是 token，尝试解码获取用户信息
+      try {
+        const payload = JSON.parse(atob(cookieStr.split('.')[1]));
+        storedUser = { id: payload.sub, name: payload.name, role: payload.role };
+      } catch(e) {}
+    } else {
+      const cookies = Object.fromEntries(
+        cookieStr.split('; ').map(c => { const eq = c.indexOf('='); return eq >= 0 ? [c.slice(0,eq), c.slice(eq+1)] : [c,'']; })
+      );
+      if (cookies.authToken) {
+        try {
+          const payload = JSON.parse(atob(cookies.authToken.split('.')[1]));
+          storedUser = { id: payload.sub, name: payload.name, role: payload.role };
+        } catch(e) {}
+      }
+    }
+  }
+
   if (storedUser) {
     S.currentUser = storedUser;
     S.isLoggedIn = true;

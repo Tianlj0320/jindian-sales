@@ -92,6 +92,7 @@ class Supplier(Base):
     phone = Column(String(20))
     delivery_days = Column(Integer, default=7)
     address = Column(String(300))
+    payment = Column(String(200), default='')
     created_at = Column(DateTime, default=datetime.now)
 
 
