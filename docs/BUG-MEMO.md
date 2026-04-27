@@ -368,3 +368,72 @@ ALTER TABLE products ADD COLUMN remark VARCHAR(500) DEFAULT '';
 1. 表单值用 `form.xxx` 而非 `form.value.xxx`（ref 在 setup return 时已解包）
 2. 保存函数检查 `editingXxx` 是否存在来决定是新增还是更新
 3. 保存成功后正确更新列表数据
+
+---
+
+## 七、Day 1 (4月27日) 新增修复
+
+### 28. 客户保存后列表不刷新
+**文件：** `06-customer.js`
+**原因：** 保存后未调用 `loadCustomers()` 刷新
+**修复：** 保存成功后添加 `await window.__customerModule__.loadCustomers()`
+
+### 29. 员工表单字段缺失
+**文件：** `index.html` + `07-employee.js`
+**原因：** 员工编辑弹窗的 `empForm` 缺少 gender/dept/code/maxDiscount/roundLimit 字段映射
+**修复：** 补充完整字段映射和 payload 字段
+
+### 30. 员工保存后列表不刷新
+**文件：** `07-employee.js`
+**原因：** 保存后未调用 `loadEmployees()` 刷新
+**修复：** 保存成功后添加 `await window.__employeeModule__.loadEmployees()`
+
+### 31. 财务摘要 fin.data 多层访问
+**文件：** `09-report.js`
+**原因：** `apiFinance.summary()` 返回 `data` 对象而非外层包装，前端错误访问 `fin.data?.month_receive`
+**修复：** 改为 `fin.month_receive || 0`
+
+### 32. 财务 API 缺少 receive/pay/expense 方法
+**文件：** `01-api.js`
+**原因：** 前端 `apiFinance` 只有 `summary()`，缺少收/付/费用记录方法
+**修复：** 补充 `receive/pay/expense` 三个 POST 方法
+
+### 33. 仓库列表字段名错误
+**文件：** `10-warehouse.js`
+**原因：** API 返回 `qty`，前端映射为 `quantity`
+**修复：** `r.quantity` → `r.qty`
+
+### 34. 中间件拦截 track/installer/sms 公开 API
+**文件：** `app/middleware.py`
+**原因：** `/api/track`、`/api/installer`、`/api/sms` 被 `AuthMiddleware` 拦截，需要登录
+**修复：** 添加这三个路径到 `ALLOWED_PATHS`
+
+### 35. 订单创建 quote_amount 计算错误
+**文件：** `app/api/orders.py`
+**原因：** 用 `price * qty` 计算，应该用前端已计算的 `item.amount`（含折扣）
+**修复：** `quote_amount = sum(i.amount for i in items) + sum(m.amount for m in materials)`
+
+### 36. 产品列表 API 缺少 supplier_id/category_id
+**文件：** `app/api/products.py` + `app/schemas.py`
+**原因：** `ProductListItem` schema 缺少这两个字段
+**修复：** 补充到 schema 和 API 返回值
+
+### 37. 报表模块 API 响应 data 对象访问
+**文件：** `09-report.js`
+**原因：** trend/empRpt/prodRpt 响应是 `{success, data: {items}}`，前端访问 `trend.items`
+**修复：** 改为 `trend.data?.items`
+
+### 38. 产品 remark 字段未保存
+**文件：** `app/api/products.py`
+**原因：** `update_product` 中缺少 `cf` 和 `remark` 字段处理
+**修复：** 已添加 `remark` 字段处理（cf 字段待确认）
+
+### 39. 安装工 API 路径测试注意
+**文件：** -
+**说明：** 安装工任务列表是 `/api/installer/tasks`，不是 `/api/installation-orders`（后者是管理端用）
+
+### 40. 订单编辑功能缺失
+**文件：** `index.html`
+**状态：** ⚠️ 未修复（功能缺失）
+**说明：** 目前只有新建订单功能，没有编辑已有订单的功能。订单状态通过下拉框切换状态 key 来更新状态。
+
