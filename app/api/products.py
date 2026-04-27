@@ -317,6 +317,7 @@ async def create_product(req: dict = Body(...)):
         session.add(product)
         await session.commit()
         await session.refresh(product)
+        return CommonResponse(success=True, data={"id": product.id, "code": product.code})
 
 
 @router.delete("/{product_id}", response_model=CommonResponse)
