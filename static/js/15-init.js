@@ -177,10 +177,10 @@ window.__initModule__ = {
     const S = window.__STATE__;
     const M = window.__initModule__;
     const ElMsg = (window.ElementPlus || {}).ElMessage;
-    if (!M.loginForm.value.phone) { ElMsg?.warning('请输入手机号'); return; }
+    if (!M.loginForm.phone) { ElMsg?.warning('请输入手机号'); return; }
     try {
       M.loginLoading.value = true;
-      const res = await apiAuth.login(M.loginForm.value.phone, M.loginForm.value.password || '');
+      const res = await apiAuth.login(M.loginForm.phone, M.loginForm.password || '');
       const token = res?.token || res?.data?.token;
       if (token) {
         AUTH_TOKEN = token;
