@@ -175,7 +175,8 @@ window.__initModule__ = {
   },
 
   async doLogin() {
-    console.log("[doLogin] called, loginLoading=", window.__initModule__?.loginLoading?.value);
+    console.log("[doLogin] called");
+    console.log("[doLogin] M=", !!M, "M.loginForm=", !!M?.loginForm, "loginForm.phone=", M?.loginForm?.phone);
     const S = window.__STATE__;
     const M = window.__initModule__;
     const ElMsg = (window.ElementPlus || {}).ElMessage;
@@ -189,8 +190,11 @@ window.__initModule__ = {
     if (!M.loginForm.password) { ElMsg?.warning('请输入密码'); return; }
     try {
       M.loginLoading.value = true;
+      console.log('[doLogin] calling API with phone:', M.loginForm.phone);
       const res = await apiAuth.login(M.loginForm.phone, M.loginForm.password || '');
+      console.log('[doLogin] API response:', res);
       const token = res?.token || res?.data?.token;
+      console.log('[doLogin] token:', !!token, token ? token.substring(0,20) : 'none');
       if (token) {
         AUTH_TOKEN = token;
         S.authToken = token;
@@ -221,6 +225,7 @@ window.__initModule__ = {
         }
       }
     } catch (e) {
+      console.error("[doLogin] error:", e);
       M.loginLoading.value = false;
       const msg = e?.message || String(e) || '';
       if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('network') || msg.includes('ERR_')) {
