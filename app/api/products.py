@@ -209,7 +209,9 @@ async def list_products(
         items = [
             ProductListItem(
                 id=p.id, code=p.code or "", name=p.name or "",
+                supplier_id=p.supplier_id or 0,
                 supplier_name=sup_map.get(p.supplier_id, type('',(),{'name':''})()).name if p.supplier_id else "",
+                category_id=p.category_id or 0,
                 category_name=cat_map.get(p.category_id, type('',(),{'name':''})()).name if p.category_id else "",
                 product_type=p.product_type or "",
                 material=p.material or "",

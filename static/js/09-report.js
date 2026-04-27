@@ -13,13 +13,13 @@ window.__reportModule__ = {
       apiReports.productRank(y, m).catch(() => ({ items: [] })),
       apiOrders.list({ page: 1, page_size: 100, year: y, month: m }).catch(() => ({ items: [] })),
     ]);
-    S.salesTrend = (trend.items || []).filter(Boolean).map(t => t.amount || 0);
-    S.staffRank = (empRpt.items || []).filter(Boolean).map(e => ({
+    S.salesTrend = (trend.data?.items || []).filter(Boolean).map(t => t.amount || 0);
+    S.staffRank = (empRpt.data?.items || []).filter(Boolean).map(e => ({
       name: e.salesperson || '',
       amount: e.total_amount || 0,
       orders: e.order_count || 0,
     }));
-    S.topProducts = (prodRpt.items || []).filter(Boolean).map(p => ({
+    S.topProducts = (prodRpt.data?.items || []).filter(Boolean).map(p => ({
       name: p.product || '',
       times: p.qty || 0,
       amount: p.amount || 0,

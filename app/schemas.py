@@ -290,7 +290,9 @@ class ProductListItem(BaseModel):
     id: int
     code: str
     name: str
+    supplier_id: int
     supplier_name: str
+    category_id: int
     category_name: str
     product_type: str
     material: str
