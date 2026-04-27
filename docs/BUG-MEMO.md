@@ -561,3 +561,47 @@ ALTER TABLE products ADD COLUMN remark VARCHAR(500) DEFAULT '';
 2. 码表管理仅存localStorage无后端持久化（已知限制）
 3. 财务页面无添加收付款UI（后端API存在但前端无界面）
 4. 安装单分配前端无分配按钮（已有分配弹窗）
+
+---
+
+## 十一、Day 2 傍晚扫雷记录 (16:50-17:10)
+
+### 新增修复 (扫雷151-175)
+
+| 编号 | 问题 | 文件 | 修复 |
+|------|------|------|------|
+| 151 | 安装工端API测试 | - | ✅ 正常 |
+| 152 | 订单各状态流转完整性 | - | ✅ 9态均正常 |
+| 153 | 订单详情字段完整性 | - | ✅ install_address/install_date存在 |
+| 154 | 产品编辑字段完整性 | - | ✅ 正常 |
+| 155 | 采购单分单路径 | app/api/purchase_orders.py | ✅ POST /purchase-orders/split/{order_id} |
+| **156** | **订单status筛选失效** | app/api/orders.py | ✅ 新增status参数别名支持status_key |
+| 157 | 订单删除权限 | - | ✅ 正常 |
+| 158 | 订单编辑API | - | ✅ PUT /api/orders/{id} 存在 |
+| 159 | 员工删除API缺失 | app/api/employees.py | 📋 已知限制(无DELETE端点) |
+| 160 | 客户删除功能 | - | ✅ 软删除正常 |
+| 161 | 订单编辑字段 | - | ✅ 正常 |
+| 162 | 产品编辑字段 | - | ✅ 正常 |
+| 163 | 采购单编辑功能 | - | ✅ PATCH正常 |
+| 164 | 仓库记录筛选 | - | ✅ record_type筛选正常 |
+| 165 | 安装单状态流转 | - | ✅ 正常 |
+| 166 | 财务记录筛选 | - | ✅ type筛选正常 |
+| 167 | 产品面料材质数据 | - | ✅ 正常 |
+| 168 | 码表数据 | - | ✅ 正常 |
+| 169 | 完整API最终验证 | - | ✅ 19/19 通过 |
+| 170 | 生产反馈完整流程 | - | ✅ 创建+查询正常 |
+| 171 | 打印模板功能 | - | ✅ contract/measurement正常 |
+| **172** | **产品新增API返回None** | app/api/products.py | ✅ 添加return语句 |
+| 173 | 客户新增功能 | - | ✅ 正常 |
+| 174 | 员工新增功能 | - | ✅ 正常 |
+| 175 | 仓库记录新增功能 | - | ✅ /in 和 /out 端点正常 |
+
+### 关键修复
+- **扫雷156**: 前端订单状态筛选参数`status`后端不识别 → 添加`status`作为`status_key`别名
+- **扫雷172**: 产品新增API缺少`return CommonResponse(...)`导致500错误
+
+### commit历史 (傍晚)
+```
+eda6b1c fix: 产品新增API缺少return语句导致500
+5c46507 fix: 订单列表API支持status参数别名(等同status_key)
+```
