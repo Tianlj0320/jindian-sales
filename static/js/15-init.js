@@ -176,7 +176,7 @@ window.__initModule__ = {
 
   async doLogin() {
     console.log("[doLogin] called");
-    console.log("[doLogin] M=", !!M, "M.loginForm=", !!M?.loginForm, "loginForm.phone=", M?.loginForm?.phone);
+    console.log("[doLogin] M=", !!window.__initModule__, "M.loginForm=", !!window.__initModule__?.loginForm, "phone=", window.__initModule__?.loginForm?.phone);
     const S = window.__STATE__;
     const M = window.__initModule__;
     const ElMsg = (window.ElementPlus || {}).ElMessage;
