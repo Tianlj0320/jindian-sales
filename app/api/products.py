@@ -144,6 +144,20 @@ async def create_category(req: dict = Body(...)):
         return CommonResponse(success=True, data={"id": cat.id, "code": cat.code})
 
 
+@router.put("/categories/{category_id}", response_model=CommonResponse)
+async def update_category(category_id: int, req: dict = Body(...)):
+    async with async_session() as session:
+        result = await session.execute(select(FabricCategory).where(FabricCategory.id == category_id))
+        cat = result.scalar_one_or_none()
+        if not cat:
+            return CommonResponse(success=False, error="分类不存在")
+        if "name" in req: cat.name = req["name"]
+        if "description" in req: cat.description = req["description"]
+        if "supplier_id" in req: cat.supplier_id = req["supplier_id"]
+        await session.commit()
+        return CommonResponse(success=True, data={"id": cat.id})
+
+
 # ─── 产品 ─────────────────────────────────────────────────────────────────────
 
 @router.get("", response_model=ProductListResponse)
@@ -288,3 +302,27 @@ async def create_product(req: dict = Body(...)):
         await session.commit()
         await session.refresh(product)
         return CommonResponse(success=True, data={"id": product.id, "code": product.code})
+
+
+@router.put("/{product_id}", response_model=CommonResponse)
+async def update_product(product_id: int, req: dict = Body(...)):
+    async with async_session() as session:
+        result = await session.execute(select(Product).where(Product.id == product_id))
+        product = result.scalar_one_or_none()
+        if not product:
+            return CommonResponse(success=False, error="产品不存在")
+        if "name" in req: product.name = req["name"]
+        if "supplier_id" in req: product.supplier_id = req["supplier_id"]
+        if "category_id" in req: product.category_id = req["category_id"]
+        if "product_type" in req: product.product_type = req["product_type"]
+        if "classification" in req: product.classification = req["classification"]
+        if "model" in req: product.model = req["model"]
+        if "material" in req: product.material = req["material"]
+        if "width" in req: product.width = req["width"]
+        if "weight" in req: product.weight = req["weight"]
+        if "unit_price" in req: product.unit_price = req["unit_price"]
+        if "unit" in req: product.unit = req["unit"]
+        if "stock" in req: product.stock = req["stock"]
+        if "remark" in req: product.remark = req.get("remark", "")
+        await session.commit()
+        return CommonResponse(success=True, data={"id": product.id})

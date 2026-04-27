@@ -78,6 +78,7 @@ class Product(Base):
     unit_price = Column(DECIMAL(10, 2))
     unit = Column(String(10), default="米")
     stock = Column(Integer, default=0)
+    remark = Column(String(500), default='')
     created_at = Column(DateTime, default=datetime.now)
 
 

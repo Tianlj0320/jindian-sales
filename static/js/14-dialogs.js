@@ -125,7 +125,7 @@ window.__dialogsModule__ = {
     S.dlgProduct = true;
   },
 
-  async addProduct(S) {
+  async saveProduct(S) {
     const f = S.pForm;
     if (!f.name) { ElementPlus.ElMessage.warning('请填写产品名称'); return; }
     const payload = {
@@ -135,28 +135,48 @@ window.__dialogsModule__ = {
       product_type: f.category, classification: f.classification,
       model: f.model, material: f.material,
       width: f.width, weight: f.weight,
-      cf: f.cf, unit_price: f.price,
-      stock: f.stock, unit: f.unit, remark: f.remark,
+      cf: f.cf || 0, unit_price: f.price,
+      stock: f.stock, unit: f.unit, remark: f.remark || '',
     };
     try {
-      const d = await apiProducts.create(payload);
-      S.products.push({
-        id: d.id, code: d.code, name: d.name,
-        supplierId: 's' + d.supplier_id,
-        categoryId: 'c' + d.category_id,
-        category: d.category || '窗帘',
-        classification: d.classification || '',
-        model: d.model || '', material: d.material || '',
-        width: d.width || 280, weight: d.weight || 0,
-        cf: 0, price: d.unit_price || 0,
-        stock: d.stock || 0, unit: d.unit || '米', remark: '',
-      });
+      if (S.editingProduct) {
+        const d = await apiProducts.update(S.editingProduct.id, payload);
+        const idx = S.products.findIndex(p => p.id === S.editingProduct.id);
+        if (idx > -1) S.products.splice(idx, 1, {
+          ...S.products[idx],
+          id: S.editingProduct.id, code: f.code, name: f.name,
+          supplierId: f.supplierId, categoryId: f.categoryId,
+          category: f.category, classification: f.classification,
+          model: f.model, material: f.material,
+          width: f.width, weight: f.weight,
+          cf: f.cf || 0, price: f.price,
+          stock: f.stock, unit: f.unit, remark: f.remark || '',
+        });
+        ElementPlus.ElMessage.success('更新成功');
+      } else {
+        const d = await apiProducts.create(payload);
+        S.products.push({
+          id: d.id, code: d.code, name: d.name,
+          supplierId: f.supplierId,
+          categoryId: f.categoryId,
+          category: f.category || '窗帘',
+          classification: f.classification || '',
+          model: f.model || '', material: f.material || '',
+          width: f.width || 280, weight: f.weight || 0,
+          cf: 0, price: f.price || 0,
+          stock: f.stock || 0, unit: f.unit || '米', remark: f.remark || '',
+        });
+        ElementPlus.ElMessage.success('添加成功');
+      }
       S.dlgProduct = false;
-      ElementPlus.ElMessage.success('添加成功');
     } catch (e) {
-      ElementPlus.ElMessage.error('添加失败');
+      console.error('[saveProduct] error:', e, 'payload:', payload);
+      ElementPlus.ElMessage.error('保存失败');
     }
   },
+
+  // 兼容旧名称
+  addProduct(S) { return this.saveProduct(S); },
 
   async delProduct(row, S) {
     if (!confirm(`确定删除产品「${row.name}」？`)) return;

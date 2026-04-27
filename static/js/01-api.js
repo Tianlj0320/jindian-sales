@@ -85,10 +85,11 @@ window.apiProducts = {
   createCategory: (payload) =>
     api('/api/products/categories', 'POST', payload),
   updateCategory: (id, payload) =>
-    api(`/api/products/categories/${id}`, 'POST', payload),
+    api(`/api/products/categories/${id}`, 'PUT', payload),
 
   list: () => api('/api/products'),
   create: (payload) => api('/api/products', 'POST', payload),
+  update: (id, payload) => api(`/api/products/${id}`, 'PUT', payload),
   delete: (id) => api(`/api/products/${id}`, 'DELETE'),
 };
 
@@ -96,7 +97,7 @@ window.apiProducts = {
 window.apiCustomers = {
   list: () => api('/api/customers'),
   create: (payload) => api('/api/customers', 'POST', payload),
-  update: (id, payload) => api(`/api/customers/${id}`, 'POST', payload),
+  update: (id, payload) => api(`/api/customers/${id}`, 'PUT', payload),
   delete: (id) => api(`/api/customers/${id}`, 'DELETE'),
 };
 
@@ -104,7 +105,7 @@ window.apiCustomers = {
 window.apiEmployees = {
   list: () => api('/api/employees'),
   create: (payload) => api('/api/employees', 'POST', payload),
-  update: (id, payload) => api(`/api/employees/${id}`, 'POST', payload),
+  update: (id, payload) => api(`/api/employees/${id}`, 'PUT', payload),
 };
 
 // ── 仓库 ──────────────────────────────────────────────────
