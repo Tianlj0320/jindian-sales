@@ -343,7 +343,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <tr v-for="row in filteredProducts" :key="row.id" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background=\'#f5f7fa\'" onmouseout="this.style.background=\'\'">
                 <td style="padding:7px 6px;text-align:center">{{row.code||'-'}}</td>
                 <td style="padding:7px 6px;text-align:left">{{row.name}}</td>
-                <td style="padding:7px 6px;text-align:center"><span class="num-tag" :class="row.category==='窗帘'?'num-blue':'num-gray'">{{row.category||'-'}}</span></td>
+                <td style="padding:7px 6px;text-align:center"><span class="num-tag" :class="row.type==='窗帘'?'num-blue':'row.type==='面料'?'num-green':'num-gray'">{{row.type||'-'}}</span></td>
                 <td style="padding:7px 6px;text-align:center">{{getSupplierName(row.supplierId)}}</td>
                 <td style="padding:7px 6px;text-align:center">{{row.material||'-'}}</td>
                 <td style="padding:7px 6px;text-align:center">{{row.classification||'-'}}</td>
@@ -1595,7 +1595,7 @@ const app = createApp({
     // 主料产品过滤（只显示面料）
     const filteredItemProducts = idx => {
       const kw = (itemProdSearch.value[idx] || '').toLowerCase().trim();
-      const prods = (S.products || []).filter(p => String(p.category) == '窗帘' || p.category == '窗帘');
+      const prods = (S.products || []).filter(p => String(p.type) === '窗帘' || p.type === '窗帘');
       if (!kw) return prods.slice(0, 30);
       return prods.filter(p =>
         (p.name || '').toLowerCase().includes(kw) ||
@@ -1608,7 +1608,7 @@ const app = createApp({
     // 辅料产品过滤（只显示辅料）
     const filteredMatProducts = idx => {
       const kw = (matProdSearch.value[idx] || '').toLowerCase().trim();
-      const prods = (S.products || []).filter(p => String(p.category) == '辅料' || p.category == '辅料');
+      const prods = (S.products || []).filter(p => String(p.type) === '辅料' || p.type === '辅料');
       if (!kw) return prods.slice(0, 30);
       return prods.filter(p =>
         (p.name || '').toLowerCase().includes(kw) ||
