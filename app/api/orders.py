@@ -54,6 +54,7 @@ def get_next_status(current_key: str) -> Optional[str]:
 @router.get("", response_model=OrderListResponse)
 async def list_orders(
     status_key: Optional[str] = Query(None, description="状态key筛选"),
+    status: Optional[str] = Query(None, description="状态筛选(别名,等同status_key)"),
     order_type: Optional[str] = Query(None, description="订单类型"),
     keyword: Optional[str] = Query(None, description="搜索：订单号/客户名"),
     year: Optional[int] = Query(None, description="年筛选"),
@@ -68,6 +69,8 @@ async def list_orders(
 
         if status_key:
             conditions.append(Order.status_key == status_key)
+        if status:
+            conditions.append(Order.status_key == status)
         if order_type:
             conditions.append(Order.order_type == order_type)
         if keyword:
