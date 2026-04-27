@@ -110,6 +110,19 @@ async def login(req: LoginRequest):
         ))
 
 
+# ─── 安装工列表（供管理员分配使用）───────────────────────────────────────
+
+@router.get("/list")
+async def list_installers():
+    """获取所有启用的安装工列表（管理员分配用）"""
+    async with async_session() as session:
+        result = await session.execute(
+            select(InstallerAccount).where(InstallerAccount.status == "active").order_by(InstallerAccount.id)
+        )
+        installers = result.scalars().all()
+        return {"success": True, "items": [{"id": i.id, "name": i.name, "phone": i.phone} for i in installers]}
+
+
 # ─── 今日任务 ────────────────────────────────────────────────────────────────
 
 @router.get("/tasks", response_model=TasksResponse)

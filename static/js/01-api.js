@@ -119,6 +119,7 @@ window.apiWarehouse = {
 // ── 安装 ──────────────────────────────────────────────────
 window.apiInstall = {
   list: () => api('/api/installation-orders'),
+  listInstallers: () => api('/api/installer/list'),
   complete: (taskId, payload) =>
     api(`/api/installer/tasks/${taskId}/complete`, 'POST', payload),
 };

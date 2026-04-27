@@ -918,8 +918,8 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
                 <td style="padding:7px 6px;text-align:center">{{row.scheduledDate||'-'}}</td>
                 <td style="padding:7px 6px;text-align:center"><span class="num-tag" :class="row.status==='已验收'?'num-green':row.status==='已安装'?'num-blue':'num-gray'">{{row.status}}</span></td>
                 <td style="padding:7px 6px;text-align:center">
-                  <el-button size="small" type="primary" v-if="row.status==='待分配'" @click="confirmInstall(row)">分配</el-button>
-                  <el-button size="small" type="success" v-if="row.status==='已分配'" @click="confirmInstall(row)">确认完成</el-button>
+                  <el-button size="small" type="primary" v-if="row.status==='待分配'" @click="openAssignDlg(row)">分配</el-button>
+                  <el-button size="small" type="success" v-if="row.status==='已分配'" @click="confirmAccept(row)">确认验收</el-button>
                 </td>
               </tr>
               <tr v-if="!filteredInstall||filteredInstall.length===0">
@@ -929,6 +929,21 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
           </table>
         </div>
       </div>
+
+      <!-- 安装单分配弹窗 -->
+      <el-dialog v-model="dlgAssignInstaller" title="分配安装工" width="380px">
+        <el-form label-position="top">
+          <el-form-item label="选择安装工">
+            <el-select v-model="assignInstallerId" placeholder="请选择安装工" style="width:100%">
+              <el-option v-for="inst in installers" :key="inst.id" :label="inst.name + ' (' + inst.phone + ')'" :value="inst.id"/>
+            </el-select>
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="dlgAssignInstaller=false">取消</el-button>
+          <el-button type="primary" @click="doAssignInstaller">确认分配</el-button>
+        </template>
+      </el-dialog>
 
       <!-- ============ 财务结算 ============ -->
       <div v-if="page==='finance'">
@@ -1571,6 +1586,9 @@ const app = createApp({
     const loginForm = ref({ phone: '', password: '' });
     const showLogin = ref(false);
     const showNewOrder = ref(false);
+    const dlgAssignInstaller = ref(false);
+    const assigningOrder = ref(null);
+    const assignInstallerId = ref('');
 
     // ── 新建订单表单相关 ────────────────────────────────────────
     const customerSearchKw = ref('');
@@ -1834,6 +1852,9 @@ const app = createApp({
       loginLoading,
       doLogin, logout,
       showLogin,
+      dlgAssignInstaller,
+      assigningOrder,
+      assignInstallerId,
       drawerVisible: ref(false),
       activeMenuVal: computed(() => S.activeMenu || 'home'),
       stats: computed(() => S.stats),
@@ -1941,9 +1962,19 @@ const app = createApp({
       loadProduction,
       prodStepNext: row => { if (row.step < 6) row.step++; },
       installOrders: computed(() => S.installOrders),
+      installers: computed(() => S.installers || []),
       filteredInstall,
       installSearch: computed(() => S.installSearch),
       installStatusF: computed(() => S.installStatusF),
+      openAssignDlg: row => __installModule__.openAssignDlg(row),
+      doAssignInstaller: () => __installModule__.doAssignInstaller(),
+      confirmAccept: async row => {
+        try {
+          await api(`/api/installation-orders/${row.id}`, 'PATCH', { status: '已验收' });
+          row.status = '已验收';
+          ElementPlus.ElMessage.success('已验收');
+        } catch(e) { ElementPlus.ElMessage.error('验收失败'); }
+      },
       confirmInstall: row => __installModule__.confirmInstall(row),
       financeData: computed(() => S.financeData),
       costBreakdown,
