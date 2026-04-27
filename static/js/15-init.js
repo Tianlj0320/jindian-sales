@@ -177,6 +177,7 @@ window.__initModule__ = {
   async doLogin() {
     const S = window.__STATE__;
     const M = window.__initModule__;
+    if (!M || !M.loginForm) { console.error('__initModule__ not ready'); return; }
     const ElMsg = (window.ElementPlus || {}).ElMessage;
     if (!M.loginForm.phone) { ElMsg?.warning('请输入手机号'); return; }
     try {
