@@ -37,14 +37,19 @@ window.__employeeModule__ = {
   },
 
   async saveEmployee(editing, S) {
+    const f = S.empForm;
     const payload = {
-      name: S.empForm.name,
-      position: S.empForm.position || '',
-      phone: S.empForm.phone || '',
-      id_card: S.empForm.idCard || '',
-      join_date: S.empForm.joinDate || '',
-      status: S.empForm.status || '在职',
-      remark: S.empForm.remark || '',
+      name: f.name || '',
+      gender: f.gender || '男',
+      phone: f.phone || '',
+      position: f.position || '',
+      department: f.dept || '',
+      max_discount: f.maxDiscount || 1,
+      round_limit: f.roundLimit || 0,
+      id_card: f.idCard || '',
+      join_date: f.joinDate || '',
+      status: f.status || '在职',
+      remark: f.remark || '',
     };
     try {
       if (editing) {
@@ -68,6 +73,7 @@ window.__employeeModule__ = {
       }
       S.dlgEmployee = false;
       ElementPlus.ElMessage.success('保存成功');
+      await window.__employeeModule__.loadEmployees();  // 刷新列表
     } catch (e) {
       ElementPlus.ElMessage.error('保存失败');
     }

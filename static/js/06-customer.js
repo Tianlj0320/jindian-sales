@@ -21,8 +21,8 @@ window.__customerModule__ = {
         salespersonId: c.salesperson_id || null,
         source: c.source || '',
         debt: c.debt || 0,
-        debtLimit: c.debt_limit || 0,
-        remark: '',
+        debtLimit: c.debt || 0,
+        remark: c.remark || '',
       }));
     } catch (e) {
       console.error('loadCustomers error:', e);
@@ -73,6 +73,7 @@ window.__customerModule__ = {
       }
       S.dlgCustomer = false;
       ElementPlus.ElMessage.success('保存成功');
+      await window.__customerModule__.loadCustomers();  // 刷新列表
     } catch (e) {
       ElementPlus.ElMessage.error('保存失败');
     }

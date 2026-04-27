@@ -1881,8 +1881,8 @@ const app = createApp({
       openEmpDlg: row => {
         S.dlgEmployee = true;
         S.editingEmp = row ? {...row} : null;
-        S.empForm = row ? { name:row.name, position:row.position||'', phone:row.phone||'', idCard:row.idCard||'', joinDate:row.hireDate||'', status:row.status||'在职', remark:row.remark||'' }
-                       : { name:'', position:'', phone:'', idCard:'', joinDate:'', status:'在职', remark:'' };
+        S.empForm = row ? { name:row.name||'', gender:row.gender||'男', position:row.position||'', phone:row.phone||'', dept:row.dept||'', code:row.code||'', maxDiscount:row.maxDiscount||1, roundLimit:row.roundLimit||0, idCard:row.idCard||'', joinDate:row.hireDate||'', status:row.status||'在职', remark:row.remark||'' }
+                       : { name:'', gender:'男', position:'', phone:'', dept:'', code:'', maxDiscount:1, roundLimit:0, idCard:'', joinDate:'', status:'在职', remark:'' };
       },
       saveEmployee: () => __employeeModule__.saveEmployee(S.editingEmp, S),
       dictCats: computed(() => S.dictCats),

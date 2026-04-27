@@ -42,11 +42,11 @@ window.__reportModule__ = {
     try {
       const fin = await apiFinance.summary();
       S.financeData = {
-        monthRevenue: fin.data?.month_receive || 0,
-        monthCost: fin.data?.month_pay || 0,
-        monthProfit: (fin.data?.month_receive || 0) - (fin.data?.month_pay || 0),
-        totalDebt: fin.data?.total_debt || 0,
-        pendingCommission: fin.data?.pending_commission || 0,
+        monthRevenue: fin.month_receive || 0,
+        monthCost: fin.month_pay || 0,
+        monthProfit: (fin.month_receive || 0) - (fin.month_pay || 0),
+        totalDebt: fin.total_debt || 0,
+        pendingCommission: fin.pending_commission || 0,
       };
     } catch (e) {
       console.error('loadFinance error:', e);
