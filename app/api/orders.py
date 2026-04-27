@@ -194,10 +194,9 @@ async def create_order(req: dict = Body(...)):
         order_no = f"{today}{seq:03d}"
 
         items = req.get("items", [])
-        quote_amount = sum(
-            float(i.get("unit_price", i.get("price", 0))) * int(i.get("qty", 0))
-            for i in items
-        )
+        materials = req.get("materials", [])
+        quote_amount = (sum(float(i.get("amount", 0)) for i in items)
+                     + sum(float(m.get("amount", 0)) for m in materials))
         discount = float(req.get("discount_amount", 0))
         round_amt = float(req.get("round_amount", 0))
         amount = max(0, quote_amount - discount - round_amt)
