@@ -40,6 +40,8 @@ window.__ordersModule__ = {
         orderDate: o.order_date || '',
         deliveryDate: o.delivery_date || '',
         deliveryMethod: o.delivery_method || '上门安装',
+        installAddress: o.install_address || '',
+        installDate: o.install_date || '',
         history: o.history || [],
         items: o.items || [],
       }));
@@ -69,6 +71,8 @@ window.__ordersModule__ = {
       statusColor: o.statusColor || '#909399',
       statusColorKey: o.statusKey || 'created',
       history: o.history || [],
+      installAddress: o.installAddress || '',
+      installDate: o.installDate || '',
       items: (o.items || []).map(i => ({
         product_name: i.product_name || i.product || '',
         unit_price: i.unit_price || i.price || 0,
