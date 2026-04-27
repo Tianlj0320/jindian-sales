@@ -66,7 +66,7 @@ window.__initModule__ = {
         type: c.type || '零售', salesperson: c.salesperson || '',
         salespersonId: c.salesperson_id || null,
         source: c.source || '', debt: c.debt || 0,
-        debtLimit: 0, address: c.address || '',
+        debtLimit: c.debt || 0, address: c.address || '',
         contact: '', remark: '',
       }));
 
@@ -80,13 +80,14 @@ window.__initModule__ = {
       }));
 
       // 财务
-      if (finS.data) {
+      const finData = finS.data || finS;
+      if (finData.month_receive !== undefined) {
         S.financeData = {
-          monthRevenue: finS.data.month_receive || 0,
-          monthCost: finS.data.month_pay || 0,
-          monthProfit: (finS.data.month_receive || 0) - (finS.data.month_pay || 0),
-          totalDebt: finS.data.total_debt || 0,
-          pendingCommission: 0,
+          monthRevenue: finData.month_receive || 0,
+          monthCost: finData.month_pay || 0,
+          monthProfit: (finData.month_receive || 0) - (finData.month_pay || 0),
+          totalDebt: finData.total_debt || 0,
+          pendingCommission: finData.pending_commission || 0,
         };
       }
 
