@@ -83,6 +83,20 @@ async def update_supplier(supplier_id: int, req: dict = Body(...)):
         return CommonResponse(success=True, data={"id": supplier.id})
 
 
+@router.delete("/suppliers/{supplier_id}", response_model=CommonResponse)
+async def delete_supplier(supplier_id: int, authorization: str = Header(None)):
+    async with async_session() as session:
+        result = await session.execute(
+            select(Supplier).where(Supplier.id == supplier_id)
+        )
+        supplier = result.scalar_one_or_none()
+        if not supplier:
+            return CommonResponse(success=False, error="供应商不存在")
+        await session.delete(supplier)
+        await session.commit()
+        return CommonResponse(success=True, data={"id": supplier_id})
+
+
 # ─── 布版/系列 ────────────────────────────────────────────────────────────────
 
 @router.get("/categories", response_model=dict)
