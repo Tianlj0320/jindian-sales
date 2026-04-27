@@ -66,7 +66,7 @@ window.apiPurchase = {
   list: () => api('/api/purchase-orders'),
   create: (payload) => api('/api/purchase-orders', 'POST', payload),
   updateStatus: (id, status) =>
-    api(`/api/purchase-orders/${id}/status`, 'PUT', { status }),
+    api(`/api/purchase-orders/${id}`, 'PATCH', { status }),
   delete: (id) => api(`/api/purchase-orders/${id}`, 'DELETE'),
   batchSplit: (orderIds) =>
     api('/api/purchase-orders/batch-split', 'POST', orderIds),
