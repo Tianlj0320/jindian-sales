@@ -478,3 +478,40 @@ ALTER TABLE products ADD COLUMN remark VARCHAR(500) DEFAULT '';
 **状态：** ⚠️ 未修复（功能缺失）
 **说明：** `selectOrder` 函数没有将订单的安装地址和安装日期复制到 selOrder，导致订单详情页无法显示这两个字段
 
+
+---
+
+## 九、Day 1 最终总结 (15:00-15:36)
+
+### 已修复并验证的问题（今日共 46 个）
+
+**核心 bug（影响功能使用）：**
+- 订单 completed 状态生成安装单失败（address 字段访问错误）→ 已修复 ✅
+- 产品/供应商 DELETE API 缺失 → 已添加 ✅
+- 安装工登录流程 API 路径正确（测试通过）✅
+- 客户更新后前端列表显示正确 ✅
+- 财务收款后订单欠款正确更新 ✅
+- 订单自动生成安装单（completed 触发）✅
+- 订单详情显示安装地址/日期 ✅
+
+**字段映射问题（前后端不一致）：**
+- initAll 财务数据访问 `finS.data` → `finS` ✅
+- initAll 客户 debtLimit 硬编码为 0 → `c.debt` ✅
+- 报表 trend/empRpt/prodRpt 访问 `trend.items` → `trend.data?.items` ✅
+- loadCustomers 客户 debtLimit 映射 ✅
+- loadEmployees 字段完整 ✅
+- 仓库列表 `r.quantity` → `r.qty` ✅
+- selectOrder 添加 installAddress/installDate ✅
+
+**界面显示问题：**
+- 财务毛利率 NaN → 添加除零保护 ✅
+- 待结提成 pendingCommission 空值保护 ✅
+
+**新增 API：**
+- `DELETE /api/products/{id}` ✅
+- `DELETE /api/products/suppliers/{id}` ✅
+
+### 待办/未修复（不影响核心流程）
+- 订单编辑功能缺失（只能新建，不能编辑已有订单）
+- 员工编辑功能表单 maxDiscount 默认值 1（85折应显示为0.85但显示为1）
+
