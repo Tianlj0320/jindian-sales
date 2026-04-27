@@ -343,7 +343,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <tr v-for="row in filteredProducts" :key="row.id" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background=\'#f5f7fa\'" onmouseout="this.style.background=\'\'">
                 <td style="padding:7px 6px;text-align:center">{{row.code||'-'}}</td>
                 <td style="padding:7px 6px;text-align:left">{{row.name}}</td>
-                <td style="padding:7px 6px;text-align:center"><span class="num-tag" :class="row.type==='窗帘'?'num-blue':'row.type==='面料'?'num-green':'num-gray'">{{row.type||'-'}}</span></td>
+                <td style="padding:7px 6px;text-align:center"><span class="num-tag" :class="row.type==='窗帘'?'num-blue':row.type==='面料'?'num-green':'num-gray'">{{row.type||'-'}}</span></td>
                 <td style="padding:7px 6px;text-align:center">{{getSupplierName(row.supplierId)}}</td>
                 <td style="padding:7px 6px;text-align:center">{{row.material||'-'}}</td>
                 <td style="padding:7px 6px;text-align:center">{{row.classification||'-'}}</td>
