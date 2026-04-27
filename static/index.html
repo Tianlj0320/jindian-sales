@@ -934,9 +934,9 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
         <div class="stat-row" style="margin-bottom:14px">
           <div class="stat-card"><div class="stat-num" style="color:#67c23a">¥{{financeData.monthRevenue.toLocaleString()}}</div><div class="stat-label">本月收入</div></div>
           <div class="stat-card"><div class="stat-num" style="color:#f56c6c">¥{{financeData.monthCost.toLocaleString()}}</div><div class="stat-label">本月成本</div></div>
-          <div class="stat-card"><div class="stat-num" style="color:#1a3a5c">{{((financeData.monthProfit/financeData.monthRevenue)*100).toFixed(1)}}%</div><div class="stat-label">毛利率</div></div>
+          <div class="stat-card"><div class="stat-num" style="color:#1a3a5c">{{financeData.monthRevenue?((financeData.monthProfit/financeData.monthRevenue)*100).toFixed(1)+'%':'—'}}</div><div class="stat-label">毛利率</div></div>
           <div class="stat-card"><div class="stat-num" style="color:#e6a23c">¥{{financeData.totalDebt.toLocaleString()}}</div><div class="stat-label">总欠款</div></div>
-          <div class="stat-card"><div class="stat-num" style="color:#9c27b0">{{financeData.pendingCommission.toFixed(0)}}</div><div class="stat-label">待结提成(元)</div></div>
+          <div class="stat-card"><div class="stat-num" style="color:#9c27b0">{{(financeData.pendingCommission||0).toFixed(0)}}</div><div class="stat-label">待结提成(元)</div></div>
         </div>
         <div class="card" style="overflow-x:auto">
           <div class="card-title">成本构成（本月）</div>
