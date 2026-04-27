@@ -29,8 +29,8 @@ async def sales_report(
             select(func.count(Order.id), func.sum(Order.amount))
             .where(and_(
                 Order.status_key.notin_(["cancelled", "created"]),
-                func.date(Order.created_at) >= start,
-                func.date(Order.created_at) <= end
+                Order.order_date >= start,
+                Order.order_date <= end
             ))
         )
         row = r.one()
@@ -44,8 +44,8 @@ async def sales_report(
                 select(func.count(Order.id)).where(
                     and_(
                         Order.status_key == sk,
-                        func.date(Order.created_at) >= start,
-                        func.date(Order.created_at) <= end
+                        Order.order_date >= start,
+                        Order.order_date <= end
                     )
                 )
             )
@@ -76,8 +76,8 @@ async def product_rank(
         r = await session.execute(
             select(Order).where(and_(
                 Order.status_key.notin_(["cancelled"]),
-                func.date(Order.created_at) >= start,
-                func.date(Order.created_at) <= end
+                Order.order_date >= start,
+                Order.order_date <= end
             ))
         )
         orders = r.scalars().all()
@@ -117,8 +117,8 @@ async def employee_report(
             .where(and_(
                 Order.salesperson.isnot(None),
                 Order.status_key.notin_(["cancelled"]),
-                func.date(Order.created_at) >= start,
-                func.date(Order.created_at) <= end
+                Order.order_date >= start,
+                Order.order_date <= end
             ))
             .group_by(Order.salesperson)
             .order_by(desc(func.sum(Order.amount)))
@@ -148,14 +148,14 @@ async def sales_trend(
         start, end = get_month_range(year, month)
 
         r = await session.execute(
-            select(func.date(Order.created_at), func.sum(Order.amount))
+            select(Order.order_date, func.sum(Order.amount))
             .where(and_(
                 Order.status_key.notin_(["cancelled", "created"]),
-                func.date(Order.created_at) >= start,
-                func.date(Order.created_at) <= end
+                Order.order_date >= start,
+                Order.order_date <= end
             ))
-            .group_by(func.date(Order.created_at))
-            .order_by(func.date(Order.created_at))
+            .group_by(Order.order_date)
+            .order_by(Order.order_date)
         )
         rows = r.all()
 
