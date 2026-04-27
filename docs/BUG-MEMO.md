@@ -437,3 +437,44 @@ ALTER TABLE products ADD COLUMN remark VARCHAR(500) DEFAULT '';
 **状态：** ⚠️ 未修复（功能缺失）
 **说明：** 目前只有新建订单功能，没有编辑已有订单的功能。订单状态通过下拉框切换状态 key 来更新状态。
 
+
+---
+
+## 八、Day 1 下午新增修复 (15:00-15:22)
+
+### 41. 报表 trend/empRpt/prodRpt API 响应 data 对象访问
+**文件：** `09-report.js`
+**原因：** API 响应 `{success, data: {items}}`，前端错误访问 `trend.items`
+**修复：** `trend.items` → `trend.data?.items`
+
+### 42. initAll 财务数据访问路径错误
+**文件：** `15-init.js`
+**原因：** `finS.data.month_receive` 但 finS 已经是 data 对象
+**修复：** `finS.data` → `finS.data || finS`，并补充 `pending_commission`
+
+### 43. initAll 客户 debtLimit 映射为 0
+**文件：** `15-init.js`
+**原因：** `debtLimit: 0` 写死，应从 `debt` 映射
+**修复：** `debtLimit: c.debt || 0`
+
+### 44. 财务毛利率除零导致 NaN
+**文件：** `index.html`
+**原因：** `financeData.monthRevenue` 为 0 时 `(monthProfit/monthRevenue)*100` = NaN
+**修复：** `financeData.monthRevenue ? ... : '—'`
+
+### 45. 财务待结提成空值报错
+**文件：** `index.html`
+**原因：** `pendingCommission.toFixed(0)` 在 undefined 时报错
+**修复：** `(financeData.pendingCommission||0).toFixed(0)`
+
+### 46. 订单 completed 状态生成安装单时 address 字段访问错误
+**文件：** `app/api/orders.py`
+**原因：** 用 `getattr(o, "install_address", "")` 但字段直接是 `o.install_address`，且旧代码有 `or o.address`（Order 模型无 address 属性）
+**修复：** 改为 `o.install_address or ""`
+**影响：** 之前所有订单状态流转到 completed 时安装单生成均失败
+
+### 47. 订单详情 selOrder 缺少 install_address/install_date 字段
+**文件：** `03-orders.js`
+**状态：** ⚠️ 未修复（功能缺失）
+**说明：** `selectOrder` 函数没有将订单的安装地址和安装日期复制到 selOrder，导致订单详情页无法显示这两个字段
+
