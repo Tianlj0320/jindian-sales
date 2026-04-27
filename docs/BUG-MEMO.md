@@ -274,3 +274,97 @@ window.__STATE__.orders.length  // 订单数量
 | 2026-04-26 | v3.0 | 页面导航状态异常、码表切换、登录流程 |
 | 2026-04-25 | v2.5 | JS 模块化重构 |
 | 2026-04-21 | v2.4 | 初始稳定版 |
+
+---
+
+## 八、API 方法不一致问题（2026-04-27 发现并修复）
+
+### 13. 登录函数 loginForm 访问路径错误 ⚠️ 已修复
+**文件：** `static/js/15-init.js`
+
+**根因**：`M.loginForm.value.phone` 访问了 `loginForm.value.phone`，但 `loginForm` 本身是 ref（暴露给 `__initModule__` 时 Vue 已自动解包），所以 `.value` 是 `null`。
+
+**修复**：
+```javascript
+// ❌ 错误
+if (!M.loginForm.value.phone) { ... }
+const res = await apiAuth.login(M.loginForm.value.phone, M.loginForm.value.password || '');
+
+// ✅ 正确
+if (!M.loginForm.phone) { ... }
+const res = await apiAuth.login(M.loginForm.phone, M.loginForm.password || '');
+```
+
+---
+
+### 14. 产品模块无编辑功能 ⚠️ 已修复
+**文件：** `static/js/14-dialogs.js`, `static/js/01-api.js`, `app/api/products.py`
+
+**问题**：
+- 前端有 `addProduct` 但没有 `updateProduct`
+- 后端没有 PUT `/api/products/{id}` 端点
+
+**修复**：
+1. 后端添加 `PUT /api/products/{product_id}` 端点
+2. 前端添加 `apiProducts.update()` 方法
+3. 将 `addProduct` 改名为 `saveProduct`，支持新增和编辑两种模式
+
+---
+
+### 15. 分类模块无编辑功能 ⚠️ 已修复
+**文件：** `static/js/01-api.js`, `app/api/products.py`
+
+**问题**：
+- 前端 `updateCategory` 使用 POST 方法
+- 后端没有 PUT `/api/products/categories/{id}` 端点
+
+**修复**：
+1. 后端添加 `PUT /api/products/categories/{category_id}` 端点
+2. 前端 `updateCategory` 改为 PUT 方法
+
+---
+
+### 16. 客户/员工更新 API 方法错误 ⚠️ 已修复
+**文件：** `static/js/01-api.js`
+
+**问题**：前端 `update` 方法使用 POST，但后端期望 PUT
+
+**修复**：将 `apiCustomers.update` 和 `apiEmployees.update` 从 POST 改为 PUT
+
+---
+
+### 17. 采购单更新 API 方法不匹配 ⚠️ 已修复
+**文件：** `static/js/14-dialogs.js`
+
+**问题**：前端使用 PUT 调用 `/api/purchase-orders/{id}`，但后端只有 PATCH
+
+**修复**：将调用改为 PATCH 方法
+
+---
+
+## 九、数据库迁移
+
+### 18. products 表缺少 remark 列 ⚠️ 已修复
+**文件：** `migrations/add_product_remark.sql`
+
+**问题**：Product 模型添加了 remark 字段，但数据库表没有该列
+
+**修复**：
+```sql
+ALTER TABLE products ADD COLUMN remark VARCHAR(500) DEFAULT '';
+```
+
+---
+
+## 十、防重复 Bug 规范
+
+### 开发规范：添加新 API 端点时
+1. 确保前端 API 调用方法（GET/POST/PUT/PATCH/DELETE）与后端一致
+2. 确保前端传字段名与后端期望一致（snake_case vs camelCase）
+3. 确保数据库表结构与 Model 一致
+4. 提交前在本地测试 API 调用
+
+### 开发规范：添加新的 Dialog/Form 时
+1. 表单值用 `form.xxx` 而非 `form.value.xxx`（ref 在 setup return 时已解包）
+2. 保存函数检查 `editingXxx` 是否存在来决定是新增还是更新
+3. 保存成功后正确更新列表数据
