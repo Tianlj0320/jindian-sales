@@ -312,7 +312,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
           <div class="page-title" style="margin:0">产品资料</div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <el-button type="primary" size="small" @click="openProductDlg()">+ 新建产品</el-button>
+            <el-button type="primary" size="small" @click="__dialogsModule__.openProductDlg(null, S)">+ 新建产品</el-button>
             <el-input v-model="prodSearch" placeholder="搜索名称/编码" size="small" style="width:160px" clearable>
               <template #prefix><el-icon><search/></el-icon></template>
             </el-input>
@@ -351,8 +351,8 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
                 <td style="padding:7px 6px;text-align:center">{{row.unit||'-'}}</td>
                 <td style="padding:7px 6px;text-align:right" :style="(row.stock||0)>0?'color:#67c23a':'color:#f56c6c'">{{row.stock||0}}</td>
                 <td style="padding:7px 6px;text-align:center">
-                  <el-button size="small" @click="openProductDlg(row)">编辑</el-button>
-                  <el-button size="small" type="danger" @click="delProduct(row)">删除</el-button>
+                  <el-button size="small" @click="__dialogsModule__.openProductDlg(row, S)">编辑</el-button>
+                  <el-button size="small" type="danger" @click="__dialogsModule__.delProduct(row, S)">删除</el-button>
                 </td>
               </tr>
               <tr v-if="!filteredProducts||filteredProducts.length===0">
@@ -474,7 +474,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
           <div class="page-title" style="margin:0">供应商管理</div>
           <div style="display:flex;gap:8px;align-items:center">
-            <el-button type="primary" size="small" @click="openSupplierDlg()">+ 新建供应商</el-button>
+            <el-button type="primary" size="small" @click="__dialogsModule__.openSupplierDlg(null, S)">+ 新建供应商</el-button>
             <el-input v-model="suppSearch" placeholder="搜索名称/编号/联系人" size="small" style="width:180px" clearable>
               <template #prefix><el-icon><search/></el-icon></template>
             </el-input>
@@ -506,8 +506,8 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
                 <td style="padding:7px 6px;text-align:center">{{row.deliveryDays||row.delivery_days?row.deliveryDays||row.delivery_days+'天':'-'}}</td>
                 <td style="padding:7px 6px;text-align:left">{{row.address||'-'}}</td>
                 <td style="padding:7px 6px;text-align:center">
-                  <el-button size="small" @click="openSupplierDlgWrapper(row)">编辑</el-button>
-                  <el-button size="small" type="danger" @click="delSupplier(row)">删除</el-button>
+                  <el-button size="small" @click="__dialogsModule__.openSupplierDlg(row, S)">编辑</el-button>
+                  <el-button size="small" type="danger" @click="__dialogsModule__.delSupplier(row, S)">删除</el-button>
                 </td>
               </tr>
               <tr v-if="!filteredSuppliers||filteredSuppliers.length===0">
@@ -748,7 +748,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
                 <td style="padding:7px 6px;text-align:right"><b style="color:#f56c6c">¥{{Number(row.amount||0).toLocaleString()}}</b></td>
                 <td style="padding:7px 6px;text-align:center">{{row.date||'-'}}</td>
                 <td style="padding:7px 6px;text-align:center">
-                  <el-button size="small" @click="openPurchaseDlg(row)">编辑</el-button>
+                  <el-button size="small" @click="__dialogsModule__.openPurchaseDlg(row, S)">编辑</el-button>
                   <el-button size="small" type="danger" @click="deletePurchase(row)">删除</el-button>
                 </td>
               </tr>
@@ -1131,7 +1131,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
   </el-form>
   <template #footer>
     <el-button @click="dlgSupplier=false">取消</el-button>
-    <el-button type="primary" @click="saveSupplier">保存</el-button>
+    <el-button type="primary" @click="__dialogsModule__.saveSupplier(S)">保存</el-button>
   </template>
 </el-dialog>
 
@@ -1156,7 +1156,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
   </el-form>
   <template #footer>
     <el-button @click="dlgPurchase=false">取消</el-button>
-    <el-button type="primary" @click="savePurchase">保存</el-button>
+    <el-button type="primary" @click="__dialogsModule__.savePurchase(S)">保存</el-button>
   </template>
 </el-dialog>
 
@@ -1198,7 +1198,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
   </el-form>
   <template #footer>
     <el-button @click="dlgCategory=false">取消</el-button>
-    <el-button type="primary" @click="saveCategory">保存</el-button>
+    <el-button type="primary" @click="__dialogsModule__.saveCategory(S)">保存</el-button>
   </template>
 </el-dialog>
 
@@ -1227,7 +1227,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
   </el-form>
   <template #footer>
     <el-button @click="dlgProduct=false">取消</el-button>
-    <el-button type="primary" @click="addProduct">保存</el-button>
+    <el-button type="primary" @click="__dialogsModule__.saveProduct(S)">保存</el-button>
   </template>
 </el-dialog>
 
@@ -1844,6 +1844,7 @@ const app = createApp({
 
     return {
       page: (() => { const pg = ref(S.page); watch(() => S.page, v => { if (pg.value !== v) pg.value = v; }); watch(pg, v => { S.page = v; }); return pg; })(),
+      __dialogsModule__: window.__dialogsModule__,
       activeMenuStr: computed(() => S.activeMenu || 'home'),
       pageTitle, switchPage, handleNav,
       currentUser: computed(() => S.currentUser),
