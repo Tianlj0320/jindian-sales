@@ -24,6 +24,12 @@ def is_public_path(path: str) -> bool:
         return True
     if path == "/api/dicts":
         return True
+    if path.startswith("/api/track"):
+        return True  # 客户查进度，无需登录
+    if path.startswith("/api/installer"):
+        return True  # 安装工独立认证
+    if path.startswith("/api/sms"):
+        return True  # 短信发送公开
     return False
 
 class AuthMiddleware(BaseHTTPMiddleware):
