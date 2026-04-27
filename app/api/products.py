@@ -1,5 +1,5 @@
 # app/api/products.py
-from fastapi import APIRouter, Query, Body, Path
+from fastapi import APIRouter, Query, Body, Path, Header
 from app.database import async_session
 from app.models import Supplier, FabricCategory, Product
 from app.schemas import (
@@ -303,7 +303,19 @@ async def create_product(req: dict = Body(...)):
         session.add(product)
         await session.commit()
         await session.refresh(product)
-        return CommonResponse(success=True, data={"id": product.id, "code": product.code})
+
+
+@router.delete("/{product_id}", response_model=CommonResponse)
+async def delete_product(product_id: int, authorization: str = Header(None)):
+    async with async_session() as session:
+        result = await session.execute(select(Product).where(Product.id == product_id))
+        product = result.scalar_one_or_none()
+        if not product:
+            return CommonResponse(success=False, error="产品不存在")
+        await session.delete(product)
+        await session.commit()
+        return CommonResponse(success=True, data={"id": product_id})
+
 
 
 @router.put("/{product_id}", response_model=CommonResponse)
