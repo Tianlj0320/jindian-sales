@@ -1,5 +1,5 @@
 # app/api/warehouse.py
-from fastapi import APIRouter, Query, Body
+from fastapi import APIRouter, Query, Body, Path, Header
 from app.database import async_session
 from app.models import WarehouseRecord, Product
 from app.schemas import CommonResponse
@@ -122,3 +122,19 @@ async def stock_out(req: dict = Body(...)):
 
         await session.commit()
         return CommonResponse(success=True, data={"id": record.id})
+
+
+@router.delete("/records/{record_id}", response_model=CommonResponse)
+async def delete_warehouse_record(
+    record_id: int = Path(...),
+    authorization: str = Header(None),
+):
+    """删除仓库记录"""
+    async with async_session() as session:
+        r = await session.execute(select(WarehouseRecord).where(WarehouseRecord.id == record_id))
+        record = r.scalar_one_or_none()
+        if not record:
+            return CommonResponse(success=False, error="记录不存在")
+        await session.delete(record)
+        await session.commit()
+        return CommonResponse(success=True)
