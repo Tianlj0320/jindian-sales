@@ -126,6 +126,9 @@ window.apiInstall = {
 // ── 财务 ──────────────────────────────────────────────────
 window.apiFinance = {
   summary: () => api('/api/finance/summary'),
+  receive: (payload) => api('/api/finance/receive', 'POST', payload),
+  pay: (payload) => api('/api/finance/pay', 'POST', payload),
+  expense: (payload) => api('/api/finance/expense', 'POST', payload),
 };
 
 // ── 报表 ──────────────────────────────────────────────────

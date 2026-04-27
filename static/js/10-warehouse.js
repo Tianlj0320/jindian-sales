@@ -18,7 +18,7 @@ window.__warehouseModule__ = {
         whMap[name].push({
           recordId: r.id,
           name: r.product_name || r.product_code || '',
-          stock: r.quantity || 0,
+          stock: r.qty || 0,
           unit: r.unit || '米',
           recordType: r.record_type,
         });
