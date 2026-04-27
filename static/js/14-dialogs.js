@@ -214,7 +214,7 @@ window.__dialogsModule__ = {
     try {
       let d;
       if (S.editingPurchase) {
-        d = await api(`/api/purchase-orders/${S.editingPurchase.id}`, 'PUT', payload);
+        d = await api(`/api/purchase-orders/${S.editingPurchase.id}`, 'PATCH', { status: f.status, remark: f.remark || '', expected_date: f.expectedDate });
         const idx = S.purchases.findIndex(p => p.id === S.editingPurchase.id);
         if (idx > -1) S.purchases.splice(idx, 1, { ...S.purchases[idx], ...d });
       } else {
