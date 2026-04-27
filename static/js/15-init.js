@@ -175,6 +175,7 @@ window.__initModule__ = {
   },
 
   async doLogin() {
+    console.log("[doLogin] called, loginLoading=", window.__initModule__?.loginLoading?.value);
     const S = window.__STATE__;
     const M = window.__initModule__;
     const ElMsg = (window.ElementPlus || {}).ElMessage;
