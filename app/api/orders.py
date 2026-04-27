@@ -420,7 +420,7 @@ async def update_order_status(
                         order_no=o.order_no or "",
                         customer_name=o.customer_name or "",
                         customer_phone=o.customer_phone or "",
-                        address=getattr(o, "install_address", "") or o.address or "",
+                        address=o.install_address or "",
                         product_details=o.items or {},
                         measure_summary=str(getattr(o, "measure_data", "") or ""),
                         install_requirements=getattr(o, "install_requires", "") or "",
