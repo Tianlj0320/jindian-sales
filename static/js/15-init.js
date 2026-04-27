@@ -186,12 +186,12 @@ window.__initModule__ = {
       console.error('[doLogin] __initModule__ not ready, loginForm:', M?.loginForm);
       return;
     }
-    if (!M.loginForm.phone) { ElMsg?.warning('请输入手机号'); return; }
-    if (!M.loginForm.password) { ElMsg?.warning('请输入密码'); return; }
+    if (!M.loginForm.value?.phone) { ElMsg?.warning('请输入手机号'); return; }
+    if (!M.loginForm.value?.password) { ElMsg?.warning('请输入密码'); return; }
     try {
       M.loginLoading.value = true;
       console.log('[doLogin] calling API with phone:', M.loginForm.phone);
-      const res = await apiAuth.login(M.loginForm.phone, M.loginForm.password || '');
+      const res = await apiAuth.login(M.loginForm.value?.phone, M.loginForm.value?.password || '');
       console.log('[doLogin] API response:', res);
       const token = res?.token || res?.data?.token;
       console.log('[doLogin] token:', !!token, token ? token.substring(0,20) : 'none');
