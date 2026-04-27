@@ -78,15 +78,16 @@ async def list_orders(
             )
         if year:
             from datetime import date
-            conditions.append(func.date(Order.created_at) >= date(year, 1, 1))
-            conditions.append(func.date(Order.created_at) < date(year + 1, 1, 1))
+            conditions.append(Order.order_date >= f"{year}-01-01")
+            conditions.append(Order.order_date < f"{year+1}-01-01")
         if month and year:
             from datetime import date
-            m_start = date(year, month, 1)
+            m_start = f"{year}-{month:02d}-01"
             import calendar
-            m_end = date(year, month, calendar.monthrange(year, month)[1])
-            conditions.append(func.date(Order.created_at) >= m_start)
-            conditions.append(func.date(Order.created_at) <= m_end)
+            m_end_day = calendar.monthrange(year, month)[1]
+            m_end = f"{year}-{month:02d}-{m_end_day:02d}"
+            conditions.append(Order.order_date >= m_start)
+            conditions.append(Order.order_date <= m_end)
 
         if conditions:
             query = query.where(and_(*conditions))
