@@ -506,7 +506,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
                 <td style="padding:7px 6px;text-align:center">{{row.deliveryDays||row.delivery_days?row.deliveryDays||row.delivery_days+'天':'-'}}</td>
                 <td style="padding:7px 6px;text-align:left">{{row.address||'-'}}</td>
                 <td style="padding:7px 6px;text-align:center">
-                  <el-button size="small" @click="openSupplierDlg(row)">编辑</el-button>
+                  <el-button size="small" @click="_openSupplierDlg(row)">编辑</el-button>
                   <el-button size="small" type="danger" @click="delSupplier(row)">删除</el-button>
                 </td>
               </tr>
@@ -1869,6 +1869,8 @@ const app = createApp({
         get: () => S.suppTypeF,
         set: v => { S.suppTypeF = v; }
       },
+      // Debug: wrapper that always works
+      _openSupplierDlg: (row) => { console.log('[_openSupplierDlg] called, row=', row); __dialogsModule__.openSupplierDlg(row, S); },
       openSupplierDlg: row => __dialogsModule__.openSupplierDlg(row, S),
       saveSupplier: () => __dialogsModule__.saveSupplier(S),
       delSupplier: row => __dialogsModule__.delSupplier(row, S),
