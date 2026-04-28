@@ -56,6 +56,7 @@ window.apiOrders = {
     return api('/api/orders' + (q ? '?' + q : ''));
   },
   create: (payload) => api('/api/orders', 'POST', payload),
+  update: (id, payload) => api(`/api/orders/${id}`, 'PUT', payload),
   updateStatus: (id, new_status_key) =>
     api(`/api/orders/${id}/status`, 'PUT', { new_status_key }),
   delete: (id) => api(`/api/orders/${id}`, 'DELETE'),
@@ -145,4 +146,15 @@ window.apiReports = {
 // ── 码表 ──────────────────────────────────────────────────
 window.apiDicts = {
   list: () => api('/api/dicts'),
+};
+
+// ── 生产反馈 ───────────────────────────────────────────────
+window.apiProductionFeedback = {
+  list: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return api('/api/production-feedback' + (q ? '?' + q : ''));
+  },
+  create: (payload) => api('/api/production-feedback', 'POST', payload),
+  get: (id) => api(`/api/production-feedback/${id}`),
+  update: (id, payload) => api(`/api/production-feedback/${id}`, 'PATCH', payload),
 };

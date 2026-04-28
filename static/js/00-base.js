@@ -208,6 +208,11 @@ window.__STATE__ = Vue.reactive({
     materialsTotal: 0,
   },
 
+  // ── 订单编辑 ──
+  showEditOrder: false,
+  editingOrderId: null,
+  editOrderF: {},
+
   // ── 弹窗状态（dialogs）─────────────────────────
   // 供应商
   dlgSupplier: false,

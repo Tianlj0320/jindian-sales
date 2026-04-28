@@ -604,6 +604,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
                 <span style="font-size:13px">{{selOrder?.status||selOrder?.statusKey||'待确认'}}</span>
               </div>
               <div style="display:flex;gap:8px;align-items:center">
+                <el-button size="small" type="primary" @click="openEditOrderDialog">编辑</el-button>
                 <el-select v-model="selOrder.statusKey" size="small" style="width:120px" @change="updateOrderStatusByKey">
                   <el-option v-for="s in orderStatusAll" :key="s.k" :label="s.v" :value="s.k"/>
                 </el-select>
@@ -1538,6 +1539,212 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
 </div><!-- end overlay -->
 
 
+<!-- 编辑订单弹窗 -->
+<div v-if="isLoggedIn && showEditOrder" style="position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.5);display:flex;flex-direction:column;align-items:center;padding:8px;overflow:hidden">
+  <div style="width:1300px;max-width:98vw;background:#fff;border-radius:10px;display:flex;flex-direction:column;height:calc(100vh - 32px);max-height:none;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.3)">
+    <!-- 标题栏 -->
+    <div style="background:#1a3a5c;padding:12px 20px;border-radius:10px 10px 0 0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+      <span style="color:#fff;font-size:15px;font-weight:bold">编辑订单 — {{editOrderF.orderNo}}</span>
+      <button @click="showEditOrder=false" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0;line-height:1">×</button>
+    </div>
+    <!-- 内容区 -->
+    <div style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px">
+      <!-- 基础信息区 -->
+      <div style="display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;background:#f8f9fc;border-radius:8px;padding:10px 14px">
+        <div style="display:flex;align-items:center;gap:4px">
+          <span style="font-size:12px;color:#606266;width:42px;text-align:right">订单号</span>
+          <input v-model="editOrderF.orderNo" disabled style="background:#f5f7fa;width:110px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:4px;font-size:12px"/>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <span style="color:#f56c6c;font-size:12px">*</span>
+          <input v-model="editOrderF.customerName" placeholder="客户名称" style="width:160px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:4px;font-size:12px"/>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <span style="font-size:12px;color:#606266">类型</span>
+          <select v-model="editOrderF.orderType" style="width:80px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:4px;font-size:12px">
+            <option v-for="d in dictMap.orderType||[]" :key="d.k" :value="d.v">{{d.v}}</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <span style="font-size:12px;color:#606266">来源</span>
+          <select v-model="editOrderF.customerSource" style="width:80px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:4px;font-size:12px">
+            <option v-for="d in dictMap.paymentType||[]" :key="d.k" :value="d.v">{{d.v}}</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <span style="font-size:12px;color:#606266">接单</span>
+          <input type="date" v-model="editOrderF.orderDate" style="width:120px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:4px;font-size:12px"/>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <span style="font-size:12px;color:#606266">交期</span>
+          <input type="date" v-model="editOrderF.deliveryDate" style="width:120px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:4px;font-size:12px"/>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <span style="font-size:12px;color:#606266">安装</span>
+          <input type="date" v-model="editOrderF.installDate" style="width:120px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:4px;font-size:12px"/>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <span style="font-size:12px;color:#606266">提货</span>
+          <select v-model="editOrderF.deliveryMethod" style="width:100px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:4px;font-size:12px">
+            <option v-for="d in dictMap.deliveryMethod||[]" :key="d.k" :value="d.v">{{d.v}}</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <span style="font-size:12px;color:#606266">导购</span>
+          <select v-model="editOrderF.salespersonId" style="width:80px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:4px;font-size:12px">
+            <option v-for="e in employees" :key="e.id" :value="e.id">{{e.name}}</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <span style="font-size:12px;color:#606266">手机</span>
+          <input v-model="editOrderF.customerPhone" placeholder="手机号" style="width:100px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:4px;font-size:12px"/>
+        </div>
+        <div style="flex:1;display:flex;align-items:center;gap:4px;min-width:200px">
+          <span style="font-size:12px;color:#606266;flex-shrink:0">地址</span>
+          <input v-model="editOrderF.installAddress" placeholder="安装地址" style="flex:1;padding:5px 8px;border:1px solid #dcdfe6;border-radius:4px;font-size:12px"/>
+        </div>
+      </div>
+
+      <!-- 主料+辅料 -->
+      <div style="flex:1;display:flex;gap:12px;min-height:0;overflow:hidden">
+        <div style="flex:1;background:#fff;border-radius:8px;padding:12px;display:flex;flex-direction:column;overflow:hidden;border:1px solid #e8e8e8">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:13px;font-weight:bold;color:#1a3a5c">📦 主料明细</span>
+            <button @click="editOrderF.items.push({ productType:'窗帘',itemType:'帷幔',location:'',style:'',productId:null,code:'',model:'',productName:'',size:'',qty:1,discount:1,price:null,amount:null})" style="background:#409eff;color:#fff;border:none;border-radius:4px;padding:4px 12px;font-size:12px;cursor:pointer">+ 添加主料</button>
+          </div>
+          <div style="flex:1;overflow-y:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap">
+              <thead><tr style="background:#f5f7fa">
+                <th style="padding:8px 5px;text-align:center;color:#1a3a5c;font-weight:600;width:60px">位置</th>
+                <th style="padding:8px 5px;text-align:center;color:#1a3a5c;font-weight:600;width:55px">品类</th>
+                <th style="padding:8px 5px;text-align:center;color:#1a3a5c;font-weight:600;width:55px">产品形态</th>
+                <th style="padding:8px 5px;text-align:center;color:#1a3a5c;font-weight:600;width:55px">款式</th>
+                <th style="padding:8px 5px;text-align:left;color:#1a3a5c;font-weight:600;min-width:120px">货号/名称</th>
+                <th style="padding:8px 5px;text-align:center;color:#1a3a5c;font-weight:600;width:70px">尺寸</th>
+                <th style="padding:8px 5px;text-align:center;color:#1a3a5c;font-weight:600;width:50px">幅数</th>
+                <th style="padding:8px 5px;text-align:right;color:#1a3a5c;font-weight:600;width:65px">单价</th>
+                <th style="padding:8px 5px;text-align:center;color:#1a3a5c;font-weight:600;width:55px">折扣</th>
+                <th style="padding:8px 5px;text-align:right;color:#1a3a5c;font-weight:600;width:80px">金额</th>
+                <th style="padding:8px 5px;text-align:center;color:#1a3a5c;font-weight:600;width:30px"></th>
+              </tr></thead>
+              <tbody>
+                <tr v-for="(row,idx) in editOrderF.items" :key="idx" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
+                  <td style="padding:5px 3px;text-align:center">
+                    <select v-model="row.location" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px">
+                      <option v-for="d in dictMap.installPosition||[]" :key="d.k" :value="d.v">{{d.v}}</option>
+                    </select>
+                  </td>
+                  <td style="padding:5px 3px;text-align:center">
+                    <select v-model="row.productType" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px">
+                      <option v-for="d in dictMap.orderType||[]" :key="d.k" :value="d.v">{{d.v}}</option>
+                    </select>
+                  </td>
+                  <td style="padding:5px 3px;text-align:center">
+                    <select v-model="row.itemType" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px">
+                      <option v-for="d in dictMap.productForm||[]" :key="d.k" :value="d.v">{{d.v}}</option>
+                    </select>
+                  </td>
+                  <td style="padding:5px 3px;text-align:center">
+                    <select v-model="row.style" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px">
+                      <option v-for="d in dictMap.process||[]" :key="d.k" :value="d.v">{{d.v}}</option>
+                    </select>
+                  </td>
+                  <td style="padding:5px 3px">
+                    <div style="position:relative">
+                      <input :value="row.productId ? ((products||[]).find(x=>String(x.id)===String(row.productId))||{}).name+' '+((products||[]).find(x=>String(x.id)===String(row.productId))||{}).code : ''" @focus="editItemProdSearch[idx]='';editItemProdDropdown[idx]=true" @input="editItemProdSearch[idx]=$event.target.value;editItemProdDropdown[idx]=true" @blur="setTimeout(()=>editItemProdDropdown[idx]=false,200)" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px" placeholder="搜索货号/名称"/>
+                      <div v-if="editItemProdDropdown[idx]" style="position:absolute;top:100%;left:0;z-index:999;background:#fff;border:1px solid #dcdfe6;border-radius:4px;width:200px;max-height:180px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
+                        <div v-for="p in filteredEditItemProducts(idx)" :key="p.id" @mousedown="selectEditItemProduct(idx,p)" style="padding:7px 9px;cursor:pointer;font-size:12px;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">{{p.name}} <span style="color:#999">({{p.code}})</span></div>
+                        <div v-if="filteredEditItemProducts(idx).length===0" style="padding:8px;color:#999;font-size:12px;text-align:center">无匹配产品</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td style="padding:5px 3px;text-align:center">
+                    <input v-model="row.size" placeholder="2.3×2.5" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px;text-align:center"/>
+                  </td>
+                  <td style="padding:5px 3px;text-align:center">
+                    <input type="number" v-model.number="row.qty" min="1" @change="calcEditItem(row)" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px;text-align:center"/>
+                  </td>
+                  <td style="padding:5px 3px;text-align:right;color:#666">{{row.price?'¥'+row.price:''}}</td>
+                  <td style="padding:5px 3px;text-align:center">
+                    <input type="number" v-model.number="row.discount" min="0.1" max="1" step="0.05" @change="calcEditItem(row)" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px;text-align:center"/>
+                  </td>
+                  <td style="padding:5px 3px;text-align:right;font-weight:bold;color:#1a3a5c">{{row.amount?'¥'+row.amount.toLocaleString():''}}</td>
+                  <td style="padding:5px 3px;text-align:center">
+                    <button @click="editOrderF.items.splice(idx,1);calcEditTotals()" style="background:none;border:none;color:#f56c6c;font-size:16px;cursor:pointer;padding:0">×</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="margin-top:6px;font-size:12px;color:#666;text-align:right">主料合计：<b style="color:#1a3a5c">¥{{editOrderF.itemsTotal||0}}</b></div>
+        </div>
+        <!-- 辅料 -->
+        <div style="flex:0.7;background:#fff;border-radius:8px;padding:12px;display:flex;flex-direction:column;overflow:hidden;border:1px solid #e8e8e8">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:13px;font-weight:bold;color:#1a3a5c">🔩 辅料明细</span>
+            <button @click="editOrderF.materials.push({itemType:'电动轨',productId:null,code:'',name:'',model:'',qty:1,unit:'米',price:null,amount:null,remark:''})" style="background:#67c23a;color:#fff;border:none;border-radius:4px;padding:4px 12px;font-size:12px;cursor:pointer">+ 添加辅料</button>
+          </div>
+          <div style="flex:1;overflow-y:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap">
+              <thead><tr style="background:#f5f7fa">
+                <th style="padding:8px 5px;text-align:center;color:#1a3a5c;font-weight:600;width:80px">产品形态</th>
+                <th style="padding:8px 5px;text-align:left;color:#1a3a5c;font-weight:600;min-width:100px">货号/名称</th>
+                <th style="padding:8px 5px;text-align:center;color:#1a3a5c;font-weight:600;width:55px">型号</th>
+                <th style="padding:8px 5px;text-align:center;color:#1a3a5c;font-weight:600;width:50px">数量</th>
+                <th style="padding:8px 5px;text-align:right;color:#1a3a5c;font-weight:600;width:60px">单价</th>
+                <th style="padding:8px 5px;text-align:right;color:#1a3a5c;font-weight:600;width:70px">金额</th>
+                <th style="padding:8px 5px;text-align:center;color:#1a3a5c;font-weight:600;width:28px"></th>
+              </tr></thead>
+              <tbody>
+                <tr v-for="(row,idx) in editOrderF.materials" :key="idx" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
+                  <td style="padding:5px 3px;text-align:center">
+                    <select v-model="row.itemType" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px">
+                      <option v-for="d in dictMap.productForm||[]" :key="d.k" :value="d.v">{{d.v}}</option>
+                    </select>
+                  </td>
+                  <td style="padding:5px 3px;text-align:center">
+                    <input v-model="row.name" placeholder="名称" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px"/>
+                  </td>
+                  <td style="padding:5px 3px;text-align:center">
+                    <input v-model="row.model" placeholder="型号" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px;text-align:center"/>
+                  </td>
+                  <td style="padding:5px 3px;text-align:center">
+                    <input type="number" v-model.number="row.qty" min="0.1" @change="calcEditMaterial(row)" style="width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:3px;font-size:12px;text-align:center"/>
+                  </td>
+                  <td style="padding:5px 3px;text-align:right;color:#666">{{row.price?'¥'+row.price:''}}</td>
+                  <td style="padding:5px 3px;text-align:right;font-weight:bold;color:#67c23a">{{row.amount?'¥'+row.amount.toLocaleString():''}}</td>
+                  <td style="padding:5px 3px;text-align:center">
+                    <button @click="editOrderF.materials.splice(idx,1);calcEditTotals()" style="background:none;border:none;color:#f56c6c;font-size:16px;cursor:pointer;padding:0">×</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="margin-top:6px;font-size:12px;color:#666;text-align:right">辅料合计：<b style="color:#67c23a">¥{{editOrderF.materialsTotal||0}}</b></div>
+        </div>
+      </div>
+
+      <!-- 金额汇总 -->
+      <div style="background:#1a3a5c;border-radius:8px;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+        <div style="display:flex;gap:24px">
+          <div style="text-align:center"><div style="font-size:10px;color:#8ab4d8">标价合计</div><div style="font-size:14px;font-weight:bold;color:#fff">¥{{editOrderF.quoteAmount||0}}</div></div>
+        </div>
+        <div style="display:flex;gap:20px;align-items:center">
+          <div style="text-align:center;color:#ff9a9a"><div style="font-size:10px;color:#8ab4d8">优惠</div><input type="number" v-model.number="editOrderF.discountAmount" min="0" @change="calcEditTotals" style="width:80px;padding:4px 6px;border:1px solid #dcdfe6;border-radius:4px;font-size:12px;text-align:center"/></div>
+          <div style="text-align:center"><div style="font-size:11px;color:#ffd700">抹零</div><input type="number" v-model.number="editOrderF.roundAmount" min="0" @change="calcEditTotals" style="width:70px;padding:4px 6px;border:1px solid #dcdfe6;border-radius:4px;font-size:12px;text-align:center"/></div>
+          <div style="text-align:center"><div style="font-size:11px;color:#ffd700">应收总额</div><div style="font-size:22px;font-weight:bold;color:#ffd700">¥{{editOrderF.amount||0}}</div></div>
+          <div style="text-align:center"><div style="font-size:11px;color:#8ab4d8">已收定金</div><input type="number" v-model.number="editOrderF.received" min="0" style="width:90px;padding:4px 6px;border:1px solid #dcdfe6;border-radius:4px;font-size:12px;text-align:center"/></div>
+          <div style="display:flex;gap:8px">
+            <button @click="showEditOrder=false" style="background:#fff;color:#666;border:none;border-radius:6px;padding:8px 20px;font-size:13px;cursor:pointer">取消</button>
+            <button @click="saveEditOrder" style="background:#409eff;color:#fff;border:none;border-radius:6px;padding:8px 24px;font-size:13px;font-weight:bold;cursor:pointer">保存修改</button>
+          </div>
+        </div>
+      </div>
+    </div><!-- end 内容区 -->
+  </div><!-- end dialog -->
+</div><!-- end overlay -->
+
+
 
 <!-- Login Dialog -->
 <el-dialog v-model="showLogin" title="员工登录" width="360px" center>
@@ -1833,6 +2040,49 @@ const app = createApp({
     const calcTotals = () => __orderFormModule__.calcTotals(S);
     const saveNewOrder = () => __orderFormModule__.saveNewOrder(S);
 
+    // ── 订单编辑 ──────────────────────────────────────────────
+    const editItemProdSearch = ref({});
+    const editItemProdDropdown = ref({});
+    const filteredEditItemProducts = idx => {
+      const kw = (editItemProdSearch.value[idx] || '').toLowerCase().trim();
+      const prods = (S.products || []).filter(p => p.type === '窗帘' || p.type === '面料');
+      if (!kw) return prods.slice(0, 30);
+      return prods.filter(p =>
+        (p.name||'').toLowerCase().includes(kw) || (p.code||'').toLowerCase().includes(kw) || (p.model||'').toLowerCase().includes(kw)
+      ).slice(0, 30);
+    };
+    const selectEditItemProduct = (idx, p) => {
+      const row = S.editOrderF.items[idx];
+      if (!row) return;
+      row.productId = p.id;
+      row.productName = p.name || '';
+      row.code = p.code || '';
+      row.model = p.model || '';
+      row.price = p.unit_price || 0;
+      if (row.price && row.qty) {
+        row.amount = Math.round(row.price * row.qty * (row.discount || 1) * 100) / 100;
+      }
+      editItemProdSearch.value[idx] = '';
+      editItemProdDropdown.value[idx] = false;
+      __orderFormModule__.calcEditItem(row, S);
+      __orderFormModule__.calcEditTotals(S);
+    };
+    const calcEditItem = (row, S2) => {
+      if (row && row.price && row.qty) {
+        row.amount = Math.round(row.price * row.qty * (row.discount || 1) * 100) / 100;
+      }
+      __orderFormModule__.calcEditTotals(S);
+    };
+    const calcEditMaterial = (row) => {
+      if (row && row.price && row.qty) {
+        row.amount = Math.round(row.price * row.qty * 100) / 100;
+      }
+      __orderFormModule__.calcEditTotals(S);
+    };
+    const calcEditTotals = () => __orderFormModule__.calcEditTotals(S);
+    const openEditOrderDialog = () => __orderFormModule__.openEditOrder(S, S.selOrder);
+    const saveEditOrder = () => __orderFormModule__.saveEditOrder(S);
+
     const loadProduction = () => {
       api('/api/orders?page=1&page_size=100').then(d => {
         S.productionOrders = ((d.items||[])).map(o => ({
@@ -2019,6 +2269,12 @@ const app = createApp({
       matCategories,
       addOrderItem, addOrderMaterial,
       calcItem, calcMaterial, calcTotals, saveNewOrder,
+      // 订单编辑
+      editOrderF: computed(() => S.editOrderF),
+      showEditOrder,
+      openEditOrderDialog, saveEditOrder,
+      editItemProdSearch, editItemProdDropdown, filteredEditItemProducts, selectEditItemProduct,
+      calcEditItem, calcEditMaterial, calcEditTotals,
     };
   }
 });
