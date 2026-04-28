@@ -214,6 +214,12 @@ window.__STATE__ = Vue.reactive({
   editOrderF: {},
   // ── 批量派工 ──
   selectedInstallOrders: [],
+  // ── 生产反馈 ──
+  prodFeedbacks: [],
+  fbSearch: '',
+  dlgFb: false,
+  editingFb: null,
+  fbForm: { orderNo: '', customerName: '', feedbackType: '', description: '', feedbackBy: '' },
 
   // ── 弹窗状态（dialogs）─────────────────────────
   // 供应商

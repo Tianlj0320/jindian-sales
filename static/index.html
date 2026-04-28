@@ -182,6 +182,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
       <el-menu-item index="purchase"><el-icon><box/></el-icon>&nbsp;采购管理</el-menu-item>
       <el-menu-item index="warehouse"><el-icon><box/></el-icon>&nbsp;仓库管理</el-menu-item>
       <el-menu-item index="production"><el-icon><setting/></el-icon>&nbsp;生产管理</el-menu-item>
+      <el-menu-item index="prod-feedback"><el-icon><chat-dot-round/></el-icon>&nbsp;生产反馈</el-menu-item>
       <el-menu-item index="install"><el-icon><tools/></el-icon>&nbsp;安装管理</el-menu-item>
       <el-menu-item index="finance"><el-icon><money/></el-icon>&nbsp;财务结算</el-menu-item>
       <el-menu-item index="report"><el-icon><data-analysis/></el-icon>&nbsp;统计报表</el-menu-item>
@@ -207,6 +208,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
       <el-menu-item index="purchase"><el-icon><box/></el-icon>&nbsp;采购管理</el-menu-item>
       <el-menu-item index="warehouse"><el-icon><box/></el-icon>&nbsp;仓库管理</el-menu-item>
       <el-menu-item index="production"><el-icon><setting/></el-icon>&nbsp;生产管理</el-menu-item>
+      <el-menu-item index="prod-feedback"><el-icon><chat-dot-round/></el-icon>&nbsp;生产反馈</el-menu-item>
       <el-menu-item index="install"><el-icon><tools/></el-icon>&nbsp;安装管理</el-menu-item>
       <el-menu-item index="finance"><el-icon><money/></el-icon>&nbsp;财务结算</el-menu-item>
       <el-menu-item index="report"><el-icon><data-analysis/></el-icon>&nbsp;统计报表</el-menu-item>
@@ -885,6 +887,91 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
           </table>
         </div>
       </div>
+
+      <!-- ============ 生产反馈 ============ -->
+      <div v-if="page==='prod-feedback'">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <div class="page-title">生产反馈</div>
+          <div style="display:flex;gap:8px">
+            <el-input v-model="fbSearch" placeholder="搜索订单/客户" size="small" style="width:180px" clearable/>
+            <el-button size="small" type="primary" @click="openNewFb">+ 新增反馈</el-button>
+            <el-button size="small" @click="loadFb">刷新</el-button>
+          </div>
+        </div>
+        <div class="card" style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap">
+            <thead><tr style="background:#f5f7fa">
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">订单号</th>
+              <th style="padding:8px 6px;text-align:left;color:#1a3a5c;font-weight:600">客户</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">问题类型</th>
+              <th style="padding:8px 6px;text-align:left;color:#1a3a5c;font-weight:600">描述</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">反馈人</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">反馈时间</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">状态</th>
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">操作</th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="row in filteredFb" :key="row.id" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
+                <td style="padding:7px 6px;text-align:center">{{row.orderNo||'-'}}</td>
+                <td style="padding:7px 6px;text-align:left">{{row.customerName||'-'}}</td>
+                <td style="padding:7px 6px;text-align:center"><span class="num-tag" :class="row.feedbackType==='质量问题'?'num-red':row.feedbackType==='进度问题'?'num-orange':'num-gray'">{{row.feedbackType||'-'}}</span></td>
+                <td style="padding:7px 6px;text-align:left;color:#666;font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis">{{row.description||'-'}}</td>
+                <td style="padding:7px 6px;text-align:center">{{row.feedbackBy||'-'}}</td>
+                <td style="padding:7px 6px;text-align:center;font-size:12px">{{row.createdAt?(row.createdAt.slice(0,16)):''}}</td>
+                <td style="padding:7px 6px;text-align:center"><span class="num-tag" :class="row.status==='已处理'?'num-green':'num-gray'">{{row.status||'待处理'}}</span></td>
+                <td style="padding:7px 6px;text-align:center">
+                  <el-button size="small" @click="openViewFb(row)">查看</el-button>
+                  <el-button size="small" type="success" v-if="row.status!=='已处理'" @click="resolveFb(row)">处理</el-button>
+                </td>
+              </tr>
+              <tr v-if="!filteredFb||filteredFb.length===0">
+                <td colspan="8" style="padding:20px;text-align:center;color:#ccc">暂无生产反馈记录</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 新增/查看反馈弹窗 -->
+      <el-dialog v-model="dlgFb" :title="editingFb?'查看反馈':'新增反馈'" width="500px">
+        <div v-if="editingFb" style="font-size:13px;line-height:1.8">
+          <div style="background:#f5f7fa;padding:12px;border-radius:6px;margin-bottom:10px">
+            <div><b>订单号：</b>{{editingFb.orderNo||'-'}}</div>
+            <div><b>客户：</b>{{editingFb.customerName||'-'}}</div>
+            <div><b>问题类型：</b>{{editingFb.feedbackType||'-'}}</div>
+            <div><b>反馈人：</b>{{editingFb.feedbackBy||'-'}}</div>
+            <div><b>时间：</b>{{editingFb.createdAt?(editingFb.createdAt.slice(0,16)):''}}</div>
+            <div><b>状态：</b>{{editingFb.status||'待处理'}}</div>
+          </div>
+          <div style="margin-top:10px"><b>描述：</b><p style="margin:6px 0;background:#fff8f0;padding:10px;border-radius:4px;border:1px solid #f0e0c0">{{editingFb.description||'-'}}</p></div>
+          <div v-if="editingFb.response"><b>处理结果：</b><p style="margin:6px 0;background:#f0f9f0;padding:10px;border-radius:4px;border:1px solid #c0e0c0">{{editingFb.response}}</p></div>
+        </div>
+        <el-form v-else label-position="top" style="font-size:13px">
+          <el-form-item label="订单号" required>
+            <el-input v-model="fbForm.orderNo" placeholder="请输入订单号" clearable/>
+          </el-form-item>
+          <el-form-item label="客户名称">
+            <el-input v-model="fbForm.customerName" placeholder="请输入客户名称" clearable/>
+          </el-form-item>
+          <el-form-item label="问题类型" required>
+            <el-select v-model="fbForm.feedbackType" placeholder="请选择问题类型" style="width:100%">
+              <el-option label="质量问题" value="质量问题"/>
+              <el-option label="进度问题" value="进度问题"/>
+              <el-option label="其他" value="其他"/>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="问题描述" required>
+            <el-input v-model="fbForm.description" type="textarea" :rows="3" placeholder="请详细描述问题"/>
+          </el-form-item>
+          <el-form-item label="反馈人">
+            <el-input v-model="fbForm.feedbackBy" placeholder="请输入反馈人姓名"/>
+          </el-form-item>
+        </el-form>
+        <template #footer v-if="!editingFb">
+          <el-button @click="dlgFb=false">取消</el-button>
+          <el-button type="primary" @click="saveFb">提交反馈</el-button>
+        </template>
+      </el-dialog>
 
       <!-- ============ 安装管理 ============ -->
       <div v-if="page==='install'">
@@ -2136,6 +2223,70 @@ const app = createApp({
       }).catch(() => {});
     };
 
+    // ── 生产反馈 ─────────────────────────────────────────────
+    const loadFb = () => {
+      apiProductionFeedback.list().then(d => {
+        S.prodFeedbacks = (d.items || d || []).map(f => ({
+          id: f.id, orderNo: f.order_no || '', customerName: f.customer_name || '',
+          feedbackType: f.feedback_type || f.problem_type || '',
+          description: f.description || '',
+          feedbackBy: f.feedback_by || '',
+          status: f.status || '待处理',
+          response: f.response || '',
+          createdAt: f.created_at || '',
+        }));
+      }).catch(() => {});
+    };
+    const openNewFb = () => {
+      S.editingFb = null;
+      S.fbForm = { orderNo: '', customerName: '', feedbackType: '', description: '', feedbackBy: S.currentUser?.name || '' };
+      S.dlgFb = true;
+    };
+    const openViewFb = (row) => {
+      S.editingFb = row;
+      S.dlgFb = true;
+    };
+    const saveFb = async () => {
+      const f = S.fbForm;
+      if (!f.orderNo) { ElementPlus.ElMessage.warning('请输入订单号'); return; }
+      if (!f.feedbackType) { ElementPlus.ElMessage.warning('请选择问题类型'); return; }
+      if (!f.description) { ElementPlus.ElMessage.warning('请输入问题描述'); return; }
+      try {
+        await apiProductionFeedback.create({
+          order_no: f.orderNo,
+          customer_name: f.customerName || '',
+          feedback_type: f.feedbackType,
+          description: f.description,
+          feedback_by: f.feedbackBy || '',
+        });
+        S.dlgFb = false;
+        ElementPlus.ElMessage.success('反馈已提交');
+        loadFb();
+      } catch(e) {
+        ElementPlus.ElMessage.error('提交失败：' + (e.message || ''));
+      }
+    };
+    const resolveFb = async (row) => {
+      try {
+        await apiProductionFeedback.update(row.id, { status: '已处理', response: '已处理' });
+        row.status = '已处理';
+        row.response = '已处理';
+        ElementPlus.ElMessage.success('已标记为处理');
+      } catch(e) {
+        ElementPlus.ElMessage.error('操作失败');
+      }
+    };
+    const filteredFb = computed(() => {
+      const kw = (S.fbSearch || '').toLowerCase();
+      let list = S.prodFeedbacks || [];
+      if (kw) list = list.filter(f =>
+        (f.orderNo||'').toLowerCase().includes(kw) ||
+        (f.customerName||'').toLowerCase().includes(kw) ||
+        (f.description||'').toLowerCase().includes(kw)
+      );
+      return list;
+    });
+
     return {
       page: (() => { const pg = ref(S.page); watch(() => S.page, v => { if (pg.value !== v) pg.value = v; }); watch(pg, v => { S.page = v; }); return pg; })(),
       __dialogsModule__: window.__dialogsModule__,
@@ -2327,6 +2478,18 @@ const app = createApp({
         else ElementPlus.ElMessage.error('派工失败');
       },
       confirmInstall: row => __installModule__.confirmInstall(row),
+      // 生产反馈
+      prodFeedbacks: computed(() => S.prodFeedbacks),
+      filteredFb,
+      fbSearch: { get: () => S.fbSearch, set: v => { S.fbSearch = v; } },
+      dlgFb,
+      editingFb: computed(() => S.editingFb),
+      fbForm: computed(() => S.fbForm),
+      loadFb,
+      openNewFb,
+      openViewFb,
+      saveFb,
+      resolveFb,
       financeData: computed(() => S.financeData),
       costBreakdown,
       salesTrend: computed(() => S.salesTrend),
