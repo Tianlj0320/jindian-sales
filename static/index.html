@@ -896,11 +896,15 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <el-option label="待分配" value="待分配"/><el-option label="已分配" value="已分配"/><el-option label="已安装" value="已安装"/><el-option label="已验收" value="已验收"/>
             </el-select>
             <el-button size="small" @click="loadInstallOrders">刷新</el-button>
+            <el-button size="small" type="warning" @click="openBatchAssignDlg" :disabled="selectedInstallOrders.length===0">批量派工({{selectedInstallOrders.length}})</el-button>
           </div>
         </div>
         <div class="card" style="overflow-x:auto">
           <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap">
             <thead><tr style="background:#f5f7fa">
+              <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600;width:40px">
+                <input type="checkbox" @change="toggleAllInstallOrders" :checked="selectedInstallOrders.length===filteredInstall.length && filteredInstall.length>0" style="cursor:pointer"/>
+              </th>
               <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">安装单号</th>
               <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">订单ID</th>
               <th style="padding:8px 6px;text-align:left;color:#1a3a5c;font-weight:600">客户</th>
@@ -911,7 +915,11 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">操作</th>
             </tr></thead>
             <tbody>
-              <tr v-for="row in filteredInstall" :key="row.id" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
+              <tr v-for="row in filteredInstall" :key="row.id" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''"
+                :style="{background: selectedInstallOrders.includes(row.id)?'#ecf5ff':''}">
+                <td style="padding:7px 6px;text-align:center">
+                  <input type="checkbox" :checked="selectedInstallOrders.includes(row.id)" @change="toggleInstallOrder(row.id)" style="cursor:pointer"/>
+                </td>
                 <td style="padding:7px 6px;text-align:center">{{row.insNo}}</td>
                 <td style="padding:7px 6px;text-align:center">{{row.orderId||'-'}}</td>
                 <td style="padding:7px 6px;text-align:left">{{row.customerName||'-'}}</td>
@@ -925,7 +933,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
                 </td>
               </tr>
               <tr v-if="!filteredInstall||filteredInstall.length===0">
-                <td colspan="8" style="padding:20px;text-align:center;color:#ccc">暂无安装记录</td>
+                <td colspan="9" style="padding:20px;text-align:center;color:#ccc">暂无安装记录</td>
               </tr>
             </tbody>
           </table>
@@ -944,6 +952,21 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
         <template #footer>
           <el-button @click="dlgAssignInstaller=false">取消</el-button>
           <el-button type="primary" @click="doAssignInstaller">确认分配</el-button>
+        </template>
+      </el-dialog>
+
+      <el-dialog v-model="dlgBatchAssign" title="批量派工" width="380px">
+        <p style="margin:0 0 12px;font-size:13px;color:#666">已选择 <b>{{selectedInstallOrders.length}}</b> 条待分配安装单</p>
+        <el-form label-position="top">
+          <el-form-item label="选择安装工">
+            <el-select v-model="batchInstallerId" placeholder="请选择安装工" style="width:100%">
+              <el-option v-for="inst in installers" :key="inst.id" :label="inst.name + ' (' + inst.phone + ')'" :value="inst.id"/>
+            </el-select>
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="dlgBatchAssign=false">取消</el-button>
+          <el-button type="warning" @click="doBatchAssign">确认批量派工</el-button>
         </template>
       </el-dialog>
 
@@ -1813,7 +1836,9 @@ const app = createApp({
       }
     };
     const dlgAssignInstaller = ref(false);
+    const dlgBatchAssign = ref(false);
     const assigningOrder = ref(null);
+    const batchInstallerId = ref('');
     const assignInstallerId = ref('');
 
     // ── 新建订单表单相关 ────────────────────────────────────────
@@ -2247,6 +2272,59 @@ const app = createApp({
           row.status = '已验收';
           ElementPlus.ElMessage.success('已验收');
         } catch(e) { ElementPlus.ElMessage.error('验收失败'); }
+      },
+      selectedInstallOrders: computed({
+        get: () => S.selectedInstallOrders,
+        set: v => { S.selectedInstallOrders = v; }
+      }),
+      batchInstallerId,
+      dlgBatchAssign,
+      toggleInstallOrder: id => {
+        const arr = S.selectedInstallOrders;
+        const idx = arr.indexOf(id);
+        if (idx > -1) arr.splice(idx, 1);
+        else arr.push(id);
+      },
+      toggleAllInstallOrders: () => {
+        if (S.selectedInstallOrders.length === filteredInstall.value.length) {
+          S.selectedInstallOrders = [];
+        } else {
+          S.selectedInstallOrders = filteredInstall.value.map(r => r.id);
+        }
+      },
+      openBatchAssignDlg: () => {
+        if (S.selectedInstallOrders.length === 0) {
+          ElementPlus.ElMessage.warning('请先勾选安装单');
+          return;
+        }
+        batchInstallerId.value = '';
+        dlgBatchAssign.value = true;
+      },
+      doBatchAssign: async () => {
+        const instId = batchInstallerId.value;
+        if (!instId) { ElementPlus.ElMessage.warning('请选择安装工'); return; }
+        const inst = (S.installers || []).find(i => String(i.id) === String(instId));
+        const ids = [...S.selectedInstallOrders];
+        let ok = 0, fail = 0;
+        for (const id of ids) {
+          const row = (S.installOrders || []).find(r => r.id === id);
+          if (!row || row.status !== '待分配') { fail++; continue; }
+          try {
+            await api(`/api/installation-orders/${id}`, 'PATCH', {
+              installer_id: Number(instId),
+              installer_name: inst?.name || '',
+              status: '已分配',
+            });
+            row.installerId = Number(instId);
+            row.installerName = inst?.name || '';
+            row.status = '已分配';
+            ok++;
+          } catch(e) { fail++; }
+        }
+        S.selectedInstallOrders = [];
+        dlgBatchAssign.value = false;
+        if (ok > 0) ElementPlus.ElMessage.success(`成功派工 ${ok} 条${fail > 0 ? '，失败 ' + fail + ' 条' : ''}`);
+        else ElementPlus.ElMessage.error('派工失败');
       },
       confirmInstall: row => __installModule__.confirmInstall(row),
       financeData: computed(() => S.financeData),

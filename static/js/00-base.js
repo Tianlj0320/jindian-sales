@@ -212,6 +212,8 @@ window.__STATE__ = Vue.reactive({
   showEditOrder: false,
   editingOrderId: null,
   editOrderF: {},
+  // ── 批量派工 ──
+  selectedInstallOrders: [],
 
   // ── 弹窗状态（dialogs）─────────────────────────
   // 供应商
