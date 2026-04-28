@@ -6,6 +6,7 @@
 window.__dialogsModule__ = {
   // ── 供应商 ─────────────────────────────────────────────
   openSupplierDlg(row, S) {
+    if (!S) { console.error('[openSupplierDlg] ERROR: S is', S, 'row=', row); console.trace(); return; }
     S.editingSupplier = row ? { ...row } : null;
     S.sForm = row
       ? { code: row.code || '', name: row.name || '', type: row.type || '布艺',

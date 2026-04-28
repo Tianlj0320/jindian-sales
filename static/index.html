@@ -474,7 +474,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
           <div class="page-title" style="margin:0">供应商管理</div>
           <div style="display:flex;gap:8px;align-items:center">
-            <el-button type="primary" size="small" @click="__dialogsModule__.openSupplierDlg(null, S)">+ 新建供应商</el-button>
+            <el-button type="primary" size="small" @click="openSupplierDlgWrapper(null)">+ 新建供应商</el-button>
             <el-input v-model="suppSearch" placeholder="搜索名称/编号/联系人" size="small" style="width:180px" clearable>
               <template #prefix><el-icon><search/></el-icon></template>
             </el-input>
@@ -506,8 +506,8 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
                 <td style="padding:7px 6px;text-align:center">{{row.deliveryDays||row.delivery_days?row.deliveryDays||row.delivery_days+'天':'-'}}</td>
                 <td style="padding:7px 6px;text-align:left">{{row.address||'-'}}</td>
                 <td style="padding:7px 6px;text-align:center">
-                  <el-button size="small" @click="__dialogsModule__.openSupplierDlg(row, S)">编辑</el-button>
-                  <el-button size="small" type="danger" @click="__dialogsModule__.delSupplier(row, S)">删除</el-button>
+                  <el-button size="small" @click="openSupplierDlgWrapper(row)">编辑</el-button>
+                  <el-button size="small" type="danger" @click="delSupplier(row)">删除</el-button>
                 </td>
               </tr>
               <tr v-if="!filteredSuppliers||filteredSuppliers.length===0">
