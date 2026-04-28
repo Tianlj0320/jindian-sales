@@ -605,6 +605,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               </div>
               <div style="display:flex;gap:8px;align-items:center">
                 <el-button size="small" type="primary" @click="openEditOrderDialog">编辑</el-button>
+                <el-button size="small" type="warning" @click="doSplitOrder" :disabled="selOrder.statusKey!=='confirmed'">拆分采购</el-button>
                 <el-select v-model="selOrder.statusKey" size="small" style="width:120px" @change="updateOrderStatusByKey">
                   <el-option v-for="s in orderStatusAll" :key="s.k" :label="s.v" :value="s.k"/>
                 </el-select>
@@ -1793,6 +1794,24 @@ const app = createApp({
     const loginForm = ref({ phone: '', password: '' });
     const showLogin = ref(false);
     const showNewOrder = ref(false);
+    const doSplitOrder = async () => {
+      const o = S.selOrder;
+      if (!o?.id) return;
+      if (o.statusKey !== 'confirmed') {
+        ElementPlus.ElMessage.warning('只有已确认的订单才能拆分采购');
+        return;
+      }
+      if (!confirm(`确定要拆分订单「${o.orderNo}」的采购吗？`)) return;
+      try {
+        await api(`/api/purchase-orders/split/${o.id}`, 'POST', {});
+        ElementPlus.ElMessage.success('采购单已按供应商分组生成');
+        o.statusKey = 'split';
+        o.status = '已拆分';
+        __purchaseModule__.loadPurchases();
+      } catch(e) {
+        ElementPlus.ElMessage.error('拆分失败：' + (e.message || ''));
+      }
+    };
     const dlgAssignInstaller = ref(false);
     const assigningOrder = ref(null);
     const assignInstallerId = ref('');
@@ -2183,6 +2202,7 @@ const app = createApp({
       selectOrder: o => __ordersModule__.selectOrder(o),
       updateOrderStatusByKey: () => __ordersModule__.updateOrderStatusByKey(),
       delOrder: () => __ordersModule__.delOrder(),
+      doSplitOrder,
       showNewOrder,
       purchases: computed(() => S.purchases),
       filteredPurchase,
