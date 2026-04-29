@@ -159,3 +159,18 @@ async def delete_warehouse_record(
         await session.delete(record)
         await session.commit()
         return success_response()
+
+
+@router.put("/records/{record_id}", response_model=CommonResponse)
+async def update_warehouse_record(record_id: int, req: dict = Body(...)):
+    """更新仓库记录"""
+    async with async_session() as session:
+        r = await session.execute(select(WarehouseRecord).where(WarehouseRecord.id == record_id))
+        record = r.scalar_one_or_none()
+        if not record:
+            return error_response(error="记录不存在")
+        for field in ["product_name", "qty", "unit", "remark", "operator"]:
+            if field in req:
+                setattr(record, field, req[field])
+        await session.commit()
+        return success_response(data={"id": record_id})
