@@ -1,10 +1,12 @@
 # app/api/dashboard.py
-from fastapi import APIRouter
-from app.database import async_session
-from app.models import Order, Customer
-from app.schemas import DashboardResponse, DashboardData
-from sqlalchemy import select, func, and_
 from datetime import date, timedelta
+
+from fastapi import APIRouter
+from sqlalchemy import and_, func, select
+
+from app.database import async_session
+from app.models import Customer, Order
+from app.schemas import DashboardData, DashboardResponse
 
 router = APIRouter(prefix="/api/dashboard", tags=["首页统计"])
 
@@ -17,7 +19,9 @@ async def get_dashboard():
         month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
 
         # 今日新增订单
-        r = await session.execute(select(func.count(Order.id)).where(func.date(Order.created_at) == today))
+        r = await session.execute(
+            select(func.count(Order.id)).where(func.date(Order.created_at) == today)
+        )
         today_orders = r.scalar() or 0
 
         # 本月销售额
@@ -26,7 +30,7 @@ async def get_dashboard():
                 and_(
                     Order.status_key.notin_(["cancelled", "created"]),
                     func.date(Order.created_at) >= month_start,
-                    func.date(Order.created_at) <= month_end
+                    func.date(Order.created_at) <= month_end,
                 )
             )
         )
@@ -41,7 +45,7 @@ async def get_dashboard():
             select(func.count(Order.id)).where(
                 and_(
                     Order.status_key.notin_(["completed", "installed", "cancelled"]),
-                    Order.delivery_date < str(today)
+                    Order.delivery_date < str(today),
                 )
             )
         )
@@ -61,11 +65,14 @@ async def get_dashboard():
 
         await session.commit()
 
-        return DashboardResponse(success=True, data=DashboardData(
-            today_orders=today_orders,
-            month_sales=float(month_sales),
-            pending_install=pending_install,
-            overdue_orders=overdue_orders,
-            pending_payment=pending_payment,
-            total_customers=total_customers
-        ))
+        return DashboardResponse(
+            success=True,
+            data=DashboardData(
+                today_orders=today_orders,
+                month_sales=float(month_sales),
+                pending_install=pending_install,
+                overdue_orders=overdue_orders,
+                pending_payment=pending_payment,
+                total_customers=total_customers,
+            ),
+        )

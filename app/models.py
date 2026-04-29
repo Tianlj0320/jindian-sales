@@ -1,12 +1,25 @@
 # app/models.py
-from sqlalchemy import Column, Integer, String, Boolean, Date, DateTime, Text, ForeignKey, DECIMAL, JSON
+from datetime import datetime
+
+from sqlalchemy import (
+    DECIMAL,
+    JSON,
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from datetime import datetime
 
 Base = declarative_base()
 
 # ─── 现有表（V2.1已有，此处简化建模） ─────────────────────────────────────────
+
 
 class Order(Base):
     __tablename__ = "orders"
@@ -39,8 +52,8 @@ class Order(Base):
     install_address = Column(String(300), nullable=True)
     install_date = Column(Date, nullable=True)
     install_time_slot = Column(String(20), nullable=True)
-    measure_data = Column(JSON)        # V3.0 测量数据 JSON
-    install_requires = Column(Text)    # V3.0 安装特殊要求
+    measure_data = Column(JSON)  # V3.0 测量数据 JSON
+    install_requires = Column(Text)  # V3.0 安装特殊要求
 
     created_at = Column(DateTime, default=datetime.now)
 
@@ -78,7 +91,7 @@ class Product(Base):
     unit_price = Column(DECIMAL(10, 2))
     unit = Column(String(10), default="米")
     stock = Column(Integer, default=0)
-    remark = Column(String(500), default='')
+    remark = Column(String(500), default="")
     created_at = Column(DateTime, default=datetime.now)
 
 
@@ -93,7 +106,7 @@ class Supplier(Base):
     phone = Column(String(20))
     delivery_days = Column(Integer, default=7)
     address = Column(String(300))
-    payment = Column(String(200), default='')
+    payment = Column(String(200), default="")
     created_at = Column(DateTime, default=datetime.now)
 
 
@@ -128,6 +141,7 @@ class Employee(Base):
 
 # ─── V2.2 新增表 ─────────────────────────────────────────────────────────────
 
+
 class InstallerAccount(Base):
     __tablename__ = "installer_account"
 
@@ -158,7 +172,9 @@ class InstallTask(Base):
     raw_customer_phone = Column(String(20))  # 原始手机号，App端不展示
     order_content = Column(String(500))  # "客厅+书房+次卧 窗帘"
     priority = Column(String(20), default="normal")  # high/normal
-    status = Column(String(20), default="pending", index=True)  # pending/ongoing/completed/cancelled
+    status = Column(
+        String(20), default="pending", index=True
+    )  # pending/ongoing/completed/cancelled
     completed_at = Column(DateTime, nullable=True)
     completion_remark = Column(String(1000))
     navigate_url = Column(String(500))
@@ -273,6 +289,7 @@ class OrderItem(Base):
 
 class PurchaseOrderItem(Base):
     """采购单明细（V3.0，独立表）"""
+
     __tablename__ = "purchase_order_items"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -310,8 +327,10 @@ class FinanceRecord(Base):
 # V3.0 新增表
 # ══════════════════════════════════════════════════════════════
 
+
 class PurchaseOrder(Base):
     """采购单（V3.0，区别于旧的 purchases 表）"""
+
     __tablename__ = "purchase_orders"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -327,7 +346,9 @@ class PurchaseOrder(Base):
     order_ids = Column(String(200))  # 逗号分隔，多订单合并时用
     expected_date = Column(Date)
     arrived_date = Column(Date)
-    items = Column(JSON, default=list)  # [{product_id, product_code, product_name, spec, qty, unit_price, amount}]
+    items = Column(
+        JSON, default=list
+    )  # [{product_id, product_code, product_name, spec, qty, unit_price, amount}]
     remark = Column(String(500))
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
@@ -335,6 +356,7 @@ class PurchaseOrder(Base):
 
 class ProductionFeedback(Base):
     """生产反馈（V3.0）"""
+
     __tablename__ = "production_feedback"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -355,6 +377,7 @@ class ProductionFeedback(Base):
 
 class InstallationOrder(Base):
     """安装单（V3.0，区别于 install_task）"""
+
     __tablename__ = "installation_orders"
 
     id = Column(Integer, primary_key=True, autoincrement=True)

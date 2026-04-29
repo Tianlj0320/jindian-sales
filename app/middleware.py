@@ -1,9 +1,10 @@
 # app/middleware.py
+from jose import JWTError, jwt
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-from jose import jwt, JWTError
-from app.core.config import SECRET_KEY, ALGORITHM
+
+from app.core.config import ALGORITHM, SECRET_KEY
 
 ALLOWED_PATHS = {
     "/",
@@ -11,6 +12,7 @@ ALLOWED_PATHS = {
     "/docs",
     "/openapi.json",
 }
+
 
 def is_public_path(path: str) -> bool:
     if path.startswith("/static/"):
@@ -32,6 +34,7 @@ def is_public_path(path: str) -> bool:
         return True  # 短信发送公开
     return False
 
+
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
@@ -45,8 +48,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             auth_header = request.headers.get("Authorization", "")
             if not auth_header.startswith("Bearer "):
                 return JSONResponse(
-                    status_code=401,
-                    content={"success": False, "error": "请先登录"}
+                    status_code=401, content={"success": False, "error": "请先登录"}
                 )
             token = auth_header[7:]
             try:
@@ -56,8 +58,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 request.state.user_role = payload.get("role", "staff")
             except JWTError:
                 return JSONResponse(
-                    status_code=401,
-                    content={"success": False, "error": "登录已过期，请重新登录"}
+                    status_code=401, content={"success": False, "error": "登录已过期，请重新登录"}
                 )
 
         return await call_next(request)

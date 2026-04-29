@@ -1,23 +1,24 @@
 # app/api/installation_orders.py
 # V3.0 安装单 API
-from fastapi import APIRouter, Query, Body, Path, Header, HTTPException
+from datetime import datetime
+
+from fastapi import APIRouter, Body, Header, HTTPException, Path, Query
+from sqlalchemy import and_, func, select
+
 from app.database import async_session
-from app.models import InstallationOrder, Order, InstallerAccount
+from app.models import InstallationOrder, InstallerAccount, Order
 from app.schemas import CommonResponse
-from sqlalchemy import select, func, and_
-from datetime import datetime, date
-from typing import Optional
 
 router = APIRouter(prefix="/api/installation-orders", tags=["V3.0 安装单"])
 
 
 @router.get("", response_model=dict)
 async def list_installation_orders(
-    status: Optional[str] = Query(None),
-    keyword: Optional[str] = Query(None),
-    installer_id: Optional[int] = Query(None),
-    scheduled_from: Optional[str] = Query(None, alias="scheduled_from"),
-    scheduled_to: Optional[str] = Query(None, alias="scheduled_to"),
+    status: str | None = Query(None),
+    keyword: str | None = Query(None),
+    installer_id: int | None = Query(None),
+    scheduled_from: str | None = Query(None, alias="scheduled_from"),
+    scheduled_to: str | None = Query(None, alias="scheduled_to"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ):
@@ -252,7 +253,7 @@ async def update_installation_order(
             return CommonResponse(success=False, error="安装单不存在")
 
         # 更新安装工姓名
-        if "installer_id" in req and req["installer_id"]:
+        if req.get("installer_id"):
             r = await session.execute(
                 select(InstallerAccount.name).where(InstallerAccount.id == req["installer_id"])
             )
@@ -264,7 +265,7 @@ async def update_installation_order(
             if req["status"] == "已验收":
                 io.confirmed_at = datetime.now()
 
-        if "scheduled_date" in req and req["scheduled_date"]:
+        if req.get("scheduled_date"):
             io.scheduled_date = datetime.strptime(req["scheduled_date"], "%Y-%m-%d").date()
 
         if "install_time_slot" in req:
@@ -423,12 +424,14 @@ async def confirm_installation(
                 order.status_key = "accepted"
                 order.status_color = "#059669"
                 history = order.history or []
-                history.append({
-                    "s": order.status,
-                    "s2": "已验收",
-                    "c": "accepted",
-                    "time": datetime.now().strftime("%Y-%m-%d %H:%M")
-                })
+                history.append(
+                    {
+                        "s": order.status,
+                        "s2": "已验收",
+                        "c": "accepted",
+                        "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                    }
+                )
                 order.history = history
 
         await session.commit()

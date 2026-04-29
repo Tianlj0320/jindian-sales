@@ -1,30 +1,34 @@
 # app/api/customers.py
-from fastapi import APIRouter, Query, Body
+from datetime import datetime
+
+from fastapi import APIRouter, Body, Query
+from sqlalchemy import and_, func, select
+
 from app.database import async_session
 from app.models import Customer
-from app.schemas import CustomerListResponse, CustomerResponse, CustomerListItem, CustomerDetailData, CommonResponse
-from sqlalchemy import select, func, and_
-from datetime import datetime
-from typing import Optional
+from app.schemas import (
+    CommonResponse,
+    CustomerDetailData,
+    CustomerListItem,
+    CustomerListResponse,
+    CustomerResponse,
+)
 
 router = APIRouter(prefix="/api/customers", tags=["客户管理"])
 
 
 @router.get("", response_model=CustomerListResponse)
 async def list_customers(
-    keyword: Optional[str] = Query(None, description="搜索：姓名/电话"),
-    customer_type: Optional[str] = Query(None, description="客户类型"),
+    keyword: str | None = Query(None, description="搜索：姓名/电话"),
+    customer_type: str | None = Query(None, description="客户类型"),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100)
+    page_size: int = Query(20, ge=1, le=100),
 ):
     async with async_session() as session:
         conditions = [Customer.is_deleted == False]
         if keyword:
             kw = f"%{keyword}%"
-            conditions.append(
-                (Customer.name.ilike(kw)) |
-                (Customer.phone.ilike(kw))
-            )
+            conditions.append((Customer.name.ilike(kw)) | (Customer.phone.ilike(kw)))
         if customer_type:
             conditions.append(Customer.type == customer_type)
 
@@ -33,8 +37,8 @@ async def list_customers(
             query = query.where(and_(*conditions))
 
         count_result = await session.execute(
-            select(func.count()).select_from(Customer)
-            .where(and_(*conditions)) if conditions
+            select(func.count()).select_from(Customer).where(and_(*conditions))
+            if conditions
             else select(func.count()).select_from(Customer)
         )
         total = count_result.scalar() or 0
@@ -46,38 +50,49 @@ async def list_customers(
 
         items = [
             CustomerListItem(
-                id=c.id, name=c.name or "", phone=c.phone or "",
-                type=c.type or "", address=c.address or "",
-                community=c.community or "", source=c.source or "",
+                id=c.id,
+                name=c.name or "",
+                phone=c.phone or "",
+                type=c.type or "",
+                address=c.address or "",
+                community=c.community or "",
+                source=c.source or "",
                 salesperson=c.salesperson or "",
                 debt=float(c.debt or 0),
-                created_at=str(c.created_at)[:10] if c.created_at else ""
+                created_at=str(c.created_at)[:10] if c.created_at else "",
             )
             for c in customers
         ]
 
         await session.commit()
-        return CustomerListResponse(success=True, total=total, page=page, page_size=page_size, items=items)
+        return CustomerListResponse(
+            success=True, total=total, page=page, page_size=page_size, items=items
+        )
 
 
 @router.get("/{customer_id}", response_model=CustomerResponse)
 async def get_customer(customer_id: int):
     async with async_session() as session:
-        result = await session.execute(
-            select(Customer).where(Customer.id == customer_id)
-        )
+        result = await session.execute(select(Customer).where(Customer.id == customer_id))
         c = result.scalar_one_or_none()
         if not c:
             return CustomerResponse(success=False, error="客户不存在")
 
-        return CustomerResponse(success=True, data=CustomerDetailData(
-            id=c.id, name=c.name or "", phone=c.phone or "",
-            type=c.type or "", address=c.address or "",
-            community=c.community or "", source=c.source or "",
-            salesperson=c.salesperson or "",
-            debt=float(c.debt or 0),
-            created_at=str(c.created_at)[:19] if c.created_at else ""
-        ))
+        return CustomerResponse(
+            success=True,
+            data=CustomerDetailData(
+                id=c.id,
+                name=c.name or "",
+                phone=c.phone or "",
+                type=c.type or "",
+                address=c.address or "",
+                community=c.community or "",
+                source=c.source or "",
+                salesperson=c.salesperson or "",
+                debt=float(c.debt or 0),
+                created_at=str(c.created_at)[:19] if c.created_at else "",
+            ),
+        )
 
 
 @router.post("", response_model=CommonResponse)
@@ -86,8 +101,7 @@ async def create_customer(req: dict = Body(...)):
         # 生成客户编号
         today = datetime.now().strftime("%Y%m%d")
         seq_result = await session.execute(
-            select(func.count(Customer.id))
-            .where(Customer.name.ilike(f"%{today[:6]}%"))
+            select(func.count(Customer.id)).where(Customer.name.ilike(f"%{today[:6]}%"))
         )
         seq = (seq_result.scalar() or 0) + 1
         code = f"CU{today}{seq:03d}"
@@ -100,7 +114,7 @@ async def create_customer(req: dict = Body(...)):
             community=req.get("community", ""),
             source=req.get("source", ""),
             salesperson=req.get("salesperson", ""),
-            debt=0
+            debt=0,
         )
         session.add(customer)
         await session.commit()
@@ -112,9 +126,7 @@ async def create_customer(req: dict = Body(...)):
 @router.put("/{customer_id}", response_model=CommonResponse)
 async def update_customer(customer_id: int, req: dict = Body(...)):
     async with async_session() as session:
-        result = await session.execute(
-            select(Customer).where(Customer.id == customer_id)
-        )
+        result = await session.execute(select(Customer).where(Customer.id == customer_id))
         c = result.scalar_one_or_none()
         if not c:
             return CommonResponse(success=False, error="客户不存在")
@@ -130,9 +142,7 @@ async def update_customer(customer_id: int, req: dict = Body(...)):
 @router.delete("/{customer_id}", response_model=CommonResponse)
 async def delete_customer(customer_id: int):
     async with async_session() as session:
-        result = await session.execute(
-            select(Customer).where(Customer.id == customer_id)
-        )
+        result = await session.execute(select(Customer).where(Customer.id == customer_id))
         c = result.scalar_one_or_none()
         if not c:
             return CommonResponse(success=False, error="客户不存在")

@@ -1,16 +1,15 @@
 # app/schemas.py
-from pydantic import BaseModel
-from datetime import datetime, date
-from typing import Optional, List
 
+from pydantic import BaseModel
 
 # ─── Track API ────────────────────────────────────────────────────────────────
+
 
 class StatusHistoryItem(BaseModel):
     step: int
     key: str
     label: str
-    time: Optional[str] = None
+    time: str | None = None
     done: bool
     is_current: bool = False
 
@@ -18,10 +17,10 @@ class StatusHistoryItem(BaseModel):
 class NextStep(BaseModel):
     type: str
     label: str
-    date: Optional[str] = None
-    time_slot: Optional[str] = None
-    installer_name: Optional[str] = None
-    installer_phone_masked: Optional[str] = None
+    date: str | None = None
+    time_slot: str | None = None
+    installer_name: str | None = None
+    installer_phone_masked: str | None = None
 
 
 class OrderItem(BaseModel):
@@ -41,19 +40,20 @@ class TrackResponseData(BaseModel):
     status_label: str
     progress_step: int
     progress_total: int
-    status_history: List[StatusHistoryItem]
-    next_step: Optional[NextStep] = None
-    order_items: List[OrderItem]
+    status_history: list[StatusHistoryItem]
+    next_step: NextStep | None = None
+    order_items: list[OrderItem]
     store_phone: str
 
 
 class TrackResponse(BaseModel):
     success: bool
-    data: Optional[TrackResponseData] = None
-    error: Optional[str] = None
+    data: TrackResponseData | None = None
+    error: str | None = None
 
 
 # ─── Installer Login API ─────────────────────────────────────────────────────
+
 
 class LoginRequest(BaseModel):
     phone: str
@@ -74,11 +74,12 @@ class LoginResponseData(BaseModel):
 
 class LoginResponse(BaseModel):
     success: bool
-    data: Optional[LoginResponseData] = None
-    error: Optional[str] = None
+    data: LoginResponseData | None = None
+    error: str | None = None
 
 
 # ─── SMS API ─────────────────────────────────────────────────────────────────
+
 
 class SmsSendRequest(BaseModel):
     phone: str
@@ -92,24 +93,25 @@ class SmsResponseData(BaseModel):
 
 class SmsResponse(BaseModel):
     success: bool
-    data: Optional[SmsResponseData] = None
-    error: Optional[str] = None
+    data: SmsResponseData | None = None
+    error: str | None = None
 
 
 # ─── Installer Tasks API ─────────────────────────────────────────────────────
+
 
 class TaskItem(BaseModel):
     id: int
     order_no: str
     customer_name: str
     customer_phone_masked: str
-    raw_customer_phone: Optional[str] = None  # 仅App端返回
+    raw_customer_phone: str | None = None  # 仅App端返回
     address: str
-    content: Optional[str] = None
-    time_slot: Optional[str] = None
+    content: str | None = None
+    time_slot: str | None = None
     priority: str
     status: str
-    navigate_url: Optional[str] = None
+    navigate_url: str | None = None
 
 
 class TasksResponseData(BaseModel):
@@ -117,20 +119,21 @@ class TasksResponseData(BaseModel):
     date: str
     today_completed: int
     today_pending: int
-    tasks: List[TaskItem]
+    tasks: list[TaskItem]
 
 
 class TasksResponse(BaseModel):
     success: bool
-    data: Optional[TasksResponseData] = None
-    error: Optional[str] = None
+    data: TasksResponseData | None = None
+    error: str | None = None
 
 
 # ─── Complete Task API ───────────────────────────────────────────────────────
 
+
 class CompleteRequest(BaseModel):
     completed_at: str
-    remark: Optional[str] = ""
+    remark: str | None = ""
 
 
 class CompleteResponseData(BaseModel):
@@ -141,20 +144,21 @@ class CompleteResponseData(BaseModel):
 
 class CompleteResponse(BaseModel):
     success: bool
-    data: Optional[CompleteResponseData] = None
-    error: Optional[str] = None
+    data: CompleteResponseData | None = None
+    error: str | None = None
 
 
 # ─── History API ─────────────────────────────────────────────────────────────
+
 
 class HistoryRecord(BaseModel):
     id: int
     order_no: str
     customer_name: str
     address: str
-    content: Optional[str] = None
+    content: str | None = None
     completed_at: str
-    remark: Optional[str] = None
+    remark: str | None = None
 
 
 class HistoryResponseData(BaseModel):
@@ -163,27 +167,30 @@ class HistoryResponseData(BaseModel):
     total: int
     page: int
     page_size: int
-    records: List[HistoryRecord]
+    records: list[HistoryRecord]
 
 
 class HistoryResponse(BaseModel):
     success: bool
-    data: Optional[HistoryResponseData] = None
-    error: Optional[str] = None
+    data: HistoryResponseData | None = None
+    error: str | None = None
 
 
 # ─── 通用响应 ────────────────────────────────────────────────────────────────
 
+
 class CommonData(BaseModel):
     id: int
 
+
 class CommonResponse(BaseModel):
     success: bool
-    data: Optional[dict] = None
-    error: Optional[str] = None
+    data: dict | None = None
+    error: str | None = None
 
 
 # ─── 订单 ─────────────────────────────────────────────────────────────────
+
 
 class OrderListItem(BaseModel):
     id: int
@@ -202,19 +209,21 @@ class OrderListItem(BaseModel):
     delivery_date: str
     salesperson: str
     install_date: str
-    items: List[dict]
+    items: list[dict]
+
 
 class OrderListResponse(BaseModel):
     success: bool
     total: int
     page: int
     page_size: int
-    items: List[OrderListItem]
+    items: list[OrderListItem]
+
 
 class OrderDetailData(BaseModel):
     id: int
     order_no: str
-    customer_id: Optional[int]
+    customer_id: int | None
     customer_name: str
     customer_phone: str
     order_type: str
@@ -232,20 +241,22 @@ class OrderDetailData(BaseModel):
     delivery_method: str
     content: str
     salesperson: str
-    history: List[dict]
-    items: List[dict]
+    history: list[dict]
+    items: list[dict]
     install_address: str
     install_date: str
     install_time_slot: str
     created_at: str
 
+
 class OrderResponse(BaseModel):
     success: bool
-    data: Optional[OrderDetailData] = None
-    error: Optional[str] = None
+    data: OrderDetailData | None = None
+    error: str | None = None
 
 
 # ─── 客户 ─────────────────────────────────────────────────────────────────
+
 
 class CustomerListItem(BaseModel):
     id: int
@@ -259,12 +270,14 @@ class CustomerListItem(BaseModel):
     debt: float
     created_at: str
 
+
 class CustomerListResponse(BaseModel):
     success: bool
     total: int
     page: int
     page_size: int
-    items: List[CustomerListItem]
+    items: list[CustomerListItem]
+
 
 class CustomerDetailData(BaseModel):
     id: int
@@ -278,13 +291,15 @@ class CustomerDetailData(BaseModel):
     debt: float
     created_at: str
 
+
 class CustomerResponse(BaseModel):
     success: bool
-    data: Optional[CustomerDetailData] = None
-    error: Optional[str] = None
+    data: CustomerDetailData | None = None
+    error: str | None = None
 
 
 # ─── 产品 ─────────────────────────────────────────────────────────────────
+
 
 class ProductListItem(BaseModel):
     id: int
@@ -300,12 +315,14 @@ class ProductListItem(BaseModel):
     stock: int
     unit: str
 
+
 class ProductListResponse(BaseModel):
     success: bool
     total: int
     page: int
     page_size: int
-    items: List[ProductListItem]
+    items: list[ProductListItem]
+
 
 class ProductDetailData(BaseModel):
     id: int
@@ -325,13 +342,15 @@ class ProductDetailData(BaseModel):
     unit: str
     stock: int
 
+
 class ProductResponse(BaseModel):
     success: bool
-    data: Optional[ProductDetailData] = None
-    error: Optional[str] = None
+    data: ProductDetailData | None = None
+    error: str | None = None
 
 
 # ─── 供应商 ─────────────────────────────────────────────────────────────────
+
 
 class SupplierListItem(BaseModel):
     id: int
@@ -341,16 +360,18 @@ class SupplierListItem(BaseModel):
     contact: str
     phone: str
     delivery_days: int
-    address: str = ''
-    payment: str = ''
+    address: str = ""
+    payment: str = ""
+
 
 class SupplierListResponse(BaseModel):
     success: bool
     total: int
-    items: List[SupplierListItem]
+    items: list[SupplierListItem]
 
 
 # ─── 员工 ─────────────────────────────────────────────────────────────────
+
 
 class EmployeeListItem(BaseModel):
     id: int
@@ -365,13 +386,15 @@ class EmployeeListItem(BaseModel):
     is_installer: bool
     status: str
 
+
 class EmployeeListResponse(BaseModel):
     success: bool
     total: int
-    items: List[EmployeeListItem]
+    items: list[EmployeeListItem]
 
 
 # ─── 首页统计 ────────────────────────────────────────────────────────────────
+
 
 class DashboardData(BaseModel):
     today_orders: int
@@ -381,6 +404,7 @@ class DashboardData(BaseModel):
     pending_payment: int
     total_customers: int
 
+
 class DashboardResponse(BaseModel):
     success: bool
-    data: Optional[DashboardData] = None
+    data: DashboardData | None = None

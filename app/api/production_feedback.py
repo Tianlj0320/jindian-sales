@@ -1,12 +1,13 @@
 # app/api/production_feedback.py
 # V3.0 生产反馈 API
-from fastapi import APIRouter, Query, Body, Path, Header, HTTPException
-from app.database import async_session
-from app.models import ProductionFeedback, Order, PurchaseOrder
-from app.schemas import CommonResponse
-from sqlalchemy import select, func, and_
 from datetime import datetime
-from typing import Optional
+
+from fastapi import APIRouter, Body, HTTPException, Path, Query
+from sqlalchemy import and_, func, select
+
+from app.database import async_session
+from app.models import Order, ProductionFeedback
+from app.schemas import CommonResponse
 
 router = APIRouter(prefix="/api/production-feedback", tags=["V3.0 生产反馈"])
 
@@ -38,8 +39,7 @@ async def create_feedback(req: dict = Body(...)):
     feedback_type = req.get("feedback_type", "quality")
     if feedback_type not in VALID_FEEDBACK_TYPES:
         raise HTTPException(
-            status_code=400,
-            detail=f"feedback_type 非法，允许值: {list(VALID_FEEDBACK_TYPES)}"
+            status_code=400, detail=f"feedback_type 非法，允许值: {list(VALID_FEEDBACK_TYPES)}"
         )
 
     # 3. 订单存在性校验
@@ -90,10 +90,10 @@ async def create_feedback(req: dict = Body(...)):
 
 @router.get("", response_model=dict)
 async def list_feedbacks(
-    status: Optional[str] = Query(None),
-    feedback_type: Optional[str] = Query(None, alias="feedback_type"),
-    order_id: Optional[int] = Query(None),
-    keyword: Optional[str] = Query(None),
+    status: str | None = Query(None),
+    feedback_type: str | None = Query(None, alias="feedback_type"),
+    order_id: int | None = Query(None),
+    keyword: str | None = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ):
@@ -212,17 +212,13 @@ async def update_feedback(
             new_status = req["status"]
             if new_status not in VALID_STATUSES:
                 return CommonResponse(
-                    success=False,
-                    error=f"状态值非法，允许值: {list(VALID_STATUSES)}"
+                    success=False, error=f"状态值非法，允许值: {list(VALID_STATUSES)}"
                 )
             # 状态机规则：不允许回退（已解决 → 待处理/已处理）
             old_order = STATUS_ORDER.get(fb.status, 0)
             new_order = STATUS_ORDER.get(new_status, 0)
             if old_order > new_order and fb.status == "已解决":
-                return CommonResponse(
-                    success=False,
-                    error="状态不可回退，当前状态为已解决"
-                )
+                return CommonResponse(success=False, error="状态不可回退，当前状态为已解决")
             fb.status = new_status
 
         if "resolution" in req:

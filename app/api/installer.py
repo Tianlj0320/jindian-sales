@@ -1,18 +1,29 @@
 # app/api/installer.py
-from fastapi import APIRouter, Depends, HTTPException, Header, Query
-from app.schemas import (
-    LoginRequest, LoginResponse, LoginResponseData, InstallerInfo,
-    TasksResponse, TasksResponseData, TaskItem,
-    CompleteRequest, CompleteResponse, CompleteResponseData,
-    HistoryResponse, HistoryResponseData, HistoryRecord
-)
-from app.database import async_session
-from app.models import InstallerAccount, InstallTask, Order, SmsCode
-from sqlalchemy import select, and_, func
-from datetime import datetime, date, timedelta
-from jose import jwt, JWTError
-from app.core.config import SECRET_KEY, ALGORITHM, TOKEN_EXPIRE_DAYS
 import urllib.parse
+from datetime import date, datetime, timedelta
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from jose import JWTError, jwt
+from sqlalchemy import and_, func, select
+
+from app.core.config import ALGORITHM, SECRET_KEY, TOKEN_EXPIRE_DAYS
+from app.database import async_session
+from app.models import InstallerAccount, InstallTask, Order
+from app.schemas import (
+    CompleteRequest,
+    CompleteResponse,
+    CompleteResponseData,
+    HistoryRecord,
+    HistoryResponse,
+    HistoryResponseData,
+    InstallerInfo,
+    LoginRequest,
+    LoginResponse,
+    LoginResponseData,
+    TaskItem,
+    TasksResponse,
+    TasksResponseData,
+)
 
 router = APIRouter(prefix="/api/installer", tags=["安装工"])
 
@@ -64,6 +75,7 @@ def build_navigate_url(address: str) -> str:
 
 # ─── 登录 ────────────────────────────────────────────────────────────────────
 
+
 @router.post("/login", response_model=LoginResponse)
 async def login(req: LoginRequest):
     """
@@ -85,9 +97,7 @@ async def login(req: LoginRequest):
         if not installer:
             # Demo模式：自动创建新账号
             installer = InstallerAccount(
-                name=f"安装师傅{req.phone[-4:]}",
-                phone=req.phone,
-                status="active"
+                name=f"安装师傅{req.phone[-4:]}", phone=req.phone, status="active"
             )
             session.add(installer)
             await session.commit()
@@ -99,36 +109,44 @@ async def login(req: LoginRequest):
         token, expires_in = create_token(installer.id)
         await session.commit()
 
-        return LoginResponse(success=True, data=LoginResponseData(
-            token=token,
-            expires_in=expires_in,
-            installer=InstallerInfo(
-                id=installer.id,
-                name=installer.name,
-                phone_masked=mask_phone(installer.phone)
-            )
-        ))
+        return LoginResponse(
+            success=True,
+            data=LoginResponseData(
+                token=token,
+                expires_in=expires_in,
+                installer=InstallerInfo(
+                    id=installer.id, name=installer.name, phone_masked=mask_phone(installer.phone)
+                ),
+            ),
+        )
 
 
 # ─── 安装工列表（供管理员分配使用）───────────────────────────────────────
+
 
 @router.get("/list")
 async def list_installers():
     """获取所有启用的安装工列表（管理员分配用）"""
     async with async_session() as session:
         result = await session.execute(
-            select(InstallerAccount).where(InstallerAccount.status == "active").order_by(InstallerAccount.id)
+            select(InstallerAccount)
+            .where(InstallerAccount.status == "active")
+            .order_by(InstallerAccount.id)
         )
         installers = result.scalars().all()
-        return {"success": True, "items": [{"id": i.id, "name": i.name, "phone": i.phone} for i in installers]}
+        return {
+            "success": True,
+            "items": [{"id": i.id, "name": i.name, "phone": i.phone} for i in installers],
+        }
 
 
 # ─── 今日任务 ────────────────────────────────────────────────────────────────
 
+
 @router.get("/tasks", response_model=TasksResponse)
 async def get_tasks(
     date_str: str = Query(default=None, description="查询日期，如 2026-04-20"),
-    installer: InstallerAccount = Depends(get_current_installer)
+    installer: InstallerAccount = Depends(get_current_installer),
 ):
     """获取安装工指定日期的安装任务列表"""
     query_date = date_str or str(date.today())
@@ -141,7 +159,7 @@ async def get_tasks(
                 and_(
                     InstallTask.installer_id == installer.id,
                     func.date(InstallTask.install_date) == query_date,
-                    InstallTask.status.in_(["pending", "ongoing"])
+                    InstallTask.status.in_(["pending", "ongoing"]),
                 )
             )
             .order_by(InstallTask.install_time_slot)
@@ -150,12 +168,11 @@ async def get_tasks(
 
         # 统计今日完成数
         completed_result = await session.execute(
-            select(func.count(InstallTask.id))
-            .where(
+            select(func.count(InstallTask.id)).where(
                 and_(
                     InstallTask.installer_id == installer.id,
                     func.date(InstallTask.install_date) == query_date,
-                    InstallTask.status == "completed"
+                    InstallTask.status == "completed",
                 )
             )
         )
@@ -163,48 +180,49 @@ async def get_tasks(
 
         task_items = []
         for t in tasks:
-            task_items.append(TaskItem(
-                id=t.id,
-                order_no=t.order_no or f"ORDER-{t.order_id}",
-                customer_name=t.customer_name,
-                customer_phone_masked=mask_phone(t.customer_phone or ""),
-                raw_customer_phone=t.customer_phone,  # App端专用
-                address=t.address or "",
-                content=t.order_content,
-                time_slot=t.install_time_slot,
-                priority=t.priority or "normal",
-                status=t.status,
-                navigate_url=build_navigate_url(t.address) if t.address else None
-            ))
+            task_items.append(
+                TaskItem(
+                    id=t.id,
+                    order_no=t.order_no or f"ORDER-{t.order_id}",
+                    customer_name=t.customer_name,
+                    customer_phone_masked=mask_phone(t.customer_phone or ""),
+                    raw_customer_phone=t.customer_phone,  # App端专用
+                    address=t.address or "",
+                    content=t.order_content,
+                    time_slot=t.install_time_slot,
+                    priority=t.priority or "normal",
+                    status=t.status,
+                    navigate_url=build_navigate_url(t.address) if t.address else None,
+                )
+            )
 
         await session.commit()
 
-        return TasksResponse(success=True, data=TasksResponseData(
-            installer_name=installer.name,
-            date=query_date,
-            today_completed=today_completed,
-            today_pending=len(task_items),
-            tasks=task_items
-        ))
+        return TasksResponse(
+            success=True,
+            data=TasksResponseData(
+                installer_name=installer.name,
+                date=query_date,
+                today_completed=today_completed,
+                today_pending=len(task_items),
+                tasks=task_items,
+            ),
+        )
 
 
 # ─── 确认完成 ────────────────────────────────────────────────────────────────
 
+
 @router.post("/tasks/{task_id}/complete", response_model=CompleteResponse)
 async def complete_task(
-    task_id: int,
-    req: CompleteRequest,
-    installer: InstallerAccount = Depends(get_current_installer)
+    task_id: int, req: CompleteRequest, installer: InstallerAccount = Depends(get_current_installer)
 ):
     """安装工确认安装完成"""
     async with async_session() as session:
         # 查任务
         result = await session.execute(
             select(InstallTask).where(
-                and_(
-                    InstallTask.id == task_id,
-                    InstallTask.installer_id == installer.id
-                )
+                and_(InstallTask.id == task_id, InstallTask.installer_id == installer.id)
             )
         )
         task = result.scalar_one_or_none()
@@ -221,9 +239,7 @@ async def complete_task(
         task.completion_remark = req.remark or ""
 
         # 更新关联订单状态
-        order_result = await session.execute(
-            select(Order).where(Order.id == task.order_id)
-        )
+        order_result = await session.execute(select(Order).where(Order.id == task.order_id))
         order = order_result.scalar_one_or_none()
         new_order_status = "installed"
         if order:
@@ -231,20 +247,24 @@ async def complete_task(
 
         await session.commit()
 
-        return CompleteResponse(success=True, data=CompleteResponseData(
-            task_id=task.id,
-            order_status_key=new_order_status,
-            completed_at=str(task.completed_at)
-        ))
+        return CompleteResponse(
+            success=True,
+            data=CompleteResponseData(
+                task_id=task.id,
+                order_status_key=new_order_status,
+                completed_at=str(task.completed_at),
+            ),
+        )
 
 
 # ─── 历史记录 ────────────────────────────────────────────────────────────────
+
 
 @router.get("/history", response_model=HistoryResponse)
 async def get_history(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
-    installer: InstallerAccount = Depends(get_current_installer)
+    installer: InstallerAccount = Depends(get_current_installer),
 ):
     """获取安装工历史安装记录"""
     offset = (page - 1) * page_size
@@ -253,24 +273,22 @@ async def get_history(
     async with async_session() as session:
         # 本月统计
         completed_count_result = await session.execute(
-            select(func.count(InstallTask.id))
-            .where(
+            select(func.count(InstallTask.id)).where(
                 and_(
                     InstallTask.installer_id == installer.id,
                     func.date(InstallTask.install_date) >= today_month_start,
-                    InstallTask.status == "completed"
+                    InstallTask.status == "completed",
                 )
             )
         )
         monthly_completed = completed_count_result.scalar() or 0
 
         pending_count_result = await session.execute(
-            select(func.count(InstallTask.id))
-            .where(
+            select(func.count(InstallTask.id)).where(
                 and_(
                     InstallTask.installer_id == installer.id,
                     InstallTask.install_date >= today_month_start,
-                    InstallTask.status.in_(["pending", "ongoing"])
+                    InstallTask.status.in_(["pending", "ongoing"]),
                 )
             )
         )
@@ -280,10 +298,7 @@ async def get_history(
         history_result = await session.execute(
             select(InstallTask)
             .where(
-                and_(
-                    InstallTask.installer_id == installer.id,
-                    InstallTask.status == "completed"
-                )
+                and_(InstallTask.installer_id == installer.id, InstallTask.status == "completed")
             )
             .order_by(InstallTask.completed_at.desc())
             .limit(page_size)
@@ -293,12 +308,8 @@ async def get_history(
 
         # 总数
         total_result = await session.execute(
-            select(func.count(InstallTask.id))
-            .where(
-                and_(
-                    InstallTask.installer_id == installer.id,
-                    InstallTask.status == "completed"
-                )
+            select(func.count(InstallTask.id)).where(
+                and_(InstallTask.installer_id == installer.id, InstallTask.status == "completed")
             )
         )
         total = total_result.scalar() or 0
@@ -311,18 +322,21 @@ async def get_history(
                 address=r.address or "",
                 content=r.order_content,
                 completed_at=str(r.completed_at) if r.completed_at else "",
-                remark=r.completion_remark
+                remark=r.completion_remark,
             )
             for r in records
         ]
 
         await session.commit()
 
-        return HistoryResponse(success=True, data=HistoryResponseData(
-            monthly_completed=monthly_completed,
-            monthly_pending=monthly_pending,
-            total=total,
-            page=page,
-            page_size=page_size,
-            records=record_items
-        ))
+        return HistoryResponse(
+            success=True,
+            data=HistoryResponseData(
+                monthly_completed=monthly_completed,
+                monthly_pending=monthly_pending,
+                total=total,
+                page=page,
+                page_size=page_size,
+                records=record_items,
+            ),
+        )

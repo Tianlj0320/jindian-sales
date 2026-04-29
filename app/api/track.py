@@ -1,12 +1,12 @@
 # app/api/track.py
+
 from fastapi import APIRouter, Query, Request
-from app.schemas import TrackResponse, TrackResponseData, StatusHistoryItem, NextStep, OrderItem
-from app.database import async_session
-from app.models import Order, CustomerProgressQueryLog
 from sqlalchemy import select
+
 from app.core.config import STORE_PHONE
-from typing import Optional
-import urllib.parse
+from app.database import async_session
+from app.models import CustomerProgressQueryLog, Order
+from app.schemas import NextStep, OrderItem, StatusHistoryItem, TrackResponse, TrackResponseData
 
 router = APIRouter(prefix="/api/track", tags=["客户进度查询"])
 
@@ -41,7 +41,7 @@ def mask_phone_last4(phone: str) -> str:
 async def query_order_progress(
     request: Request,
     order_no: str = Query(..., description="订单编号"),
-    phone_hint: str = Query(..., description="手机号后4位")
+    phone_hint: str = Query(..., description="手机号后4位"),
 ):
     """
     客户扫码查询订单进度
@@ -54,9 +54,7 @@ async def query_order_progress(
 
     async with async_session() as session:
         # 查找订单
-        result = await session.execute(
-            select(Order).where(Order.order_no == order_no)
-        )
+        result = await session.execute(select(Order).where(Order.order_no == order_no))
         order = result.scalar_one_or_none()
 
         if not order:
@@ -69,7 +67,7 @@ async def query_order_progress(
                 order_no=order_no,
                 phone_hint=phone_hint,
                 ip_address=client_ip,
-                user_agent=user_agent
+                user_agent=user_agent,
             )
             session.add(log)
             await session.commit()
@@ -77,10 +75,7 @@ async def query_order_progress(
 
         # 写入查询日志
         log = CustomerProgressQueryLog(
-            order_no=order_no,
-            phone_hint=phone_hint,
-            ip_address=client_ip,
-            user_agent=user_agent
+            order_no=order_no, phone_hint=phone_hint, ip_address=client_ip, user_agent=user_agent
         )
         session.add(log)
 
@@ -94,7 +89,7 @@ async def query_order_progress(
         # 构建历史
         status_history = []
         for i, s in enumerate(STATUS_STEPS):
-            is_current = (i == current_step_index)
+            is_current = i == current_step_index
             # 查找历史记录中的时间
             hist_time = None
             if order.history and isinstance(order.history, list):
@@ -103,14 +98,16 @@ async def query_order_progress(
                         hist_time = h.get("time")
                         break
 
-            status_history.append(StatusHistoryItem(
-                step=i,
-                key=s["key"],
-                label=s["label"],
-                time=hist_time,
-                done=i < current_step_index,
-                is_current=is_current
-            ))
+            status_history.append(
+                StatusHistoryItem(
+                    step=i,
+                    key=s["key"],
+                    label=s["label"],
+                    time=hist_time,
+                    done=i < current_step_index,
+                    is_current=is_current,
+                )
+            )
 
         # 下一步
         next_step_data = None
@@ -123,7 +120,7 @@ async def query_order_progress(
                     date=str(order.install_date) if order.install_date else None,
                     time_slot=order.install_time_slot,
                     installer_name=None,  # 需关联 installer_account 查询
-                    installer_phone_masked=None
+                    installer_phone_masked=None,
                 )
 
         # 解析订单明细
@@ -131,11 +128,13 @@ async def query_order_progress(
         if order.items and isinstance(order.items, list):
             for item in order.items:
                 if isinstance(item, dict):
-                    order_items.append(OrderItem(
-                        room=item.get("room", item.get("name", "")),
-                        product=item.get("product", item.get("name", "")),
-                        qty=item.get("qty", 1)
-                    ))
+                    order_items.append(
+                        OrderItem(
+                            room=item.get("room", item.get("name", "")),
+                            product=item.get("product", item.get("name", "")),
+                            qty=item.get("qty", 1),
+                        )
+                    )
 
         # 获取当前状态中文名
         status_label = STATUS_STEPS[current_step_index]["label"]
@@ -146,19 +145,22 @@ async def query_order_progress(
 
         await session.commit()
 
-        return TrackResponse(success=True, data=TrackResponseData(
-            order_no=order.order_no,
-            customer_name=order.customer_name or "",
-            customer_phone_masked=mask_phone(order.customer_phone or ""),
-            order_type=order.order_type or "窗帘",
-            amount=float(order.amount or 0),
-            received=float(order.received or 0),
-            status_key=order.status_key or "created",
-            status_label=status_label,
-            progress_step=current_step_index,
-            progress_total=len(STATUS_STEPS),
-            status_history=status_history,
-            next_step=next_step_data,
-            order_items=order_items,
-            store_phone=STORE_PHONE
-        ))
+        return TrackResponse(
+            success=True,
+            data=TrackResponseData(
+                order_no=order.order_no,
+                customer_name=order.customer_name or "",
+                customer_phone_masked=mask_phone(order.customer_phone or ""),
+                order_type=order.order_type or "窗帘",
+                amount=float(order.amount or 0),
+                received=float(order.received or 0),
+                status_key=order.status_key or "created",
+                status_label=status_label,
+                progress_step=current_step_index,
+                progress_total=len(STATUS_STEPS),
+                status_history=status_history,
+                next_step=next_step_data,
+                order_items=order_items,
+                store_phone=STORE_PHONE,
+            ),
+        )
