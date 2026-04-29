@@ -1,11 +1,55 @@
-venv/
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
-*.db
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
 .env
-*.egg-info/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+sales.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Distribution
 dist/
 build/
-app/__pycache__/
-app/*/__pycache__/
-app/*/*/__pycache__/
+*.egg-info/
+
+# Secrets (NEVER commit)
+*.pem
+*.key
+.env
+credentials.json
+
+# Node (if any)
+node_modules/
+npm-debug.log*
+
+# Temp files
+tmp/
+temp/
+*.bak

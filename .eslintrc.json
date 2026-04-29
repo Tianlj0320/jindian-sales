@@ -1,0 +1,42 @@
+{
+  "env": {
+    "browser": true,
+    "es2021": true,
+    "jquery": false
+  },
+  "extends": "eslint:recommended",
+  "parserOptions": {
+    "ecmaVersion": 2021,
+    "sourceType": "module"
+  },
+  "rules": {
+    "no-unused-vars": "warn",
+    "no-undef": "warn",
+    "semi": ["error", "always"],
+    "quotes": ["warn", "single"],
+    "indent": ["warn", 2],
+    "no-multiple-empty-lines": "warn",
+    "eqeqeq": "error",
+    "curly": "error",
+    "no-else-return": "warn",
+    "no-empty-function": "warn",
+    "no-eq-null": "error",
+    "no-eval": "error",
+    "no-implied-eval": "error",
+    "no-new-require": "error",
+    "no-path-concat": "error",
+    "no-return-await": "error",
+    "no-throw-literal": "error",
+    "no-useless-concat": "warn",
+    "no-var": "error",
+    "prefer-const": "error",
+    "object-shorthand": "warn",
+    "quote-props": ["warn", "as-needed"]
+  },
+  "globals": {
+    "API": "readonly",
+    "ElMessage": "readonly",
+    "ElMessageBox": "readonly",
+    "ElLoading": "readonly"
+  }
+}
