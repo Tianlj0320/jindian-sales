@@ -12,7 +12,7 @@ from app.models import Order
 router = APIRouter(prefix="/api/reports", tags=["统计报表"])
 
 
-def get_month_range(year: int, month: int):
+def get_month_range(year: int, month: int) -> tuple[date, date]:
     start = date(year, month, 1)
     _, last_day = monthrange(year, month)
     end = date(year, month, last_day)
@@ -22,7 +22,7 @@ def get_month_range(year: int, month: int):
 @router.get("/sales", response_model=dict)
 async def sales_report(
     year: int = Query(default=date.today().year), month: int = Query(default=date.today().month)
-):
+) -> dict:
     """月度销售报表"""
     async with async_session() as session:
         start, end = get_month_range(year, month)
@@ -76,7 +76,7 @@ async def product_rank(
     year: int = Query(default=date.today().year),
     month: int = Query(default=date.today().month),
     top: int = Query(default=10, le=50),
-):
+) -> dict:
     """产品销量排行"""
     async with async_session() as session:
         start, end = get_month_range(year, month)
@@ -119,7 +119,7 @@ async def product_rank(
 @router.get("/employee-performance", response_model=dict)
 async def employee_report(
     year: int = Query(default=date.today().year), month: int = Query(default=date.today().month)
-):
+) -> dict:
     """员工业绩报表"""
     async with async_session() as session:
         start, end = get_month_range(year, month)
@@ -159,7 +159,7 @@ async def employee_report(
 @router.get("/trend", response_model=dict)
 async def sales_trend(
     year: int = Query(default=date.today().year), month: int = Query(default=date.today().month)
-):
+) -> dict:
     """月度趋势（每日累计）"""
     async with async_session() as session:
         start, end = get_month_range(year, month)

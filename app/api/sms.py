@@ -1,5 +1,6 @@
 # app/api/sms.py
 from datetime import datetime, timedelta
+from typing import Any
 
 from fastapi import APIRouter
 from sqlalchemy import and_, select, text
@@ -12,7 +13,7 @@ router = APIRouter(prefix="/api/sms", tags=["短信"])
 
 
 @router.post("/send", response_model=SmsResponse)
-async def send_sms(req: SmsSendRequest):
+async def send_sms(req: SmsSendRequest) -> SmsResponse:
     """
     发送短信验证码
     Demo模式：固定返回 888888，不真实发短信

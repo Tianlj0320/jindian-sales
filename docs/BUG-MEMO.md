@@ -673,3 +673,75 @@ eda6b1c fix: 产品新增API缺少return语句导致500
 ### 待观察
 - 安装工完成任务需要 completed_at 字段
 - 安装工历史记录从 install_task 表读取,可能需要额外逻辑
+
+---
+
+## 十四、Day 3 QA测试记录 (2026-04-28)
+
+### 测试环境
+- 项目目录: `/home/tianlj0320/sales-system-dev/`
+- JWT_SECRET: `fbb765c8b0c0f4dae3a779acf6e92e8847fdc24352cf49db18c86612afcd41b0`
+- 测试账号: `13900000001 / jd8888`
+
+### API测试结果
+
+| 编号 | 功能 | 接口 | 结果 | 备注 |
+|------|------|------|------|------|
+| 1 | 服务启动 | GET /health | ✅ 通过 | status: ok |
+| 2 | 登录 | POST /api/auth/login | ✅ 通过 | 返回token |
+| 3 | 订单列表 | GET /api/orders | ✅ 通过 | 返回43条订单 |
+| 4 | 订单编辑 | PUT /api/orders/{id} | ✅ 通过 | content和discount_amount字段正常 |
+| 5 | 生产反馈列表 | GET /api/production-feedback | ✅ 通过 | 返回11条反馈记录 |
+| 6 | 采购拆分-API入口 | POST /api/purchase-orders/split/{id} | ✅ 通过 | 业务校验正常(待确认订单不能拆分) |
+| 7 | 安装单列表 | GET /api/installation-orders | ✅ 通过 | 返回5条安装单 |
+| 8 | 安装单批量派工 | POST /api/installation-orders/batch-assign | ❌ 未实现 | 后端API不存在 |
+| 9 | 码表管理 | GET /api/dicts | ✅ 通过 | 返回所有码表分类 |
+
+### 发现的问题
+
+#### 问题1: 安装单批量派工功能后端API未实现
+**严重程度:** 中
+**描述:** 前端需求中提到"安装单批量派工"功能，但后端 `/api/installation-orders/batch-assign` 接口不存在。
+**现状:** 后端仅有单个安装单的 PATCH 更新接口 (`PATCH /api/installation-orders/{ins_id}`)，支持更新 installer_id/status 等字段。
+**建议:** 如需批量派工功能，需新增后端批量更新接口。
+
+### 发现的问题
+
+#### 问题2: 产品管理与采购管理中仍存在直接调用 `__dialogsModule__(row, S)` 的问题按钮
+
+**严重程度:** 高
+**描述:** 在供应商管理页面修复后（Day 1），产品管理和采购管理模块仍有按钮直接绑定 `__dialogsModule__.xxx(row, S)`，点击时会因为 `S` 未被正确捕获而报错。
+
+**问题按钮清单:**
+
+| # | 模块 | 行号 | 按钮 | 当前代码 | 修复方案 |
+|---|------|------|------|----------|----------|
+| 1 | 产品管理 | 317 | 新建产品 | `@click="__dialogsModule__.openProductDlg(null, S)"` | 改为 `@click="addProduct()"` |
+| 2 | 产品管理 | 356 | 编辑 | `@click="__dialogsModule__.openProductDlg(row, S)"` | 改为 `@click="openProductDlg(row)"` |
+| 3 | 产品管理 | 357 | 删除 | `@click="__dialogsModule__.delProduct(row, S)"` | 改为 `@click="delProduct(row)"` |
+| 4 | 采购管理 | 755 | 编辑 | `@click="__dialogsModule__.openPurchaseDlg(row, S)"` | 改为 `@click="openPurchaseDlg(row)"` |
+
+**已验证安全的按钮（setup return{} 中已有 wrapper）:**
+
+| # | 模块 | 按钮 | 对应 wrapper |
+|---|------|------|--------------|
+| 1 | 供应商管理 | 新建供应商 | `openSupplierDlgWrapper(null)` ✅ |
+| 2 | 供应商管理 | 编辑供应商 | `openSupplierDlgWrapper(row)` ✅ |
+| 3 | 供应商管理 | 删除供应商 | `delSupplier(row)` ✅ |
+| 4 | 产品管理 | 新建产品 | `addProduct()` ✅ |
+| 5 | 产品管理 | 编辑 | `openProductDlg(row)` ✅ (wrapper 存在，行2332) |
+| 6 | 产品管理 | 删除 | `delProduct(row)` ✅ (wrapper 存在，行2334) |
+| 7 | 分类管理 | 新建/编辑/删除 | `openCategoryDlg(row)` ✅ (行2324) |
+| 8 | 客户管理 | 新建/编辑/删除 | `openCustomerDlg(row)` / `delCustomer(row)` ✅ |
+| 9 | 员工管理 | 新建/编辑/删除 | `openEmpDlg(row)` ✅ |
+| 10 | 采购管理 | 新建采购单 | 无新建按钮 ✅ |
+| 11 | 采购管理 | 编辑 | `openPurchaseDlg(row)` ✅ (wrapper 存在，行2390) |
+| 12 | 采购管理 | 删除 | `deletePurchase(row)` ✅ (用 __purchaseModule__，安全) |
+| 13 | 采购管理 | 状态切换 | `updatePurchaseStatus(row, s)` ✅ (用 __purchaseModule__，安全) |
+
+**各模块 save 按钮（无需 row，仅传 S）均为安全:**
+- 行1246: `__dialogsModule__.saveSupplier(S)` — saveSupplier wrapper 存在（行2321）
+- 行1271: `__dialogsModule__.savePurchase(S)` — savePurchase wrapper 存在（行2391）
+- 行1313: `__dialogsModule__.saveCategory(S)` — saveCategory wrapper 存在（行2325）
+- 行1342: `__dialogsModule__.saveProduct(S)` — 无独立 wrapper（但不走 dialogsModule，直接由弹窗内部处理）
+

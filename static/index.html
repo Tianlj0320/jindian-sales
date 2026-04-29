@@ -476,7 +476,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
           <div class="page-title" style="margin:0">供应商管理</div>
           <div style="display:flex;gap:8px;align-items:center">
-            <el-button type="primary" size="small" @click="openSupplierDlgWrapper(null)">+ 新建供应商</el-button>
+            <el-button type="primary" size="small" @click="openSupplierDlg(null)">+ 新建供应商</el-button>
             <el-input v-model="suppSearch" placeholder="搜索名称/编号/联系人" size="small" style="width:180px" clearable>
               <template #prefix><el-icon><search/></el-icon></template>
             </el-input>
@@ -508,7 +508,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
                 <td style="padding:7px 6px;text-align:center">{{row.deliveryDays||row.delivery_days?row.deliveryDays||row.delivery_days+'天':'-'}}</td>
                 <td style="padding:7px 6px;text-align:left">{{row.address||'-'}}</td>
                 <td style="padding:7px 6px;text-align:center">
-                  <el-button size="small" @click="openSupplierDlgWrapper(row)">编辑</el-button>
+                  <el-button size="small" @click="openSupplierDlg(row)">编辑</el-button>
                   <el-button size="small" type="danger" @click="delSupplier(row)">删除</el-button>
                 </td>
               </tr>
@@ -1243,7 +1243,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
   </el-form>
   <template #footer>
     <el-button @click="dlgSupplier=false">取消</el-button>
-    <el-button type="primary" @click="__dialogsModule__.saveSupplier(S)">保存</el-button>
+    <el-button type="primary" @click="saveSupplier()">保存</el-button>
   </template>
 </el-dialog>
 
@@ -1904,6 +1904,7 @@ const app = createApp({
     const loginForm = ref({ phone: '', password: '' });
     const showLogin = ref(false);
     const showNewOrder = ref(false);
+    const showEditOrder = ref(false);
     const doSplitOrder = async () => {
       const o = S.selOrder;
       if (!o?.id) return;
@@ -1924,6 +1925,50 @@ const app = createApp({
     };
     const dlgAssignInstaller = ref(false);
     const dlgBatchAssign = ref(false);
+    const dlgFb = ref(false);
+    const dlgSupplier = ref(false);
+    const dlgCategory = ref(false);
+    const dlgProduct = ref(false);
+    const dlgPurchase = ref(false);
+
+    // ── 供应商表单 ──────────────────────────────────────
+    const editingSupplier = ref(null);
+    const sForm = ref({ code: '', name: '', type: '布艺', contact: '', phone: '', deliveryDays: 7, address: '', payment: '' });
+
+    const openSupplierDlg = (row) => {
+      editingSupplier.value = row ? { ...row } : null;
+      sForm.value = row
+        ? { code: row.code || '', name: row.name || '', type: row.type || '布艺', contact: row.contact || '', phone: row.phone || '', deliveryDays: row.deliveryDays || 7, address: row.address || '', payment: row.payment || '' }
+        : { code: '', name: '', type: '布艺', contact: '', phone: '', deliveryDays: 7, address: '', payment: '' };
+      dlgSupplier.value = true;
+    };
+
+    const saveSupplier = async () => {
+      const f = sForm.value;
+      const payload = { code: f.code, name: f.name, type: f.type || '布艺', contact: f.contact || '', phone: f.phone || '', delivery_days: f.deliveryDays || 7, address: f.address || '', payment: f.payment || '' };
+      try {
+        let d;
+        if (editingSupplier.value) {
+          d = await apiProducts.updateSupplier(editingSupplier.value.id, payload);
+          const idx = S.suppliers.findIndex(s => s.id === editingSupplier.value.id);
+          if (idx > -1) S.suppliers.splice(idx, 1, { ...S.suppliers[idx], code: f.code, name: f.name, type: f.type || '布艺', contact: f.contact || '', phone: f.phone || '', deliveryDays: f.deliveryDays || 7, address: f.address || '', payment: f.payment || '' });
+        } else {
+          d = await apiProducts.createSupplier(payload);
+          S.suppliers.push({ id: d.id, code: d.code || f.code, name: f.name, type: f.type || '布艺', contact: f.contact || '', phone: f.phone || '', deliveryDays: f.deliveryDays || 7, address: f.address || '', payment: f.payment || '' });
+        }
+        dlgSupplier.value = false;
+        ElementPlus.ElMessage.success('保存成功');
+      } catch(e) { ElementPlus.ElMessage.error('保存失败'); }
+    };
+
+    const delSupplier = async (row) => {
+      if (!confirm(`确定删除供应商「${row.name}」？`)) return;
+      try {
+        await apiProducts.deleteSupplier(row.id);
+        S.suppliers = S.suppliers.filter(s => s.id !== row.id);
+        ElementPlus.ElMessage.success('已删除');
+      } catch(e) { ElementPlus.ElMessage.error('删除失败'); }
+    };
     const assigningOrder = ref(null);
     const batchInstallerId = ref('');
     const assignInstallerId = ref('');
@@ -2240,11 +2285,11 @@ const app = createApp({
     const openNewFb = () => {
       S.editingFb = null;
       S.fbForm = { orderNo: '', customerName: '', feedbackType: '', description: '', feedbackBy: S.currentUser?.name || '' };
-      S.dlgFb = true;
+      dlgFb.value = true;
     };
     const openViewFb = (row) => {
       S.editingFb = row;
-      S.dlgFb = true;
+      dlgFb.value = true;
     };
     const saveFb = async () => {
       const f = S.fbForm;
@@ -2259,7 +2304,7 @@ const app = createApp({
           description: f.description,
           feedback_by: f.feedbackBy || '',
         });
-        S.dlgFb = false;
+        dlgFb.value = false;
         ElementPlus.ElMessage.success('反馈已提交');
         loadFb();
       } catch(e) {
@@ -2500,12 +2545,12 @@ const app = createApp({
       rptMonth: computed(() => S.rptMonth),
       rptTab: computed(() => S.rptTab),
       loadReportData,
-      dlgSupplier: {
-        get: () => S.dlgSupplier,
-        set: v => { S.dlgSupplier = v; }
-      },
-      sForm: computed(() => S.sForm),
-      editingSupplier: computed(() => S.editingSupplier),
+      dlgSupplier,
+      sForm,
+      editingSupplier,
+      openSupplierDlg,
+      saveSupplier,
+      delSupplier,
       dlgCategory: computed(() => S.dlgCategory),
       cForm: computed(() => S.cForm),
       editingCategory: computed(() => S.editingCategory),
@@ -2552,44 +2597,32 @@ app.mount('#app');
 
 // 登录后自动初始化
 const S = window.__STATE__;
-try {
-  let storedUser = typeof window.LS === 'function' ? window.LS('currentUser') : null;
+const storedUser = typeof window.LS === 'function' ? window.LS('currentUser') : null;
+const authToken = localStorage.getItem('authToken') || '';
 
-  // 如果 localStorage 没有 currentUser，尝试从 cookie 读取 authToken
-  if (!storedUser) {
-    const cookieStr = document.cookie;
-    if (cookieStr.startsWith('eyJ')) {
-      // cookie 直接是 token，尝试解码获取用户信息
-      try {
-        const payload = JSON.parse(atob(cookieStr.split('.')[1]));
-        storedUser = { id: payload.sub, name: payload.name, role: payload.role };
-      } catch(e) {}
-    } else {
-      const cookies = Object.fromEntries(
-        cookieStr.split('; ').map(c => { const eq = c.indexOf('='); return eq >= 0 ? [c.slice(0,eq), c.slice(eq+1)] : [c,'']; })
-      );
-      if (cookies.authToken) {
-        try {
-          const payload = JSON.parse(atob(cookies.authToken.split('.')[1]));
-          storedUser = { id: payload.sub, name: payload.name, role: payload.role };
-        } catch(e) {}
-      }
-    }
-  }
-
-  if (storedUser) {
-    S.currentUser = storedUser;
-    S.isLoggedIn = true;
-    S.page = 'home';
-    S.activeMenu = 'home';
-    if (window.__initModule__?.showLogin) window.__initModule__.showLogin.value = false;
-    __initModule__.initAll().catch(e => console.error('[initAll error]', e));
-  } else {
-    if (window.__initModule__?.showLogin) window.__initModule__.showLogin.value = true;
-  }
-} catch(e) {
-  console.error('[init] auto-login check failed', e);
+// 显示登录页（默认）
+const showLoginPage = () => {
+  S.isLoggedIn = false;
   if (window.__initModule__?.showLogin) window.__initModule__.showLogin.value = true;
+};
+
+if (storedUser && authToken) {
+  // 有记录且有 token，先验证 token 是否有效
+  S.currentUser = storedUser;
+  S.isLoggedIn = true;
+  S.page = 'home';
+  S.activeMenu = 'home';
+  if (window.__initModule__?.showLogin) window.__initModule__.showLogin.value = false;
+  // 用 dashboard API 验证 token，失败则退回登录页
+  apiDashboard.getSummary().then(dash => {
+    __initModule__.initAll().catch(e => console.error('[initAll error]', e));
+  }).catch(e => {
+    console.warn('[auto-login] token 无效，显示登录页', e);
+    S.currentUser = null;
+    showLoginPage();
+  });
+} else {
+  showLoginPage();
 }
 </script>
 

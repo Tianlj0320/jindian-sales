@@ -1,6 +1,7 @@
 # app/api/purchase_orders.py
 # V3.0 采购单 API（含订单拆分核心逻辑）
 from datetime import date, datetime
+from typing import Any
 
 from fastapi import APIRouter, Body, Header, HTTPException, Path, Query
 from sqlalchemy import and_, func, select
@@ -8,6 +9,7 @@ from sqlalchemy import and_, func, select
 from app.core.response import success_response, error_response
 from app.database import async_session
 from app.models import Order, OrderItem, PurchaseOrder, Supplier
+from app.schemas import CommonResponse
 
 router = APIRouter(prefix="/api/purchase-orders", tags=["V3.0 采购管理"])
 
@@ -36,7 +38,7 @@ def parse_delivery_date(order: dict) -> date | None:
 
 
 # ─── 订单拆分核心逻辑 ─────────────────────────────────────────
-async def split_order_to_purchase_orders(session, order_id: int) -> list[PurchaseOrder]:
+async def split_order_to_purchase_orders(session: Any, order_id: int) -> list[PurchaseOrder]:
     """
     拆分逻辑：
     1. 读取订单明细（order_items），按 supplier_id 分组
@@ -143,8 +145,8 @@ async def split_order_to_purchase_orders(session, order_id: int) -> list[Purchas
 @router.post("/split/{order_id}")
 async def split_order(
     order_id: int = Path(..., description="订单ID"),
-    authorization: str = Header(None),
-):
+    authorization: str | None = Header(None),
+) -> dict:
     """
     【核心接口】订单拆分采购单
 
@@ -210,7 +212,7 @@ async def list_purchase_orders(
     keyword: str | None = Query(None, description="供应商/PO单号搜索"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-):
+) -> dict:
     """采购单列表（分页）"""
     async with async_session() as session:
         conditions = []
@@ -271,7 +273,7 @@ async def list_purchase_orders(
 
 
 @router.get("/{po_id}", response_model=dict)
-async def get_purchase_order(po_id: int = Path(...)):
+async def get_purchase_order(po_id: int = Path(...)) -> dict:
     """采购单详情"""
     async with async_session() as session:
         r = await session.execute(select(PurchaseOrder).where(PurchaseOrder.id == po_id))
@@ -319,8 +321,8 @@ async def get_purchase_order(po_id: int = Path(...)):
 @router.patch("/{po_id}", response_model=CommonResponse)
 async def update_purchase_order(
     po_id: int = Path(...),
-    req: dict = Body(...),
-):
+    req: dict[str, Any] = Body(...),
+) -> dict:
     """
     更新采购单状态
     Body: { "status": "已下单", "remark": "...", "items": [...] }
@@ -369,7 +371,7 @@ async def update_purchase_order(
 
 
 @router.delete("/{po_id}", response_model=CommonResponse)
-async def delete_purchase_order(po_id: int = Path(...)):
+async def delete_purchase_order(po_id: int = Path(...)) -> dict:
     """删除采购单"""
     async with async_session() as session:
         r = await session.execute(select(PurchaseOrder).where(PurchaseOrder.id == po_id))
@@ -384,8 +386,8 @@ async def delete_purchase_order(po_id: int = Path(...)):
 @router.post("/merge", response_model=dict)
 async def merge_purchase_orders(
     po_ids: list[int] = Body(..., description="要合并的采购单ID列表"),
-    authorization: str = Header(None),
-):
+    authorization: str | None = Header(None),
+) -> dict:
     """
     合并多张采购单（同一供应商 + 交期相近）
     """
@@ -464,7 +466,7 @@ async def get_purchase_orders_by_supplier(
     status: str | None = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-):
+) -> dict:
     """
     按供应商查采购单
     GET /api/purchase-orders/by-supplier/{supplier_id}?status=待采购&page=1&page_size=20
@@ -526,8 +528,8 @@ async def get_purchase_orders_by_supplier(
 @router.post("/batch-split")
 async def batch_split_orders(
     order_ids: list[int] = Body(..., description="订单ID列表"),
-    authorization: str = Header(None),
-):
+    authorization: str | None = Header(None),
+) -> dict:
     """
     【批量拆分核心接口】
     将多个已确认订单合并按供应商拆分生成采购单

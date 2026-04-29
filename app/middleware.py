@@ -1,8 +1,10 @@
 # app/middleware.py
+from typing import Awaitable, Callable
+
 from jose import JWTError, jwt
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, Response
 
 from app.core.config import ALGORITHM, SECRET_KEY
 
@@ -36,7 +38,7 @@ def is_public_path(path: str) -> bool:
 
 
 class AuthMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(self, request: Request, call_next: Callable[..., Awaitable[Response]]) -> Response:
         path = request.url.path
 
         # 公开路径直接过

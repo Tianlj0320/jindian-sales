@@ -7,6 +7,7 @@ from sqlalchemy import and_, func, select
 from app.core.response import success_response, error_response
 from app.database import async_session
 from app.models import FinanceRecord, Order
+from app.schemas import CommonResponse
 
 router = APIRouter(prefix="/api/finance", tags=["财务结算"])
 

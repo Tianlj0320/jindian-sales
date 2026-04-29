@@ -1,11 +1,14 @@
 # app/api/warehouse.py
 
+from typing import Any
+
 from fastapi import APIRouter, Body, Header, Path, Query
 from sqlalchemy import func, or_, select
 
 from app.core.response import success_response, error_response
 from app.database import async_session
 from app.models import Product, WarehouseRecord
+from app.schemas import CommonResponse
 
 router = APIRouter(prefix="/api/warehouse", tags=["仓库管理"])
 
@@ -16,7 +19,7 @@ async def list_records(
     keyword: str | None = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
-):
+) -> dict:
     async with async_session() as session:
         conditions = []
         if record_type:
@@ -66,7 +69,7 @@ async def list_records(
 
 
 @router.get("/stock", response_model=dict)
-async def get_stock(keyword: str | None = Query(None)):
+async def get_stock(keyword: str | None = Query(None)) -> dict:
     async with async_session() as session:
         query = select(Product)
         if keyword:
@@ -97,7 +100,7 @@ async def get_stock(keyword: str | None = Query(None)):
 
 
 @router.post("/in", response_model=CommonResponse)
-async def stock_in(req: dict = Body(...)):
+async def stock_in(req: dict[str, Any] = Body(...)) -> dict:
     async with async_session() as session:
         record = WarehouseRecord(
             record_type="in",
@@ -122,7 +125,7 @@ async def stock_in(req: dict = Body(...)):
 
 
 @router.post("/out", response_model=CommonResponse)
-async def stock_out(req: dict = Body(...)):
+async def stock_out(req: dict[str, Any] = Body(...)) -> dict:
     async with async_session() as session:
         record = WarehouseRecord(
             record_type="out",
@@ -148,8 +151,8 @@ async def stock_out(req: dict = Body(...)):
 @router.delete("/records/{record_id}", response_model=CommonResponse)
 async def delete_warehouse_record(
     record_id: int = Path(...),
-    authorization: str = Header(None),
-):
+    authorization: str | None = Header(None),
+) -> dict:
     """删除仓库记录"""
     async with async_session() as session:
         r = await session.execute(select(WarehouseRecord).where(WarehouseRecord.id == record_id))
@@ -162,7 +165,7 @@ async def delete_warehouse_record(
 
 
 @router.put("/records/{record_id}", response_model=CommonResponse)
-async def update_warehouse_record(record_id: int, req: dict = Body(...)):
+async def update_warehouse_record(record_id: int, req: dict[str, Any] = Body(...)) -> dict:
     """更新仓库记录"""
     async with async_session() as session:
         r = await session.execute(select(WarehouseRecord).where(WarehouseRecord.id == record_id))
