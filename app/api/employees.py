@@ -95,3 +95,15 @@ async def update_employee(employee_id: int, req: dict = Body(...)):
 
         await session.commit()
         return CommonResponse(success=True, data={"id": employee_id})
+
+
+@router.delete("/{employee_id}", response_model=CommonResponse)
+async def delete_employee(employee_id: int):
+    async with async_session() as session:
+        result = await session.execute(select(Employee).where(Employee.id == employee_id))
+        e = result.scalar_one_or_none()
+        if not e:
+            return CommonResponse(success=False, error="员工不存在")
+        await session.delete(e)
+        await session.commit()
+        return CommonResponse(success=True, message="删除成功")
