@@ -186,3 +186,31 @@ async def record_expense(req: dict = Body(...)):
         session.add(record)
         await session.commit()
         return success_response(data={"id": record.id})
+
+
+@router.put("/{record_id}", response_model=CommonResponse)
+async def update_finance_record(record_id: int, req: dict = Body(...)):
+    """更新财务记录"""
+    async with async_session() as session:
+        r = await session.execute(select(FinanceRecord).where(FinanceRecord.id == record_id))
+        record = r.scalar_one_or_none()
+        if not record:
+            return error_response(error="记录不存在")
+        for field in ["order_no", "customer_name", "amount", "method", "operator", "remark"]:
+            if field in req:
+                setattr(record, field, req[field])
+        await session.commit()
+        return success_response(data={"id": record_id})
+
+
+@router.delete("/{record_id}", response_model=CommonResponse)
+async def delete_finance_record(record_id: int):
+    """删除财务记录"""
+    async with async_session() as session:
+        r = await session.execute(select(FinanceRecord).where(FinanceRecord.id == record_id))
+        record = r.scalar_one_or_none()
+        if not record:
+            return error_response(error="记录不存在")
+        await session.delete(record)
+        await session.commit()
+        return success_response(message="删除成功")
