@@ -368,6 +368,19 @@ async def update_purchase_order(
         return success_response(data={"id": po_id, "status": p.status})
 
 
+@router.delete("/{po_id}", response_model=CommonResponse)
+async def delete_purchase_order(po_id: int = Path(...)):
+    """删除采购单"""
+    async with async_session() as session:
+        r = await session.execute(select(PurchaseOrder).where(PurchaseOrder.id == po_id))
+        p = r.scalar_one_or_none()
+        if not p:
+            return error_response(error="采购单不存在")
+        await session.delete(p)
+        await session.commit()
+        return success_response(message="删除成功")
+
+
 @router.post("/merge", response_model=dict)
 async def merge_purchase_orders(
     po_ids: list[int] = Body(..., description="要合并的采购单ID列表"),
