@@ -107,6 +107,7 @@ window.apiEmployees = {
   list: () => api('/api/employees'),
   create: (payload) => api('/api/employees', 'POST', payload),
   update: (id, payload) => api(`/api/employees/${id}`, 'PUT', payload),
+  delete: (id) => api(`/api/employees/${id}`, 'DELETE'),
 };
 
 // ── 仓库 ──────────────────────────────────────────────────
@@ -114,6 +115,8 @@ window.apiWarehouse = {
   records: () => api('/api/warehouse/records'),
   createRecord: (payload) =>
     api('/api/warehouse/records', 'POST', payload),
+  updateRecord: (id, payload) =>
+    api(`/api/warehouse/records/${id}`, 'PUT', payload),
   deleteRecord: (id) => api(`/api/warehouse/records/${id}`, 'DELETE'),
 };
 
@@ -131,6 +134,8 @@ window.apiFinance = {
   receive: (payload) => api('/api/finance/receive', 'POST', payload),
   pay: (payload) => api('/api/finance/pay', 'POST', payload),
   expense: (payload) => api('/api/finance/expense', 'POST', payload),
+  update: (id, payload) => api(`/api/finance/${id}`, 'PUT', payload),
+  delete: (id) => api(`/api/finance/${id}`, 'DELETE'),
 };
 
 // ── 报表 ──────────────────────────────────────────────────
