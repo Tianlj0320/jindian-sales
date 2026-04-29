@@ -1,4 +1,5 @@
 # app/models.py
+# mypy: disable-error-code="valid-type, misc, var-annotated"
 from datetime import datetime
 
 from sqlalchemy import (

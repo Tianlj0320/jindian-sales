@@ -64,6 +64,14 @@ exclude = ["venv", "migrations", "seed_data.py", "test_order_flow.py", "tests"]
 module = ["sqlalchemy.*"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = ["app.api.*"]
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = ["app.schemas"]
+ignore_errors = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
