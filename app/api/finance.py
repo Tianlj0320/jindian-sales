@@ -4,9 +4,9 @@ from datetime import date
 from fastapi import APIRouter, Body, Query
 from sqlalchemy import and_, func, select
 
+from app.core.response import success_response, error_response
 from app.database import async_session
 from app.models import FinanceRecord, Order
-from app.schemas import CommonResponse
 
 router = APIRouter(prefix="/api/finance", tags=["财务结算"])
 
@@ -43,27 +43,28 @@ async def list_records(
         records = result.scalars().all()
 
         await session.commit()
-        return {
-            "success": True,
-            "total": total,
-            "page": page,
-            "page_size": page_size,
-            "items": [
-                {
-                    "id": r.id,
-                    "record_type": r.record_type or "",
-                    "order_id": r.order_id,
-                    "order_no": r.order_no or "",
-                    "customer_name": r.customer_name or "",
-                    "amount": float(r.amount or 0),
-                    "method": r.method or "转账",
-                    "operator": r.operator or "",
-                    "remark": r.remark or "",
-                    "created_at": str(r.created_at)[:19] if r.created_at else "",
-                }
-                for r in records
-            ],
-        }
+        return success_response(
+            data={
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "items": [
+                    {
+                        "id": r.id,
+                        "record_type": r.record_type or "",
+                        "order_id": r.order_id,
+                        "order_no": r.order_no or "",
+                        "customer_name": r.customer_name or "",
+                        "amount": float(r.amount or 0),
+                        "method": r.method or "转账",
+                        "operator": r.operator or "",
+                        "remark": r.remark or "",
+                        "created_at": str(r.created_at)[:19] if r.created_at else "",
+                    }
+                    for r in records
+                ],
+            }
+        )
 
 
 @router.get("/summary", response_model=dict)
@@ -111,15 +112,14 @@ async def get_summary():
         total_debt = r.scalar() or 0
 
         await session.commit()
-        return {
-            "success": True,
-            "data": {
+        return success_response(
+            data={
                 "month_receive": float(month_receive),
                 "month_pay": float(month_pay),
                 "month_expense": float(month_expense),
                 "total_debt": float(total_debt),
-            },
-        }
+            }
+        )
 
 
 @router.post("/receive", response_model=CommonResponse)
@@ -147,7 +147,7 @@ async def record_receive(req: dict = Body(...)):
                 o.debt = max(0, float(o.amount or 0) - float(o.received or 0))
 
         await session.commit()
-        return CommonResponse(success=True, data={"id": record.id})
+        return success_response(data={"id": record.id})
 
 
 @router.post("/pay", response_model=CommonResponse)
@@ -166,7 +166,7 @@ async def record_pay(req: dict = Body(...)):
         )
         session.add(record)
         await session.commit()
-        return CommonResponse(success=True, data={"id": record.id})
+        return success_response(data={"id": record.id})
 
 
 @router.post("/expense", response_model=CommonResponse)
@@ -185,4 +185,4 @@ async def record_expense(req: dict = Body(...)):
         )
         session.add(record)
         await session.commit()
-        return CommonResponse(success=True, data={"id": record.id})
+        return success_response(data={"id": record.id})

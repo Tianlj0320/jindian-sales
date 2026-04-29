@@ -5,9 +5,9 @@ from datetime import date, datetime
 from fastapi import APIRouter, Body, Header, HTTPException, Path, Query
 from sqlalchemy import and_, func, select
 
+from app.core.response import success_response, error_response
 from app.database import async_session
 from app.models import Order, OrderItem, PurchaseOrder, Supplier
-from app.schemas import CommonResponse
 
 router = APIRouter(prefix="/api/purchase-orders", tags=["V3.0 采购管理"])
 
@@ -184,22 +184,23 @@ async def split_order(
 
         await session.commit()
 
-        return {
-            "success": True,
-            "message": f"成功拆分为 {len(pos)} 张采购单",
-            "purchase_orders": [
-                {
-                    "id": po.id,
-                    "po_no": po.po_no,
-                    "supplier_name": po.supplier_name or "未分配供应商",
-                    "total_amount": float(po.total_amount),
-                    "status": po.status,
-                    "expected_date": str(po.expected_date) if po.expected_date else "",
-                    "item_count": len(po.items or []),
-                }
-                for po in pos
-            ],
-        }
+        return success_response(
+            data={
+                "purchase_orders": [
+                    {
+                        "id": po.id,
+                        "po_no": po.po_no,
+                        "supplier_name": po.supplier_name or "未分配供应商",
+                        "total_amount": float(po.total_amount),
+                        "status": po.status,
+                        "expected_date": str(po.expected_date) if po.expected_date else "",
+                        "item_count": len(po.items or []),
+                    }
+                    for po in pos
+                ]
+            },
+            message=f"成功拆分为 {len(pos)} 张采购单",
+        )
 
 
 @router.get("", response_model=dict)
@@ -239,33 +240,34 @@ async def list_purchase_orders(
         result = await session.execute(query)
         items = result.scalars().all()
 
-        return {
-            "success": True,
-            "total": total,
-            "page": page,
-            "page_size": page_size,
-            "items": [
-                {
-                    "id": p.id,
-                    "po_no": p.po_no or "",
-                    "supplier_id": p.supplier_id,
-                    "supplier_name": p.supplier_name or "",
-                    "contact": p.contact or "",
-                    "phone": p.phone or "",
-                    "total_amount": float(p.total_amount or 0),
-                    "paid_amount": float(p.paid_amount or 0),
-                    "debt_amount": float(p.debt_amount or 0),
-                    "status": p.status or "待采购",
-                    "order_ids": p.order_ids or "",
-                    "expected_date": str(p.expected_date) if p.expected_date else "",
-                    "arrived_date": str(p.arrived_date) if p.arrived_date else "",
-                    "items": p.items or [],
-                    "remark": p.remark or "",
-                    "created_at": str(p.created_at)[:19] if p.created_at else "",
-                }
-                for p in items
-            ],
-        }
+        return success_response(
+            data={
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "items": [
+                    {
+                        "id": p.id,
+                        "po_no": p.po_no or "",
+                        "supplier_id": p.supplier_id,
+                        "supplier_name": p.supplier_name or "",
+                        "contact": p.contact or "",
+                        "phone": p.phone or "",
+                        "total_amount": float(p.total_amount or 0),
+                        "paid_amount": float(p.paid_amount or 0),
+                        "debt_amount": float(p.debt_amount or 0),
+                        "status": p.status or "待采购",
+                        "order_ids": p.order_ids or "",
+                        "expected_date": str(p.expected_date) if p.expected_date else "",
+                        "arrived_date": str(p.arrived_date) if p.arrived_date else "",
+                        "items": p.items or [],
+                        "remark": p.remark or "",
+                        "created_at": str(p.created_at)[:19] if p.created_at else "",
+                    }
+                    for p in items
+                ],
+            }
+        )
 
 
 @router.get("/{po_id}", response_model=dict)
@@ -290,9 +292,8 @@ async def get_purchase_order(po_id: int = Path(...)):
                             {"id": o.id, "order_no": o.order_no, "customer_name": o.customer_name}
                         )
 
-        return {
-            "success": True,
-            "data": {
+        return success_response(
+            data={
                 "id": p.id,
                 "po_no": p.po_no or "",
                 "supplier_id": p.supplier_id,
@@ -311,8 +312,8 @@ async def get_purchase_order(po_id: int = Path(...)):
                 "remark": p.remark or "",
                 "created_at": str(p.created_at)[:19] if p.created_at else "",
                 "updated_at": str(p.updated_at)[:19] if p.updated_at else "",
-            },
-        }
+            }
+        )
 
 
 @router.patch("/{po_id}", response_model=CommonResponse)
@@ -335,7 +336,7 @@ async def update_purchase_order(
         r = await session.execute(select(PurchaseOrder).where(PurchaseOrder.id == po_id))
         p = r.scalar_one_or_none()
         if not p:
-            return CommonResponse(success=False, error="采购单不存在")
+            return error_response(error="采购单不存在")
 
         new_status = req.get("status")
         if new_status:
@@ -364,7 +365,7 @@ async def update_purchase_order(
             p.arrived_date = datetime.strptime(req["arrived_date"], "%Y-%m-%d").date()
 
         await session.commit()
-        return CommonResponse(success=True, data={"id": po_id, "status": p.status})
+        return success_response(data={"id": po_id, "status": p.status})
 
 
 @router.post("/merge", response_model=dict)
@@ -430,17 +431,18 @@ async def merge_purchase_orders(
 
         await session.commit()
 
-        return {
-            "success": True,
-            "message": f"成功合并 {len(pos)} 张采购单",
-            "purchase_order": {
-                "id": new_po.id,
-                "po_no": new_po.po_no,
-                "supplier_name": new_po.supplier_name or "",
-                "total_amount": float(new_po.total_amount),
-                "item_count": len(all_items),
+        return success_response(
+            data={
+                "purchase_order": {
+                    "id": new_po.id,
+                    "po_no": new_po.po_no,
+                    "supplier_name": new_po.supplier_name or "",
+                    "total_amount": float(new_po.total_amount),
+                    "item_count": len(all_items),
+                }
             },
-        }
+            message=f"成功合并 {len(pos)} 张采购单",
+        )
 
 
 @router.get("/by-supplier/{supplier_id}", response_model=dict)
@@ -480,31 +482,32 @@ async def get_purchase_orders_by_supplier(
         if items:
             sup_name = items[0].supplier_name or ""
 
-        return {
-            "success": True,
-            "supplier_id": supplier_id,
-            "supplier_name": sup_name,
-            "total": total,
-            "page": page,
-            "page_size": page_size,
-            "items": [
-                {
-                    "id": p.id,
-                    "po_no": p.po_no or "",
-                    "total_amount": float(p.total_amount or 0),
-                    "paid_amount": float(p.paid_amount or 0),
-                    "debt_amount": float(p.debt_amount or 0),
-                    "status": p.status or "待采购",
-                    "order_ids": p.order_ids or "",
-                    "expected_date": str(p.expected_date) if p.expected_date else "",
-                    "arrived_date": str(p.arrived_date) if p.arrived_date else "",
-                    "item_count": len(p.items or []),
-                    "remark": p.remark or "",
-                    "created_at": str(p.created_at)[:19] if p.created_at else "",
-                }
-                for p in items
-            ],
-        }
+        return success_response(
+            data={
+                "supplier_id": supplier_id,
+                "supplier_name": sup_name,
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "items": [
+                    {
+                        "id": p.id,
+                        "po_no": p.po_no or "",
+                        "total_amount": float(p.total_amount or 0),
+                        "paid_amount": float(p.paid_amount or 0),
+                        "debt_amount": float(p.debt_amount or 0),
+                        "status": p.status or "待采购",
+                        "order_ids": p.order_ids or "",
+                        "expected_date": str(p.expected_date) if p.expected_date else "",
+                        "arrived_date": str(p.arrived_date) if p.arrived_date else "",
+                        "item_count": len(p.items or []),
+                        "remark": p.remark or "",
+                        "created_at": str(p.created_at)[:19] if p.created_at else "",
+                    }
+                    for p in items
+                ],
+            }
+        )
 
 
 @router.post("/batch-split")
@@ -642,8 +645,7 @@ async def batch_split_orders(
 
         await session.commit()
 
-        return {
-            "success": True,
-            "message": f"成功生成 {len(purchase_orders)} 张采购单",
-            "purchase_orders": purchase_orders,
-        }
+        return success_response(
+            data={"purchase_orders": purchase_orders},
+            message=f"成功生成 {len(purchase_orders)} 张采购单",
+        )

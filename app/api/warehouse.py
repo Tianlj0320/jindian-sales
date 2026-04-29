@@ -3,9 +3,9 @@
 from fastapi import APIRouter, Body, Header, Path, Query
 from sqlalchemy import func, or_, select
 
+from app.core.response import success_response, error_response
 from app.database import async_session
 from app.models import Product, WarehouseRecord
-from app.schemas import CommonResponse
 
 router = APIRouter(prefix="/api/warehouse", tags=["仓库管理"])
 
@@ -42,26 +42,27 @@ async def list_records(
         records = result.scalars().all()
 
         await session.commit()
-        return {
-            "success": True,
-            "total": total,
-            "page": page,
-            "page_size": page_size,
-            "items": [
-                {
-                    "id": r.id,
-                    "record_type": r.record_type or "",
-                    "product_id": r.product_id,
-                    "product_name": r.product_name or "",
-                    "qty": float(r.qty or 0),
-                    "unit": r.unit or "米",
-                    "remark": r.remark or "",
-                    "operator": r.operator or "",
-                    "created_at": str(r.created_at)[:19] if r.created_at else "",
-                }
-                for r in records
-            ],
-        }
+        return success_response(
+            data={
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "items": [
+                    {
+                        "id": r.id,
+                        "record_type": r.record_type or "",
+                        "product_id": r.product_id,
+                        "product_name": r.product_name or "",
+                        "qty": float(r.qty or 0),
+                        "unit": r.unit or "米",
+                        "remark": r.remark or "",
+                        "operator": r.operator or "",
+                        "created_at": str(r.created_at)[:19] if r.created_at else "",
+                    }
+                    for r in records
+                ],
+            }
+        )
 
 
 @router.get("/stock", response_model=dict)
@@ -76,22 +77,23 @@ async def get_stock(keyword: str | None = Query(None)):
         products = result.scalars().all()
 
         await session.commit()
-        return {
-            "success": True,
-            "items": [
-                {
-                    "id": p.id,
-                    "code": p.code or "",
-                    "name": p.name or "",
-                    "supplier_name": "",  # 简化
-                    "unit_price": float(p.unit_price or 0),
-                    "stock": float(p.stock or 0),
-                    "unit": p.unit or "米",
-                }
-                for p in products
-                if p.stock is not None and p.stock > 0
-            ],
-        }
+        return success_response(
+            data={
+                "items": [
+                    {
+                        "id": p.id,
+                        "code": p.code or "",
+                        "name": p.name or "",
+                        "supplier_name": "",  # 简化
+                        "unit_price": float(p.unit_price or 0),
+                        "stock": float(p.stock or 0),
+                        "unit": p.unit or "米",
+                    }
+                    for p in products
+                    if p.stock is not None and p.stock > 0
+                ],
+            }
+        )
 
 
 @router.post("/in", response_model=CommonResponse)
@@ -116,7 +118,7 @@ async def stock_in(req: dict = Body(...)):
                 prod.stock = (prod.stock or 0) + float(req.get("qty", 0))
 
         await session.commit()
-        return CommonResponse(success=True, data={"id": record.id})
+        return success_response(data={"id": record.id})
 
 
 @router.post("/out", response_model=CommonResponse)
@@ -140,7 +142,7 @@ async def stock_out(req: dict = Body(...)):
                 prod.stock = max(0, (prod.stock or 0) - float(req.get("qty", 0)))
 
         await session.commit()
-        return CommonResponse(success=True, data={"id": record.id})
+        return success_response(data={"id": record.id})
 
 
 @router.delete("/records/{record_id}", response_model=CommonResponse)
@@ -153,7 +155,7 @@ async def delete_warehouse_record(
         r = await session.execute(select(WarehouseRecord).where(WarehouseRecord.id == record_id))
         record = r.scalar_one_or_none()
         if not record:
-            return CommonResponse(success=False, error="记录不存在")
+            return error_response(error="记录不存在")
         await session.delete(record)
         await session.commit()
-        return CommonResponse(success=True)
+        return success_response()

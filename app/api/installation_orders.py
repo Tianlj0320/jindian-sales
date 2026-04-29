@@ -5,9 +5,9 @@ from datetime import datetime
 from fastapi import APIRouter, Body, Header, HTTPException, Path, Query
 from sqlalchemy import and_, func, select
 
+from app.core.response import success_response, error_response
 from app.database import async_session
 from app.models import InstallationOrder, InstallerAccount, Order
-from app.schemas import CommonResponse
 
 router = APIRouter(prefix="/api/installation-orders", tags=["V3.0 安装单"])
 
@@ -66,38 +66,39 @@ async def list_installation_orders(
         result = await session.execute(query)
         items = result.scalars().all()
 
-        return {
-            "success": True,
-            "total": total,
-            "page": page,
-            "page_size": page_size,
-            "items": [
-                {
-                    "id": io.id,
-                    "ins_no": io.ins_no or "",
-                    "order_id": io.order_id,
-                    "order_no": io.order_no or "",
-                    "customer_name": io.customer_name or "",
-                    "customer_phone": io.customer_phone or "",
-                    "address": io.address or "",
-                    "product_details": io.product_details or {},
-                    "measure_summary": io.measure_summary or "",
-                    "install_requirements": io.install_requirements or "",
-                    "scheduled_date": str(io.scheduled_date) if io.scheduled_date else "",
-                    "installer_id": io.installer_id,
-                    "installer_name": io.installer_name or "",
-                    "install_time_slot": io.install_time_slot or "",
-                    "status": io.status or "待分配",
-                    "install_photo": io.install_photo or [],
-                    "receivable_amount": float(io.receivable_amount or 0),
-                    "received_amount": float(io.received_amount or 0),
-                    "unpaid_amount": float(io.unpaid_amount or 0),
-                    "remark": io.remark or "",
-                    "created_at": str(io.created_at)[:19] if io.created_at else "",
-                }
-                for io in items
-            ],
-        }
+        return success_response(
+            data={
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "items": [
+                    {
+                        "id": io.id,
+                        "ins_no": io.ins_no or "",
+                        "order_id": io.order_id,
+                        "order_no": io.order_no or "",
+                        "customer_name": io.customer_name or "",
+                        "customer_phone": io.customer_phone or "",
+                        "address": io.address or "",
+                        "product_details": io.product_details or {},
+                        "measure_summary": io.measure_summary or "",
+                        "install_requirements": io.install_requirements or "",
+                        "scheduled_date": str(io.scheduled_date) if io.scheduled_date else "",
+                        "installer_id": io.installer_id,
+                        "installer_name": io.installer_name or "",
+                        "install_time_slot": io.install_time_slot or "",
+                        "status": io.status or "待分配",
+                        "install_photo": io.install_photo or [],
+                        "receivable_amount": float(io.receivable_amount or 0),
+                        "received_amount": float(io.received_amount or 0),
+                        "unpaid_amount": float(io.unpaid_amount or 0),
+                        "remark": io.remark or "",
+                        "created_at": str(io.created_at)[:19] if io.created_at else "",
+                    }
+                    for io in items
+                ],
+            }
+        )
 
 
 @router.get("/{ins_id}", response_model=dict)
@@ -109,9 +110,8 @@ async def get_installation_order(ins_id: int = Path(...)):
         if not io:
             raise HTTPException(status_code=404, detail="安装单不存在")
 
-        return {
-            "success": True,
-            "data": {
+        return success_response(
+            data={
                 "id": io.id,
                 "ins_no": io.ins_no or "",
                 "order_id": io.order_id,
@@ -135,8 +135,8 @@ async def get_installation_order(ins_id: int = Path(...)):
                 "unpaid_amount": float(io.unpaid_amount or 0),
                 "remark": io.remark or "",
                 "created_at": str(io.created_at)[:19] if io.created_at else "",
-            },
-        }
+            }
+        )
 
 
 @router.post("", response_model=CommonResponse)
@@ -220,8 +220,7 @@ async def create_installation_order(req: dict = Body(...)):
         await session.commit()
         await session.refresh(io)
 
-        return CommonResponse(
-            success=True,
+        return success_response(
             data={"id": io.id, "ins_no": io.ins_no, "status": io.status},
         )
 
@@ -250,7 +249,7 @@ async def update_installation_order(
         r = await session.execute(select(InstallationOrder).where(InstallationOrder.id == ins_id))
         io = r.scalar_one_or_none()
         if not io:
-            return CommonResponse(success=False, error="安装单不存在")
+            return error_response(error="安装单不存在")
 
         # 更新安装工姓名
         if req.get("installer_id"):
@@ -296,7 +295,7 @@ async def update_installation_order(
                 order.status_key = "installed"
 
         await session.commit()
-        return CommonResponse(success=True, data={"id": ins_id, "status": io.status})
+        return success_response(data={"id": ins_id, "status": io.status})
 
 
 @router.post("/auto-generate/{order_id}", response_model=CommonResponse)
@@ -318,13 +317,13 @@ async def auto_generate_installation_order(
         )
         existing = r.scalar_one_or_none()
         if existing:
-            return CommonResponse(success=False, error=f"订单已有安装单 {existing.ins_no}")
+            return error_response(error=f"订单已有安装单 {existing.ins_no}")
 
         # 读取订单
         r = await session.execute(select(Order).where(Order.id == order_id))
         order = r.scalar_one_or_none()
         if not order:
-            return CommonResponse(success=False, error="订单不存在")
+            return error_response(error="订单不存在")
 
         # 生成安装单号
         today_str = datetime.now().strftime("%Y%m%d")
@@ -367,8 +366,7 @@ async def auto_generate_installation_order(
         await session.commit()
         await session.refresh(io)
 
-        return CommonResponse(
-            success=True,
+        return success_response(
             data={"id": io.id, "ins_no": io.ins_no, "status": io.status},
         )
 
@@ -395,7 +393,7 @@ async def confirm_installation(
         r = await session.execute(select(InstallationOrder).where(InstallationOrder.id == ins_id))
         io = r.scalar_one_or_none()
         if not io:
-            return CommonResponse(success=False, error="安装单不存在")
+            return error_response(error="安装单不存在")
 
         if "status" in req:
             io.status = req["status"]
@@ -435,13 +433,12 @@ async def confirm_installation(
                 order.history = history
 
         await session.commit()
-        return CommonResponse(
-            success=True,
+        return success_response(
             data={
                 "id": ins_id,
                 "status": io.status,
                 "received_amount": float(io.received_amount or 0),
                 "unpaid_amount": float(io.unpaid_amount or 0),
                 "confirmed_at": str(io.confirmed_at)[:19] if io.confirmed_at else "",
-            },
+            }
         )
