@@ -5,6 +5,7 @@ from datetime import date
 from fastapi import APIRouter, Query
 from sqlalchemy import and_, desc, func, select
 
+from app.core.response import success_response
 from app.database import async_session
 from app.models import Order
 
@@ -58,17 +59,16 @@ async def sales_report(
             status_dist[sk] = cr.scalar() or 0
 
         await session.commit()
-        return {
-            "success": True,
-            "data": {
+        return success_response(
+            data={
                 "year": year,
                 "month": month,
                 "order_count": order_count,
                 "total_amount": float(total_amount),
                 "avg_amount": float(total_amount / order_count) if order_count else 0,
                 "status_distribution": status_dist,
-            },
-        }
+            }
+        )
 
 
 @router.get("/product-rank", response_model=dict)
@@ -105,16 +105,15 @@ async def product_rank(
 
         ranked = sorted(prod_sales.items(), key=lambda x: x[1]["amount"], reverse=True)[:top]
         await session.commit()
-        return {
-            "success": True,
-            "data": {
+        return success_response(
+            data={
                 "year": year,
                 "month": month,
                 "items": [
                     {"product": k, "qty": v["qty"], "amount": v["amount"]} for k, v in ranked
                 ],
-            },
-        }
+            }
+        )
 
 
 @router.get("/employee-performance", response_model=dict)
@@ -141,9 +140,8 @@ async def employee_report(
         rows = r.all()
 
         await session.commit()
-        return {
-            "success": True,
-            "data": {
+        return success_response(
+            data={
                 "year": year,
                 "month": month,
                 "items": [
@@ -154,8 +152,8 @@ async def employee_report(
                     }
                     for row in rows
                 ],
-            },
-        }
+            }
+        )
 
 
 @router.get("/trend", response_model=dict)
@@ -181,9 +179,8 @@ async def sales_trend(
         rows = r.all()
 
         await session.commit()
-        return {
-            "success": True,
-            "data": {
+        return success_response(
+            data={
                 "items": [{"date": str(row[0]), "amount": float(row[1] or 0)} for row in rows]
-            },
-        }
+            }
+        )

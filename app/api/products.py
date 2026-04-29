@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Body, Header, Query
 from sqlalchemy import and_, func, select
 
+from app.core.response import success_response, error_response
 from app.database import async_session
 from app.models import FabricCategory, Product, Supplier
 from app.schemas import (
@@ -137,7 +138,7 @@ async def list_categories(supplier_id: int | None = Query(None)):
             for c in cats
         ]
         await session.commit()
-        return {"success": True, "items": items}
+        return success_response(data={"items": items})
 
 
 @router.post("/categories", response_model=CommonResponse)

@@ -4,6 +4,7 @@ from datetime import datetime
 from fastapi import APIRouter, Body, Query
 from sqlalchemy import and_, func, select
 
+from app.core.response import success_response, error_response
 from app.database import async_session
 from app.models import Product, Purchase
 from app.schemas import CommonResponse
@@ -43,32 +44,33 @@ async def list_purchases(
         items = result.scalars().all()
 
         await session.commit()
-        return {
-            "success": True,
-            "total": total,
-            "page": page,
-            "page_size": page_size,
-            "items": [
-                {
-                    "id": p.id,
-                    "po_no": p.po_no or "",
-                    "supplier_id": p.supplier_id,
-                    "supplier_name": p.supplier_name or "",
-                    "contact": p.contact or "",
-                    "phone": p.phone or "",
-                    "amount": float(p.amount or 0),
-                    "paid": float(p.paid or 0),
-                    "debt": float(p.debt or 0),
-                    "status": p.status or "待采购",
-                    "order_date": str(p.order_date) if p.order_date else "",
-                    "expected_date": str(p.expected_date) if p.expected_date else "",
-                    "items": p.items or [],
-                    "remark": p.remark or "",
-                    "created_at": str(p.created_at)[:19] if p.created_at else "",
-                }
-                for p in items
-            ],
-        }
+        return success_response(
+            data={
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "items": [
+                    {
+                        "id": p.id,
+                        "po_no": p.po_no or "",
+                        "supplier_id": p.supplier_id,
+                        "supplier_name": p.supplier_name or "",
+                        "contact": p.contact or "",
+                        "phone": p.phone or "",
+                        "amount": float(p.amount or 0),
+                        "paid": float(p.paid or 0),
+                        "debt": float(p.debt or 0),
+                        "status": p.status or "待采购",
+                        "order_date": str(p.order_date) if p.order_date else "",
+                        "expected_date": str(p.expected_date) if p.expected_date else "",
+                        "items": p.items or [],
+                        "remark": p.remark or "",
+                        "created_at": str(p.created_at)[:19] if p.created_at else "",
+                    }
+                    for p in items
+                ],
+            }
+        )
 
 
 @router.post("", response_model=CommonResponse)
@@ -104,7 +106,7 @@ async def create_purchase(req: dict = Body(...)):
         session.add(p)
         await session.commit()
         await session.refresh(p)
-        return CommonResponse(success=True, data={"id": p.id, "po_no": po_no})
+        return success_response(data={"id": p.id, "po_no": po_no})
 
 
 @router.put("/{po_id}/status", response_model=CommonResponse)
@@ -113,7 +115,7 @@ async def update_purchase_status(po_id: int, req: dict = Body(...)):
         r = await session.execute(select(Purchase).where(Purchase.id == po_id))
         p = r.scalar_one_or_none()
         if not p:
-            return CommonResponse(success=False, error="采购单不存在")
+            return error_response(error="采购单不存在")
 
         new_status = req.get("status", "已完成")
         p.status = new_status
@@ -129,4 +131,4 @@ async def update_purchase_status(po_id: int, req: dict = Body(...)):
                     prod.stock = (prod.stock or 0) + float(item.get("qty", 0))
 
         await session.commit()
-        return CommonResponse(success=True, data={"id": po_id, "status": new_status})
+        return success_response(data={"id": po_id, "status": new_status})

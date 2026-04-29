@@ -101,4 +101,4 @@ async def get_me(authorization: str | None = Header(None)) -> dict:
     payload = verify_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Token无效")
-    return {"user_id": int(payload["sub"]), "name": payload["name"], "role": payload["role"]}
+    return success_response(data={"user_id": int(payload["sub"]), "name": payload["name"], "role": payload["role"]})

@@ -7,6 +7,7 @@ from jose import JWTError, jwt
 from sqlalchemy import and_, func, select
 
 from app.core.config import ALGORITHM, SECRET_KEY, TOKEN_EXPIRE_DAYS
+from app.core.response import success_response
 from app.database import async_session
 from app.models import InstallerAccount, InstallTask, Order
 from app.schemas import (
@@ -134,10 +135,9 @@ async def list_installers():
             .order_by(InstallerAccount.id)
         )
         installers = result.scalars().all()
-        return {
-            "success": True,
-            "items": [{"id": i.id, "name": i.name, "phone": i.phone} for i in installers],
-        }
+        return success_response(
+            data={"items": [{"id": i.id, "name": i.name, "phone": i.phone} for i in installers]},
+        )
 
 
 # ─── 今日任务 ────────────────────────────────────────────────────────────────
