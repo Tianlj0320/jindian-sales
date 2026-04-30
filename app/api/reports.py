@@ -19,6 +19,37 @@ def get_month_range(year: int, month: int) -> tuple[date, date]:
     return start, end
 
 
+VALID_REPORT_STATUSES = [
+    "confirmed",
+    "split",
+    "purchasing",
+    "stocked",
+    "processing",
+    "production_exception",
+    "completed",
+    "install_order_generated",
+    "shipped",
+    "installed",
+    "accepted",
+]
+
+# 完整的12态列表（用于状态分布统计）
+STATUS_STEPS = [
+    "created",
+    "confirmed",
+    "split",
+    "purchasing",
+    "stocked",
+    "processing",
+    "production_exception",
+    "completed",
+    "install_order_generated",
+    "shipped",
+    "installed",
+    "accepted",
+]
+
+
 @router.get("/sales", response_model=dict)
 async def sales_report(
     year: int = Query(default=date.today().year), month: int = Query(default=date.today().month)
@@ -27,10 +58,11 @@ async def sales_report(
     async with async_session() as session:
         start, end = get_month_range(year, month)
 
+        # P1-1：使用显式有效状态列表，排除 cancelled/created 等不应计入的状态
         r = await session.execute(
             select(func.count(Order.id), func.sum(Order.amount)).where(
                 and_(
-                    Order.status_key.notin_(["cancelled", "created"]),
+                    Order.status_key.in_(VALID_REPORT_STATUSES),
                     Order.order_date >= start,
                     Order.order_date <= end,
                 )
@@ -40,17 +72,9 @@ async def sales_report(
         order_count = row[0] or 0
         total_amount = row[1] or 0
 
-        # 按状态分布
+        # 按状态分布（包含所有12态）
         status_dist = {}
-        for sk in [
-            "confirmed",
-            "measured",
-            "stocked",
-            "processing",
-            "install",
-            "installed",
-            "completed",
-        ]:
+        for sk in STATUS_STEPS:
             cr = await session.execute(
                 select(func.count(Order.id)).where(
                     and_(Order.status_key == sk, Order.order_date >= start, Order.order_date <= end)
@@ -81,10 +105,11 @@ async def product_rank(
     async with async_session() as session:
         start, end = get_month_range(year, month)
 
+        # P1-1：使用显式有效状态列表
         r = await session.execute(
             select(Order).where(
                 and_(
-                    Order.status_key.notin_(["cancelled"]),
+                    Order.status_key.in_(VALID_REPORT_STATUSES),
                     Order.order_date >= start,
                     Order.order_date <= end,
                 )
@@ -129,7 +154,7 @@ async def employee_report(
             .where(
                 and_(
                     Order.salesperson.isnot(None),
-                    Order.status_key.notin_(["cancelled"]),
+                    Order.status_key.in_(VALID_REPORT_STATUSES),
                     Order.order_date >= start,
                     Order.order_date <= end,
                 )
@@ -168,7 +193,7 @@ async def sales_trend(
             select(Order.order_date, func.sum(Order.amount))
             .where(
                 and_(
-                    Order.status_key.notin_(["cancelled", "created"]),
+                    Order.status_key.in_(VALID_REPORT_STATUSES),
                     Order.order_date >= start,
                     Order.order_date <= end,
                 )
