@@ -234,7 +234,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
     <div class="main-content">
 
       <!-- ============ 首页 ============ -->
-      <div v-if="page==='home'">
+      <div style="height:calc(100vh - 90px);overflow-y:auto;padding-right:8px" v-if="page==='home'">
         <div class="stat-row">
           <div class="stat-card" @click="switchPage('order')">
             <div class="stat-num" style="color:#409eff">{{stats.todayOrders}}</div>
@@ -310,7 +310,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
       </div>
 
       <!-- ============ 产品资料 ============ -->
-      <div v-if="page==='product'">
+      <div style="height:calc(100vh - 90px);overflow-y:auto;padding-right:8px" v-if="page==='product'">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
           <div class="page-title" style="margin:0">产品资料</div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -367,7 +367,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
       </div>
 
       <!-- ============ 客户资料 ============ -->
-      <div v-if="page==='customer'">
+      <div style="height:calc(100vh - 90px);overflow-y:auto;padding-right:8px" v-if="page==='customer'">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
           <div class="page-title" style="margin:0">客户资料 <span>（必须先录入客户，才能下订单）</span></div>
           <div style="display:flex;gap:8px;align-items:center">
@@ -421,7 +421,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
         </div>
       </div>
       <!-- ============ 员工资料 ============ -->
-      <div v-if="page==='employee'">
+      <div style="height:calc(100vh - 90px);overflow-y:auto;padding-right:8px" v-if="page==='employee'">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
           <div class="page-title" style="margin:0">员工资料</div>
           <div style="display:flex;gap:8px;align-items:center">
@@ -473,7 +473,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
         </div>
       </div>
       <!-- ============ 供应商管理 ============ -->
-      <div v-if="page==='suppliers'">
+      <div style="height:calc(100vh - 90px);overflow-y:auto;padding-right:8px" v-if="page==='suppliers'">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
           <div class="page-title" style="margin:0">供应商管理</div>
           <div style="display:flex;gap:8px;align-items:center">
@@ -520,7 +520,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
           </table>
         </div>
       </div>
-      <div v-if="page==='dict'">
+      <div style="height:calc(100vh - 90px);overflow-y:auto;padding-right:8px" v-if="page==='dict'">
         <div class="page-title">码表管理 <span>（两级架构：分类 → 条目，可按需增删）</span></div>
         <div class="card">
           <div class="dict-layout">
@@ -569,7 +569,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
       </div>
 
       <!-- ============ 销售订单 ============ -->
-      <div v-if="page==='order'">
+      <div style="height:calc(100vh - 90px);overflow-y:auto;padding-right:8px" v-if="page==='order'">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
           <div class="page-title" style="margin:0">销售订单 <span>（7态：待确认→完成）</span></div>
           <el-button type="primary" size="small" @click="showNewOrder=true">+ 新建订单</el-button>
@@ -713,7 +713,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
       </div>
 
       <!-- ============ 采购管理 ============ -->
-      <div v-if="page==='purchase'">
+      <div style="height:calc(100vh - 90px);overflow-y:auto;padding-right:8px" v-if="page==='purchase'">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
           <div class="page-title">采购管理</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -804,7 +804,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
       </div>
 
       <!-- ============ 仓库管理 ============ -->
-      <div v-if="page==='warehouse'">
+      <div style="height:calc(100vh - 90px);overflow-y:auto;padding-right:8px" v-if="page==='warehouse'">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
           <div class="page-title">仓库管理 <span>（成品库/辅料库/在途库）</span></div>
           <div style="display:flex;gap:8px">
@@ -844,7 +844,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
       </div>
 
       <!-- ============ 生产管理 ============ -->
-      <div v-if="page==='production'">
+      <div style="height:calc(100vh - 90px);overflow-y:auto;padding-right:8px" v-if="page==='production'">
         <div class="page-title">生产管理 <span>（6步流程）</span></div>
         <div style="display:flex;gap:4px;align-items:center;margin-bottom:16px;background:#f5f7fa;border-radius:8px;padding:14px;flex-wrap:wrap">
           <div v-for="(step,i) in productionSteps" :key="step" style="flex:1;min-width:120px;text-align:center;padding:8px;border-radius:6px" :style="prodStep>=i+1?'background:#1a3a5c;color:#fff':'background:#e8e8e8;color:#999'">
@@ -890,7 +890,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
       </div>
 
       <!-- ============ 生产反馈 ============ -->
-      <div v-if="page==='prod-feedback'">
+      <div style="height:calc(100vh - 90px);overflow-y:auto;padding-right:8px" v-if="page==='prod-feedback'">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
           <div class="page-title">生产反馈</div>
           <div style="display:flex;gap:8px">
@@ -975,7 +975,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
       </el-dialog>
 
       <!-- ============ 安装管理 ============ -->
-      <div v-if="page==='install'">
+      <div style="height:calc(100vh - 90px);overflow-y:auto;padding-right:8px" v-if="page==='install'">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
           <div class="page-title">安装管理</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1059,7 +1059,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
       </el-dialog>
 
       <!-- ============ 财务结算 ============ -->
-      <div v-if="page==='finance'">
+      <div style="height:calc(100vh - 90px);overflow-y:auto;padding-right:8px" v-if="page==='finance'">
         <div class="page-title">财务结算</div>
         <div class="stat-row" style="margin-bottom:14px">
           <div class="stat-card"><div class="stat-num" style="color:#67c23a">¥{{financeData.monthRevenue.toLocaleString()}}</div><div class="stat-label">本月收入</div></div>
@@ -1089,7 +1089,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
       </div>
 
       <!-- ============ 统计报表 ============ -->
-      <div v-if="page==='report'">
+      <div style="height:calc(100vh - 90px);overflow-y:auto;padding-right:8px" v-if="page==='report'">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
           <div class="page-title" style="margin-bottom:0">统计报表</div>
           <div style="display:flex;align-items:center;gap:8px">
@@ -2582,14 +2582,8 @@ const app = createApp({
       alerts: computed(() => S.alerts),
       suppliers: computed(() => S.suppliers),
       filteredSuppliers, getTypeLabel,
-      suppSearch: {
-        get: () => S.suppSearch,
-        set: v => { S.suppSearch = v; }
-      },
-      suppTypeF: {
-        get: () => S.suppTypeF,
-        set: v => { S.suppTypeF = v; }
-      },
+      suppSearch: { get: () => S.suppSearch, set: v => { S.suppSearch = v; } },
+      suppTypeF: { get: () => S.suppTypeF, set: v => { S.suppTypeF = v; } },
       openSupplierDlg,
       saveSupplier,
       delSupplier,
@@ -2614,8 +2608,8 @@ const app = createApp({
       getSupplierName, getCatName, supCategories,
       customers: computed(() => S.customers),
       filteredCustomers,
-      customerSearch: computed(() => S.customerSearch),
-      customerTypeF: computed(() => S.customerTypeF),
+      customerSearch: { get: () => S.customerSearch, set: v => { S.customerSearch = v; } },
+      customerTypeF: { get: () => S.customerTypeF, set: v => { S.customerTypeF = v; } },
       openCustomerDlg,
       saveCustomer,
       delCustomer,
@@ -2624,8 +2618,8 @@ const app = createApp({
       editingCustomer,
       employees: computed(() => S.employees),
       filteredEmployees,
-      empSearch: computed(() => S.empSearch),
-      empPositionF: computed(() => S.empPositionF),
+      empSearch: { get: () => S.empSearch, set: v => { S.empSearch = v; } },
+      empPositionF: { get: () => S.empPositionF, set: v => { S.empPositionF = v; } },
       openEmployeeDlg,
       saveEmployee,
       delEmployee,
@@ -2647,9 +2641,9 @@ const app = createApp({
       orders: computed(() => S.orders),
       filteredOrders,
       selOrder: computed(() => S.selOrder),
-      orderSearch: computed(() => S.orderSearch),
-      orderStatusF: computed(() => S.orderStatusF),
-      orderTypeF: computed(() => S.orderTypeF),
+      orderSearch: { get: () => S.orderSearch, set: v => { S.orderSearch = v; } },
+      orderStatusF: { get: () => S.orderStatusF, set: v => { S.orderStatusF = v; } },
+      orderTypeF: { get: () => S.orderTypeF, set: v => { S.orderTypeF = v; } },
       selectOrder: o => __ordersModule__.selectOrder(o),
       updateOrderStatusByKey: () => __ordersModule__.updateOrderStatusByKey(),
       delOrder: () => __ordersModule__.delOrder(),
@@ -2657,8 +2651,8 @@ const app = createApp({
       showNewOrder,
       purchases: computed(() => S.purchases),
       filteredPurchase,
-      purchaseSearch: computed(() => S.purchaseSearch),
-      purchaseStatusF: computed(() => S.purchaseStatusF),
+      purchaseSearch: { get: () => S.purchaseSearch, set: v => { S.purchaseSearch = v; } },
+      purchaseStatusF: { get: () => S.purchaseStatusF, set: v => { S.purchaseStatusF = v; } },
       dlgPurchase,
       editingPurchase,
       purchaseForm,
@@ -2688,8 +2682,8 @@ const app = createApp({
       installOrders: computed(() => S.installOrders),
       installers: computed(() => S.installers || []),
       filteredInstall,
-      installSearch: computed(() => S.installSearch),
-      installStatusF: computed(() => S.installStatusF),
+      installSearch: { get: () => S.installSearch, set: v => { S.installSearch = v; } },
+      installStatusF: { get: () => S.installStatusF, set: v => { S.installStatusF = v; } },
       openAssignDlg: row => __installModule__.openAssignDlg(row),
       doAssignInstaller: () => __installModule__.doAssignInstaller(),
       confirmAccept: async row => {
