@@ -445,6 +445,10 @@ async def update_order_status(order_id: int, new_status_key: str = Body(..., emb
                         measure_summary=str(getattr(o, "measure_data", "") or ""),
                         install_requirements=getattr(o, "install_requires", "") or "",
                         status="待分配",
+                        # P1-4：自动带入订单应收信息
+                        receivable_amount=o.amount,
+                        received_amount=o.received,
+                        unpaid_amount=o.debt,
                     )
                     session.add(ins)
                     await session.flush()
@@ -543,6 +547,10 @@ async def advance_order(order_id: int):
                         measure_summary=str(getattr(o, "measure_data", "") or ""),
                         install_requirements=getattr(o, "install_requires", "") or "",
                         status="待分配",
+                        # P1-4：自动带入订单应收信息
+                        receivable_amount=o.amount,
+                        received_amount=o.received,
+                        unpaid_amount=o.debt,
                     )
                     session.add(ins)
                     await session.flush()
