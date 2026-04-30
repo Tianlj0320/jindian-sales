@@ -250,10 +250,17 @@ async def list_products(
                 if p.category_id
                 else "",
                 product_type=p.product_type or "",
+                classification=p.classification or "",
+                model=p.model or "",
                 material=p.material or "",
+                series=p.series or "",
+                width=p.width or 280,
+                weight=p.weight or 0,
+                cf=p.cf or 0,
                 unit_price=float(p.unit_price or 0),
                 stock=p.stock or 0,
                 unit=p.unit or "米",
+                remark=p.remark or "",
             )
             for p in products
         ]
@@ -302,11 +309,14 @@ async def get_product(product_id: int):
                 classification=p.classification or "",
                 model=p.model or "",
                 material=p.material or "",
-                width=p.width or 0,
+                series=p.series or "",
+                width=p.width or 280,
                 weight=p.weight or 0,
+                cf=p.cf or 0,
                 unit_price=float(p.unit_price or 0),
                 unit=p.unit or "米",
                 stock=p.stock or 0,
+                remark=p.remark or "",
             ),
         )
 
@@ -349,9 +359,12 @@ async def create_product(req: dict = Body(...)):
             material=req.get("material", ""),
             width=req.get("width", 280),
             weight=req.get("weight", 0),
+            cf=req.get("cf", 0),
             unit_price=req.get("unit_price", 0),
             unit=req.get("unit", "米"),
             stock=req.get("stock", 0),
+            series=req.get("series", ""),
+            remark=req.get("remark", ""),
         )
         session.add(product)
         await session.commit()
@@ -404,5 +417,7 @@ async def update_product(product_id: int, req: dict = Body(...)):
             product.stock = req["stock"]
         if "remark" in req:
             product.remark = req.get("remark", "")
+        if "series" in req:
+            product.series = req.get("series", "")
         await session.commit()
         return CommonResponse(success=True, data={"id": product.id})

@@ -314,7 +314,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
           <div class="page-title" style="margin:0">产品资料</div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <el-button type="primary" size="small" @click="addProduct()">+ 新建产品</el-button>
+            <el-button type="primary" size="small" @click="openProductDlg(null)">+ 新建产品</el-button>
             <el-input v-model="prodSearch" placeholder="搜索名称/编码" size="small" style="width:160px" clearable>
               <template #prefix><el-icon><search/></el-icon></template>
             </el-input>
@@ -342,11 +342,12 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <th style="padding:8px 6px;text-align:center;color:#1a3a5c;font-weight:600">操作</th>
             </tr></thead>
             <tbody>
-              <tr v-for="row in filteredProducts" :key="row.id" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background=\'#f5f7fa\'" onmouseout="this.style.background=\'\'">
+              <tr v-for="row in filteredProducts" :key="row.id" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
                 <td style="padding:7px 6px;text-align:center">{{row.code||'-'}}</td>
                 <td style="padding:7px 6px;text-align:left">{{row.name}}</td>
-                <td style="padding:7px 6px;text-align:center"><span class="num-tag" :class="row.type==='窗帘'?'num-blue':row.type==='面料'?'num-green':'num-gray'">{{row.type||'-'}}</span></td>
+                <td style="padding:7px 6px;text-align:center"><span class="num-tag">{{row.category||'-'}}</span></td>
                 <td style="padding:7px 6px;text-align:center">{{getSupplierName(row.supplierId)}}</td>
+                <td style="padding:7px 6px;text-align:center">{{row.series||'-'}}</td>
                 <td style="padding:7px 6px;text-align:center">{{row.material||'-'}}</td>
                 <td style="padding:7px 6px;text-align:center">{{row.classification||'-'}}</td>
                 <td style="padding:7px 6px;text-align:right;color:#67c23a">¥{{row.price||0}}/{{row.unit||'米'}}</td>
@@ -408,7 +409,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
                 <td style="padding:7px 6px;text-align:left">{{row.address||'-'}}</td>
                 <td style="padding:7px 6px;text-align:right" :style="(row.debt||0)>0?'color:#f56c6c':'color:#67c23a'">¥{{row.debt||0}}</td>
                 <td style="padding:7px 6px;text-align:center">
-                  <el-button size="small" @click="openCustomerDlg(row,idx)">编辑</el-button>
+                  <el-button size="small" @click="openCustomerDlg(row)">编辑</el-button>
                   <el-button size="small" type="danger" @click="delCustomer(row,idx)">删</el-button>
                 </td>
               </tr>
@@ -424,7 +425,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
           <div class="page-title" style="margin:0">员工资料</div>
           <div style="display:flex;gap:8px;align-items:center">
-            <el-button type="primary" size="small" @click="openEmpDlg()">+ 新增员工</el-button>
+            <el-button type="primary" size="small" @click="openEmployeeDlg(null)">+ 新增员工</el-button>
             <el-input v-model="empSearch" placeholder="搜索姓名/工号/手机" size="small" style="width:160px" clearable>
               <template #prefix><el-icon><search/></el-icon></template>
             </el-input>
@@ -460,7 +461,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
                 <td style="padding:7px 6px;text-align:center;color:#666">¥{{row.roundLimit||0}}</td>
                 <td style="padding:7px 6px;text-align:center"><span :class="row.status==='启用'?'num-tag num-green':'num-tag num-gray'">{{row.status}}</span></td>
                 <td style="padding:7px 6px;text-align:center">
-                  <el-button size="small" @click="openEmpDlg(row,idx)">编辑</el-button>
+                  <el-button size="small" @click="openEmployeeDlg(row)">编辑</el-button>
                   
                 </td>
               </tr>
@@ -481,7 +482,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <template #prefix><el-icon><search/></el-icon></template>
             </el-input>
             <el-select v-model="suppTypeF" placeholder="类型" size="small" style="width:100px" clearable>
-              <el-option v-for="t in (dictMap.supplierType||[])" :key="t.k" :label="t.v" :value="t.k"/>
+              <el-option v-for="t in (dictMap.supplierType||[])" :key="t.k" :label="t.v" :value="t.v"/>
             </el-select>
             <span style="color:#888;font-size:12px">共{{filteredSuppliers.length}}条</span>
           </div>
@@ -502,7 +503,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <tr v-for="(row, idx) in filteredSuppliers" :key="row.id ?? 's-'+idx" style="border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background=''">
                 <td style="padding:7px 6px;text-align:center">{{row.code||'-'}}</td>
                 <td style="padding:7px 6px;text-align:left">{{row.name}}</td>
-                <td style="padding:7px 6px;text-align:center"><span class="num-tag" :class="row.type==='成品'?'num-blue':row.type==='布艺'?'num-green':'num-gray'">{{row.type||'-'}}</span></td>
+                <td style="padding:7px 6px;text-align:center"><span class="num-tag" :class="row.type==='成品'?'num-blue':row.type==='布艺'?'num-green':'num-gray'">{{getTypeLabel(row.type)}}</span></td>
                 <td style="padding:7px 6px;text-align:center">{{row.contact||'-'}}</td>
                 <td style="padding:7px 6px;text-align:center">{{row.phone||'-'}}</td>
                 <td style="padding:7px 6px;text-align:center">{{row.deliveryDays||row.delivery_days?row.deliveryDays||row.delivery_days+'天':'-'}}</td>
@@ -552,7 +553,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
                         </span>
                       </td>
                       <td style="padding:6px 8px;text-align:center">
-                        <el-button size="small" @click="openDictItemDlg(row,idx)">编辑</el-button>
+                        <el-button size="small" @click="openDictItemDlg(row)">编辑</el-button>
                         <el-button size="small" type="danger" @click="delDictItem(idx)">删</el-button>
                       </td>
                     </tr>
@@ -894,7 +895,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
           <div class="page-title">生产反馈</div>
           <div style="display:flex;gap:8px">
             <el-input v-model="fbSearch" placeholder="搜索订单/客户" size="small" style="width:180px" clearable/>
-            <el-button size="small" type="primary" @click="openNewFb">+ 新增反馈</el-button>
+            <el-button size="small" type="primary" @click="openNewFb()">+ 新增反馈</el-button>
             <el-button size="small" @click="loadFb">刷新</el-button>
           </div>
         </div>
@@ -1232,7 +1233,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
     <el-form-item label="名称"><el-input v-model="sForm.name" placeholder="如：杭州诺雅布业"/></el-form-item>
     <el-form-item label="类型">
       <el-select v-model="sForm.type" style="width:100%">
-        <el-option v-for="t in (dictMap.supplierType||[])" :key="t.k" :label="t.v" :value="t.k"/>
+        <el-option v-for="t in (dictMap.supplierType||[])" :key="t.k" :label="t.v" :value="t.v"/>
       </el-select>
     </el-form-item>
     <el-form-item label="联系人"><el-input v-model="sForm.contact"/></el-form-item>
@@ -1268,7 +1269,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
   </el-form>
   <template #footer>
     <el-button @click="dlgPurchase=false">取消</el-button>
-    <el-button type="primary" @click="__dialogsModule__.savePurchase(S)">保存</el-button>
+    <el-button type="primary" @click="savePurchase()">保存</el-button>
   </template>
 </el-dialog>
 
@@ -1310,12 +1311,12 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
   </el-form>
   <template #footer>
     <el-button @click="dlgCategory=false">取消</el-button>
-    <el-button type="primary" @click="__dialogsModule__.saveCategory(S)">保存</el-button>
+    <el-button type="primary" @click="saveCategory()">保存</el-button>
   </template>
 </el-dialog>
 
 <!-- 产品弹窗 -->
-<el-dialog v-model="dlgProduct" title="新增产品" width="520px">
+<el-dialog v-model="dlgProduct" title="新增产品" width="520px" style="max-height:85vh;overflow-y:auto">
   <el-form :model="pForm" label-width="110px" size="small">
     <el-form-item label="产品名称"><el-input v-model="pForm.name" placeholder="如：婴儿绒雪尼尔-奶白"/></el-form-item>
     <el-form-item label="供应商">
@@ -1323,23 +1324,20 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
         <el-option v-for="s in suppliers" :key="s.id" :label="s.name" :value="s.id"/>
       </el-select>
     </el-form-item>
-    <el-form-item label="布版系列">
-      <el-select v-model="pForm.categoryId" style="width:100%">
-        <el-option v-for="c in supCategories" :key="c.id" :label="c.name+'('+c.code+')'" :value="c.id"/>
-      </el-select>
-    </el-form-item>
-    <el-form-item label="商品品类"><el-select v-model="pForm.category" style="width:100%"><el-option label="窗帘" value="窗帘"/><el-option label="墙布" value="墙布"/><el-option label="墙纸" value="墙纸"/><el-option label="岩板" value="岩板"/><el-option label="全屋" value="全屋"/></el-select></el-form-item>
-    <el-form-item label="产品形态"><el-select v-model="pForm.classification" style="width:100%"><el-option label="帷幔" value="帷幔"/><el-option label="罗马帘" value="罗马帘"/><el-option label="蜂巢帘" value="蜂巢帘"/><el-option label="柔纱帘" value="柔纱帘"/><el-option label="基膜胶水" value="基膜胶水"/><el-option label="垂直帘" value="垂直帘"/><el-option label="软包" value="软包"/><el-option label="硬包" value="硬包"/><el-option label="岩板" value="岩板"/><el-option label="电动轨" value="电动轨"/><el-option label="铅块" value="铅块"/><el-option label="无纺布" value="无纺布"/><el-option label="配件" value="配件"/></el-select></el-form-item>
-    <el-form-item label="面料材质"><el-select v-model="pForm.material" style="width:100%"><el-option label="雪尼尔" value="雪尼尔"/><el-option label="棉麻" value="棉麻"/><el-option label="绒布" value="绒布"/><el-option label="高精密" value="高精密"/><el-option label="丝绸" value="丝绸"/><el-option label="亚麻" value="亚麻"/><el-option label="刺绣" value="刺绣"/><el-option label="提花" value="提花"/><el-option label="仿真丝" value="仿真丝"/><el-option label="无纺布" value="无纺布"/><el-option label="PVC" value="PVC"/></el-select></el-form-item>
+    <el-form-item label="布版系列"><el-input v-model="pForm.series" placeholder="输入布版系列名称"/></el-form-item>
+    <el-form-item label="商品品类"><el-select v-model="pForm.category" style="width:100%"><el-option v-for="t in (dictMap.productType||[])" :key="t.k" :label="t.v" :value="t.v"/></el-select></el-form-item>
+    <el-form-item label="产品形态"><el-select v-model="pForm.classification" style="width:100%"><el-option v-for="t in (dictMap.productForm||[])" :key="t.k" :label="t.v" :value="t.v"/></el-select></el-form-item>
+    <el-form-item label="面料材质"><el-select v-model="pForm.material" style="width:100%" placeholder="请选择面料材质"><el-option v-for="t in (dictMap.productMaterial||[])" :key="t.k" :label="t.v" :value="t.v"/></el-select></el-form-item>
     <el-form-item label="型号"><el-input v-model="pForm.model" placeholder="如：F001"/></el-form-item>
     <el-form-item label="门幅(cm)"><el-input-number v-model="pForm.width" :min="0" style="width:100%"/></el-form-item>
     <el-form-item label="克重(g/㎡)"><el-input-number v-model="pForm.weight" :min="0" style="width:100%"/></el-form-item>
     <el-form-item label="单价(元)"><el-input-number v-model="pForm.price" :min="0" :precision="2" style="width:100%"/></el-form-item>
     <el-form-item label="库存"><el-input-number v-model="pForm.stock" :min="0" style="width:100%"/></el-form-item>
+    <el-form-item label="备注"><el-input v-model="pForm.remark" placeholder="可选"/></el-form-item>
   </el-form>
   <template #footer>
     <el-button @click="dlgProduct=false">取消</el-button>
-    <el-button type="primary" @click="__dialogsModule__.saveProduct(S)">保存</el-button>
+    <el-button type="primary" @click="saveProduct()">保存</el-button>
   </template>
 </el-dialog>
 
@@ -1347,9 +1345,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
 <el-dialog v-model="dlgCustomer" :title="editingCustomer?'编辑客户':'新增客户'" width="500px">
   <el-form :model="cuForm" label-width="100px" size="small">
     <el-form-item label="客户名称" required><el-input v-model="cuForm.name"/></el-form-item>
-    <el-form-item label="终端类型">
-      <el-radio-group v-model="cuForm.type"><el-radio label="零售">零售</el-radio><el-radio label="工程">工程</el-radio><el-radio label="设计师">设计师</el-radio></el-radio-group>
-    </el-form-item>
+    <el-form-item label="终端类型"><el-select v-model="cuForm.type" style="width:100%"><el-option v-for="t in (dictMap.customerType||[])" :key="t.k" :label="t.v" :value="t.v"/></el-select></el-form-item>
     <el-form-item label="联系人"><el-input v-model="cuForm.contact"/></el-form-item>
     <el-form-item label="电话" required><el-input v-model="cuForm.phone"/></el-form-item>
     <el-form-item label="小区"><el-input v-model="cuForm.community"/></el-form-item>
@@ -1369,7 +1365,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
   </el-form>
   <template #footer>
     <el-button @click="dlgCustomer=false">取消</el-button>
-    <el-button type="primary" @click="saveCustomer">保存</el-button>
+    <el-button type="primary" @click="saveCustomer()">保存</el-button>
   </template>
 </el-dialog>
 
@@ -1393,7 +1389,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
   </el-form>
   <template #footer>
     <el-button @click="dlgEmployee=false">取消</el-button>
-    <el-button type="primary" @click="saveEmployee">保存</el-button>
+    <el-button type="primary" @click="saveEmployee()">保存</el-button>
   </template>
 </el-dialog>
 
@@ -1406,7 +1402,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
   </el-form>
   <template #footer>
     <el-button @click="dlgDictItem=false">取消</el-button>
-    <el-button type="primary" @click="saveDictItem">保存</el-button>
+    <el-button type="primary" @click="saveDictItem()">保存</el-button>
   </template>
 </el-dialog>
 
@@ -1930,6 +1926,31 @@ const app = createApp({
     const dlgCategory = ref(false);
     const dlgProduct = ref(false);
     const dlgPurchase = ref(false);
+    const dlgCustomer = ref(false);
+    const dlgEmployee = ref(false);
+    const dlgDictItem = ref(false);
+
+    // ── 布版分类 ──────────────────────────────────────
+    const editingCategory = ref(null);
+    const cForm = ref({ code: '', name: '', supplierId: '', desc: '' });
+    // ── 产品 ──────────────────────────────────────────
+    const editingProduct = ref(null);
+    const pForm = ref({ code: '', name: '', supplierId: '', categoryId: '', series: '', category: '窗帘', classification: '', model: '', material: '', width: 280, weight: 0, cf: 0, price: 0, stock: 0, unit: '米', remark: '' });
+    // ── 客户 ──────────────────────────────────────────
+    const editingCustomer = ref(null);
+    const cuForm = ref({ name: '', phone: '', community: '', type: '', source: '', salesperson: '', salespersonId: null, address: '', contact: '', remark: '' });
+    // ── 员工 ──────────────────────────────────────────
+    const editingEmp = ref(null);
+    const empForm = ref({ name: '', gender: '男', phone: '', dept: '', position: '', code: '', maxDiscount: 1, roundLimit: 0, idCard: '', joinDate: '', status: '在职', remark: '' });
+    // ── 码表 ─────────────────────────────────────────
+    const editingDictItem = ref(null);
+    const diForm = ref({ k: '', v: '', c: '#409eff' });
+    // ── 采购单 ────────────────────────────────────────
+    const editingPurchase = ref(null);
+    const purchaseForm = ref({ supplierId: '', orderIds: '', expectedDate: '', status: '待采购', remark: '' });
+    // ── 仓库 ──────────────────────────────────────────
+    const dlgWarehouseRecord = ref(false);
+
 
     // ── 供应商表单 ──────────────────────────────────────
     const editingSupplier = ref(null);
@@ -1945,16 +1966,19 @@ const app = createApp({
 
     const saveSupplier = async () => {
       const f = sForm.value;
-      const payload = { code: f.code, name: f.name, type: f.type || '布艺', contact: f.contact || '', phone: f.phone || '', delivery_days: f.deliveryDays || 7, address: f.address || '', payment: f.payment || '' };
+      // 把类型代码转成标签（如 'fabric' -> '面料供应商'）
+      const typeItems = S.dictMap.supplierType || [];
+      const typeLabel = (typeItems.find(t => t.k === f.type) || {}).v || f.type || '布艺';
+      const payload = { code: f.code, name: f.name, type: typeLabel, contact: f.contact || '', phone: f.phone || '', delivery_days: f.deliveryDays || 7, address: f.address || '', payment: f.payment || '' };
       try {
         let d;
         if (editingSupplier.value) {
           d = await apiProducts.updateSupplier(editingSupplier.value.id, payload);
           const idx = S.suppliers.findIndex(s => s.id === editingSupplier.value.id);
-          if (idx > -1) S.suppliers.splice(idx, 1, { ...S.suppliers[idx], code: f.code, name: f.name, type: f.type || '布艺', contact: f.contact || '', phone: f.phone || '', deliveryDays: f.deliveryDays || 7, address: f.address || '', payment: f.payment || '' });
+          if (idx > -1) S.suppliers.splice(idx, 1, { ...S.suppliers[idx], code: f.code, name: f.name, type: typeLabel, contact: f.contact || '', phone: f.phone || '', deliveryDays: f.deliveryDays || 7, address: f.address || '', payment: f.payment || '' });
         } else {
           d = await apiProducts.createSupplier(payload);
-          S.suppliers.push({ id: d.id, code: d.code || f.code, name: f.name, type: f.type || '布艺', contact: f.contact || '', phone: f.phone || '', deliveryDays: f.deliveryDays || 7, address: f.address || '', payment: f.payment || '' });
+          S.suppliers.push({ id: d.id, code: d.code || f.code, name: f.name, type: typeLabel, contact: f.contact || '', phone: f.phone || '', deliveryDays: f.deliveryDays || 7, address: f.address || '', payment: f.payment || '' });
         }
         dlgSupplier.value = false;
         ElementPlus.ElMessage.success('保存成功');
@@ -2120,6 +2144,16 @@ const app = createApp({
       if (S.orderTypeF) list = list.filter(o => o.orderType === S.orderTypeF);
       return list;
     });
+
+    const getTypeLabel = (val) => {
+      if (!val) return '-';
+      // 如果已经是标签（不是代码），直接返回
+      const items = S.dictMap.supplierType || [];
+      const byCode = items.find(t => t.k === val);
+      if (byCode) return byCode.v;  // 代码转标签
+      // 如果是标签或无法识别，当作已是他本身
+      return val;
+    };
 
     const filteredSuppliers = computed(() => {
       let list = S.suppliers;
@@ -2332,6 +2366,202 @@ const app = createApp({
       return list;
     });
 
+    // ── 布版分类 ──────────────────────────────────────
+    const openCategoryDlg = (row) => {
+      editingCategory.value = row ? { ...row } : null;
+      cForm.value = row ? { code: row.code || '', name: row.name || '', supplierId: row.supplierId || '', desc: row.desc || '' } : { code: '', name: '', supplierId: '', desc: '' };
+      dlgCategory.value = true;
+    };
+    const saveCategory = async () => {
+      const f = cForm.value;
+      const payload = { code: f.code, name: f.name, supplier_id: parseInt((f.supplierId || '').replace('s', '')) || 0, description: f.desc || '' };
+      try {
+        if (editingCategory.value) {
+          const d = await apiProducts.updateCategory(editingCategory.value.id, payload);
+          const idx = S.categories.findIndex(c => c.id === editingCategory.value.id);
+          if (idx > -1) S.categories.splice(idx, 1, { ...S.categories[idx], ...d, supplierId: d.supplier_id || 0 });
+        } else {
+          const d = await apiProducts.createCategory(payload);
+          S.categories.push({ id: d.id, code: d.code, name: d.name, supplierId: d.supplier_id || 0, desc: d.description || '' });
+        }
+        dlgCategory.value = false;
+        ElementPlus.ElMessage.success('保存成功');
+      } catch(e) { ElementPlus.ElMessage.error('保存失败'); }
+    };
+    // ── 产品 ──────────────────────────────────────────
+    const openProductDlg = (row) => {
+      editingProduct.value = row;
+      const getTypeLabel = (code, dictKey) => {
+        const items = S.dictMap[dictKey] || [];
+        const found = items.find(t => t.k === code);
+        return found ? found.v : code;
+      };
+      const getTypeCode = (label, dictKey) => {
+        const items = S.dictMap[dictKey] || [];
+        const found = items.find(t => t.v === label);
+        return found ? found.k : label;
+      };
+      if (row) {
+        pForm.value = { code: row.code || '', name: row.name || '', supplierId: row.supplierId || 0, categoryId: row.categoryId || 0, series: row.series || '', category: row.category || '', classification: row.classification || '', model: row.model || '', material: row.material || row.mat || '', width: row.width || 280, weight: row.weight || 0, cf: row.cf || 0, price: row.price || 0, stock: row.stock || 0, unit: row.unit || '米', remark: row.remark || '' };
+        // 把代码转成标签（因为下拉 value 是代码 k，显示用标签 v）
+        pForm.value.category = getTypeLabel(row.category, 'productType') || row.category || '';
+        pForm.value.classification = getTypeLabel(row.classification, 'productForm') || row.classification || '';
+      } else {
+        const firstType = S.dictMap.productType?.[0];
+        const firstForm = S.dictMap.productForm?.[0];
+        pForm.value = { code: '', name: '', supplierId: S.suppliers[0]?.id || '', categoryId: S.categories[0]?.id || '', series: '', category: firstType?.v || '', classification: firstForm?.v || '', model: '', material: '', width: 280, weight: 0, cf: 0, price: 0, stock: 0, unit: '米', remark: '' };
+      }
+      dlgProduct.value = true;
+    };
+    const saveProduct = async () => {
+      const f = pForm.value;
+      if (!f.name) { ElementPlus.ElMessage.warning('请填写产品名称'); return; }
+      // 把标签转成代码（label→k）
+      const typeItems = S.dictMap.productType || [];
+      const formItems = S.dictMap.productForm || [];
+      const catCode = (typeItems.find(t => t.v === f.category) || {}).k || f.category;
+      const clsCode = (formItems.find(t => t.v === f.classification) || {}).k || f.classification;
+      const supId = typeof f.supplierId === 'number' ? f.supplierId : parseInt((String(f.supplierId || '')).replace('s', '')) || 0;
+      const catId = typeof f.categoryId === 'number' ? f.categoryId : parseInt((String(f.categoryId || '')).replace('c', '')) || 0;
+      const payload = { code: f.code, name: f.name, supplier_id: supId, category_id: catId, series: f.series || '', product_type: catCode, classification: clsCode, model: f.model, material: f.material, width: f.width, weight: f.weight, cf: f.cf || 0, unit_price: f.price, stock: f.stock, unit: f.unit, remark: f.remark || '' };
+      try {
+        if (editingProduct.value) {
+          const d = await apiProducts.update(editingProduct.value.id, payload);
+          const idx = S.products.findIndex(p => p.id === editingProduct.value.id);
+          if (idx > -1) S.products.splice(idx, 1, { ...S.products[idx], id: editingProduct.value.id, code: f.code, name: f.name, supplierId: f.supplierId, categoryId: f.categoryId, series: f.series, category: f.category, classification: f.classification, model: f.model, material: f.material, width: f.width, weight: f.weight, cf: f.cf || 0, price: f.price, stock: f.stock, unit: f.unit, remark: f.remark || '' });
+          ElementPlus.ElMessage.success('更新成功');
+        } else {
+          const d = await apiProducts.create(payload);
+          S.products.push({ id: d.id, code: d.code, name: d.name, supplierId: f.supplierId, categoryId: f.categoryId, series: f.series, category: f.category || '窗帘', classification: f.classification || '', model: f.model || '', material: f.material || '', width: f.width || 280, weight: f.weight || 0, cf: f.cf || 0, price: f.price || 0, stock: f.stock || 0, unit: f.unit || '米', remark: f.remark || '' });
+          ElementPlus.ElMessage.success('添加成功');
+        }
+        dlgProduct.value = false;
+      } catch(e) { ElementPlus.ElMessage.error('保存失败'); }
+    };
+    const delProduct = async (row) => {
+      if (!confirm(`确定删除产品「${row.name}」？`)) return;
+      try { await apiProducts.delete(row.id); S.products = S.products.filter(p => p.id !== row.id); ElementPlus.ElMessage.success('已删除'); } catch(e) { ElementPlus.ElMessage.error('删除失败'); }
+    };
+    // ── 客户 ──────────────────────────────────────────
+    const openCustomerDlg = (row) => {
+      editingCustomer.value = row;
+      cuForm.value = row ? { name: row.name || '', phone: row.phone || '', community: row.community || '', type: row.type || '', source: row.source || '', salesperson: row.salesperson || '', salespersonId: row.salespersonId || null, address: row.address || '', contact: row.contact || '', remark: row.remark || '' } : { name: '', phone: '', community: '', type: '', source: '', salesperson: S.currentUser?.name || '', salespersonId: S.currentUser?.id || null, address: '', contact: '', remark: '' };
+      dlgCustomer.value = true;
+    };
+    const saveCustomer = async () => {
+      const f = cuForm.value;
+      const payload = { name: f.name, phone: f.phone || '', community: f.community || '', type: f.type || '零售', source: f.source || '', salesperson: f.salesperson || '', salesperson_id: f.salespersonId || null, address: f.address || '', contact: f.contact || '', remark: f.remark || '' };
+      try {
+        if (editingCustomer.value) {
+          const d = await apiCustomers.update(editingCustomer.value.id, payload);
+          const idx = S.customers.findIndex(c => c.id === editingCustomer.value.id);
+          if (idx > -1) S.customers.splice(idx, 1, { ...S.customers[idx], ...d });
+          ElementPlus.ElMessage.success('更新成功');
+        } else {
+          const d = await apiCustomers.create(payload);
+          S.customers.push({ id: d.id, code: d.id, name: f.name, phone: f.phone || '', community: f.community || '', type: f.type || '零售', source: f.source || '', salesperson: f.salesperson || '', salespersonId: f.salespersonId || null, address: f.address || '', contact: f.contact || '', remark: f.remark || '' });
+          ElementPlus.ElMessage.success('添加成功');
+        }
+        dlgCustomer.value = false;
+      } catch(e) { ElementPlus.ElMessage.error('保存失败'); }
+    };
+    const delCustomer = async (row) => {
+      if (!confirm(`确定删除客户「${row.name}」？`)) return;
+      try { await apiCustomers.delete(row.id); S.customers = S.customers.filter(c => c.id !== row.id); ElementPlus.ElMessage.success('已删除'); } catch(e) { ElementPlus.ElMessage.error('删除失败'); }
+    };
+    // ── 员工 ──────────────────────────────────────────
+    const openEmployeeDlg = (row) => {
+      editingEmp.value = row;
+      empForm.value = row ? { name: row.name || '', gender: row.gender || '男', phone: row.phone || '', dept: row.dept || '', position: row.position || '', code: row.code || '', maxDiscount: row.maxDiscount || 1, roundLimit: row.roundLimit || 0, idCard: row.idCard || '', joinDate: row.hireDate || '', status: row.status || '在职', remark: row.remark || '' } : { name: '', gender: '男', phone: '', dept: '', position: '', code: '', maxDiscount: 1, roundLimit: 0, idCard: '', joinDate: '', status: '在职', remark: '' };
+      dlgEmployee.value = true;
+    };
+    const saveEmployee = async () => {
+      const f = empForm.value;
+      const payload = { code: f.code, name: f.name, gender: f.gender, phone: f.phone || '', position: f.position || '', department: f.dept || '', max_discount: f.maxDiscount || 1, round_limit: f.roundLimit || 0, id_card: f.idCard || '', hire_date: f.joinDate || '', status: f.status || '在职', remark: f.remark || '' };
+      try {
+        if (editingEmp.value) {
+          const d = await apiEmployees.update(editingEmp.value.id, payload);
+          const idx = S.employees.findIndex(e => e.id === editingEmp.value.id);
+          if (idx > -1) S.employees.splice(idx, 1, { ...S.employees[idx], code: f.code, name: f.name, gender: f.gender, phone: f.phone || '', position: f.position || '', dept: f.dept || '', maxDiscount: f.maxDiscount || 1, roundLimit: f.roundLimit || 0, hireDate: f.joinDate || '', status: f.status || '在职' });
+          ElementPlus.ElMessage.success('更新成功');
+        } else {
+          const d = await apiEmployees.create(payload);
+          S.employees.push({ id: d.id, code: f.code, name: f.name, gender: f.gender, phone: f.phone || '', position: f.position || '', dept: f.dept || '', maxDiscount: f.maxDiscount || 1, roundLimit: f.roundLimit || 0, hireDate: f.joinDate || '', status: f.status || '在职' });
+          ElementPlus.ElMessage.success('添加成功');
+        }
+        dlgEmployee.value = false;
+      } catch(e) { ElementPlus.ElMessage.error('保存失败'); }
+    };
+    const delEmployee = async (row) => {
+      if (!confirm(`确定删除员工「${row.name}」？`)) return;
+      try { await apiEmployees.delete(row.id); S.employees = S.employees.filter(e => e.id !== row.id); ElementPlus.ElMessage.success('已删除'); } catch(e) { ElementPlus.ElMessage.error('删除失败'); }
+    };
+    // ── 码表 ──────────────────────────────────────────
+    const openDictItemDlg = (row) => {
+      editingDictItem.value = row;
+      diForm.value = row ? { k: row.k || '', v: row.v || '', c: row.c || '#409eff' } : { k: S.dictCat, v: '', c: '#409eff' };
+      dlgDictItem.value = true;
+    };
+    const saveDictItem = async () => {
+      const f = diForm.value;
+      const cat = S.dictCat;
+      if (!f.v) { ElementPlus.ElMessage.warning('请填写名称'); return; }
+      try {
+        if (editingDictItem.value) {
+          const d = await apiDicts.updateItem(cat, editingDictItem.value.k, { v: f.v, c: f.c });
+          const items = S.dictMap[cat] || [];
+          const idx = items.findIndex(x => x.k === editingDictItem.value.k);
+          if (idx > -1) items.splice(idx, 1, { ...items[idx], v: f.v, c: f.c });
+        } else {
+          const k = Date.now().toString();
+          await apiDicts.addItem(cat, { k, v: f.v, c: f.c });
+          if (!S.dictMap[cat]) S.dictMap[cat] = [];
+          S.dictMap[cat].push({ k, v: f.v, c: f.c });
+        }
+        localStorage.setItem('dictMap', JSON.stringify(S.dictMap));
+        dlgDictItem.value = false;
+        ElementPlus.ElMessage.success('保存成功');
+      } catch(e) { ElementPlus.ElMessage.error('保存失败'); }
+    };
+    const delDictItem = async (row) => {
+      if (!confirm(`确定删除「${row.v}」？`)) return;
+      try {
+        await apiDicts.deleteItem(S.dictCat, row.k);
+        const items = S.dictMap[S.dictCat] || [];
+        S.dictMap[S.dictCat] = items.filter(x => x.k !== row.k);
+        localStorage.setItem('dictMap', JSON.stringify(S.dictMap));
+        ElementPlus.ElMessage.success('已删除');
+      } catch(e) { ElementPlus.ElMessage.error('删除失败'); }
+    };
+    // ── 采购单 ────────────────────────────────────────
+    const openPurchaseDlg = (row) => {
+      editingPurchase.value = row ? { ...row } : null;
+      purchaseForm.value = row ? { supplierId: row.supplierId || '', orderIds: row.orderIds || '', expectedDate: row.date || '', status: row.status || '待采购', remark: row.remark || '' } : { supplierId: S.suppliers[0]?.id || '', orderIds: '', expectedDate: '', status: '待采购', remark: '' };
+      dlgPurchase.value = true;
+    };
+    const savePurchase = async () => {
+      const f = purchaseForm.value;
+      const sid = parseInt((f.supplierId || '').replace('s', '')) || null;
+      const payload = { supplier_id: sid, order_ids: f.orderIds, expected_date: f.expectedDate, status: f.status, remark: f.remark || '' };
+      try {
+        if (editingPurchase.value) {
+          const d = await api(`/api/purchase-orders/${editingPurchase.value.id}`, 'PATCH', { status: f.status, remark: f.remark || '', expected_date: f.expectedDate });
+          const idx = S.purchases.findIndex(p => p.id === editingPurchase.value.id);
+          if (idx > -1) S.purchases.splice(idx, 1, { ...S.purchases[idx], ...d });
+        } else {
+          const d = await apiPurchase.create(payload);
+          S.purchases.push({ id: d.id, purchaseNo: d.po_no || '', supplierId: sid, supplierName: '', orderIds: f.orderIds, items: '', itemsRaw: [], status: f.status, amount: 0, date: f.expectedDate, remark: f.remark });
+        }
+        dlgPurchase.value = false;
+        ElementPlus.ElMessage.success('保存成功');
+        __purchaseModule__.loadPurchases();
+      } catch(e) { ElementPlus.ElMessage.error('保存失败'); }
+    };
+    const deletePurchase = async (row) => {
+      if (!confirm(`确定删除采购单？`)) return;
+      try { await api(`/api/purchase-orders/${row.id}`, 'DELETE'); S.purchases = S.purchases.filter(p => p.id !== row.id); ElementPlus.ElMessage.success('已删除'); } catch(e) { ElementPlus.ElMessage.error('删除失败'); }
+    };
+
     return {
       page: (() => { const pg = ref(S.page); watch(() => S.page, v => { if (pg.value !== v) pg.value = v; }); watch(pg, v => { S.page = v; }); return pg; })(),
       __dialogsModule__: window.__dialogsModule__,
@@ -2351,7 +2581,7 @@ const app = createApp({
       stats: computed(() => S.stats),
       alerts: computed(() => S.alerts),
       suppliers: computed(() => S.suppliers),
-      filteredSuppliers,
+      filteredSuppliers, getTypeLabel,
       suppSearch: {
         get: () => S.suppSearch,
         set: v => { S.suppSearch = v; }
@@ -2360,60 +2590,60 @@ const app = createApp({
         get: () => S.suppTypeF,
         set: v => { S.suppTypeF = v; }
       },
-      // Debug: wrapper that always works
-      openSupplierDlgWrapper: (row) => { console.log('[openSupplierDlgWrapper] called, row=', row); __dialogsModule__.openSupplierDlg(row, S); },
-      openSupplierDlg: row => __dialogsModule__.openSupplierDlg(row, S),
-      saveSupplier: () => __dialogsModule__.saveSupplier(S),
-      delSupplier: row => __dialogsModule__.delSupplier(row, S),
+      openSupplierDlg,
+      saveSupplier,
+      delSupplier,
       categories: computed(() => S.categories),
-      openCategoryDlg: row => __dialogsModule__.openCategoryDlg(row, S),
-      saveCategory: () => __dialogsModule__.saveCategory(S),
+      openCategoryDlg,
+      saveCategory,
+      dlgCategory,
+      cForm,
+      editingCategory,
+      dlgProduct,
+      pForm,
+      editingProduct,
       products: computed(() => S.products),
       productTree,
       filteredProducts: computed(() => filteredProductsFn()),
       prodSearch: { get: () => S.prodSearch, set: v => { S.prodSearch = v; } },
       prodSupplierF: { get: () => S.prodSupplierF, set: v => { S.prodSupplierF = v; } },
       prodCatF: { get: () => S.prodCatF, set: v => { S.prodCatF = v; } },
-      openProductDlg: row => __dialogsModule__.openProductDlg(row, S),
-      addProduct: () => __dialogsModule__.addProduct(S),
-      delProduct: row => __dialogsModule__.delProduct(row, S),
+      openProductDlg,
+      saveProduct,
+      delProduct,
       getSupplierName, getCatName, supCategories,
       customers: computed(() => S.customers),
       filteredCustomers,
       customerSearch: computed(() => S.customerSearch),
       customerTypeF: computed(() => S.customerTypeF),
-      openCustomerDlg: row => {
-        S.dlgCustomer = true;
-        S.editingCustomer = row ? {...row} : null;
-        S.cuForm = row ? { name:row.name, type:row.type||'零售', contact:row.contact||'', phone:row.phone||'', community:row.community||'', address:row.address||'', salespersonId:row.salespersonId||'', source:row.source||'', debtLimit:row.debtLimit||0, remark:row.remark||'' }
-                       : { name:'', type:'零售', contact:'', phone:'', community:'', address:'', salespersonId:'', source:'', debtLimit:0, remark:'' };
-      },
-      saveCustomer: () => __customerModule__.saveCustomer(S.editingCustomer, S),
-      delCustomer: row => __customerModule__.deleteCustomer(row, S),
+      openCustomerDlg,
+      saveCustomer,
+      delCustomer,
+      dlgCustomer,
+      cuForm,
+      editingCustomer,
       employees: computed(() => S.employees),
       filteredEmployees,
       empSearch: computed(() => S.empSearch),
       empPositionF: computed(() => S.empPositionF),
-      openEmpDlg: row => {
-        S.dlgEmployee = true;
-        S.editingEmp = row ? {...row} : null;
-        S.empForm = row ? { name:row.name||'', gender:row.gender||'男', position:row.position||'', phone:row.phone||'', dept:row.dept||'', code:row.code||'', maxDiscount:row.maxDiscount||1, roundLimit:row.roundLimit||0, idCard:row.idCard||'', joinDate:row.hireDate||'', status:row.status||'在职', remark:row.remark||'' }
-                       : { name:'', gender:'男', position:'', phone:'', dept:'', code:'', maxDiscount:1, roundLimit:0, idCard:'', joinDate:'', status:'在职', remark:'' };
-      },
-      saveEmployee: () => __employeeModule__.saveEmployee(S.editingEmp, S),
+      openEmployeeDlg,
+      saveEmployee,
+      delEmployee,
+      dlgEmployee,
+      empForm,
+      editingEmp,
       dictCats: computed(() => S.dictCats),
       dictCat: { get: () => S.dictCat, set: v => { S.dictCat = v; } },
       dictCatStr: computed(() => S.dictCat || ''),
       setDictCat: k => { S.dictCat = k; },
       dictCatLabel, dictItems, dictMap: computed(() => S.dictMap),
       orderStatusAll,
-      openDictItemDlg: (row=null) => {
-        S.dlgDictItem = true;
-        S.editingDictItem = row ? {...row} : null;
-        S.diForm = row ? { k:row.k||'', v:row.v||'', c:row.c||'#409eff' } : { k:S.dictCat, v:'', c:'#409eff' };
-      },
-      saveDictItem: () => __dictModule__.saveDictItem(S.editingDictItem, S),
-      delDictItem: row => __dictModule__.delDictItem(row, S),
+      openDictItemDlg,
+      saveDictItem,
+      delDictItem,
+      dlgDictItem,
+      diForm,
+      editingDictItem,
       orders: computed(() => S.orders),
       filteredOrders,
       selOrder: computed(() => S.selOrder),
@@ -2429,12 +2659,12 @@ const app = createApp({
       filteredPurchase,
       purchaseSearch: computed(() => S.purchaseSearch),
       purchaseStatusF: computed(() => S.purchaseStatusF),
-      dlgPurchase: computed(() => S.dlgPurchase),
-      editingPurchase: computed(() => S.editingPurchase),
-      purchaseForm: computed(() => S.purchaseForm),
-      openPurchaseDlg: row => __dialogsModule__.openPurchaseDlg(row, S),
-      savePurchase: () => __dialogsModule__.savePurchase(S),
-      deletePurchase: row => __purchaseModule__.deletePurchase(row),
+      dlgPurchase,
+      editingPurchase,
+      purchaseForm,
+      openPurchaseDlg,
+      savePurchase,
+      deletePurchase,
       updatePurchaseStatus: (row, s) => __purchaseModule__.updateStatus(row, s),
       purchaseOrdersForSplit: computed(() => S.purchaseOrdersForSplit),
       selectedSplitOrders: computed(() => S.selectedSplitOrders),
@@ -2443,7 +2673,7 @@ const app = createApp({
       toggleAllSplitOrders: () => __purchaseModule__.toggleAllSplitOrders(),
       doBatchSplit: () => __purchaseModule__.doBatchSplit(),
       warehouses: computed(() => S.warehouses),
-      dlgWarehouseRecord: computed(() => S.dlgWarehouseRecord),
+      dlgWarehouseRecord,
       warehouseForm: computed(() => S.warehouseForm),
       saveWarehouseRecord: () => __warehouseModule__.saveRecord(S),
       deleteWarehouseRecord: id => __warehouseModule__.deleteRecord(id),
@@ -2548,24 +2778,6 @@ const app = createApp({
       dlgSupplier,
       sForm,
       editingSupplier,
-      openSupplierDlg,
-      saveSupplier,
-      delSupplier,
-      dlgCategory: computed(() => S.dlgCategory),
-      cForm: computed(() => S.cForm),
-      editingCategory: computed(() => S.editingCategory),
-      dlgProduct: computed(() => S.dlgProduct),
-      pForm: computed(() => S.pForm),
-      editingProduct: computed(() => S.editingProduct),
-      dlgCustomer: computed(() => S.dlgCustomer),
-      cuForm: computed(() => S.cuForm),
-      editingCustomer: computed(() => S.editingCustomer),
-      dlgEmployee: computed(() => S.dlgEmployee),
-      empForm: computed(() => S.empForm),
-      editingEmp: computed(() => S.editingEmp),
-      dlgDictItem: computed(() => S.dlgDictItem),
-      diForm: computed(() => S.diForm),
-      editingDictItem: computed(() => S.editingDictItem),
       orderF: computed(() => S.orderF),
       newOrderNo: computed(() => S.orderF.orderNo || ''),
       onCustomerSelect, autoDelivery,

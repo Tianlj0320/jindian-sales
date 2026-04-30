@@ -44,19 +44,21 @@ window.__initModule__ = {
       // 布版
       S.categories = (catsS.items || []).map(c => ({
         id: c.id, code: c.code || '', name: c.name || '',
-        supplierId: 's' + c.supplier_id,
+        supplierId: c.supplier_id || 0,
         desc: c.description || '',
       }));
 
       // 产品
       S.products = (prodsS.items || []).map(p => ({
         id: p.id, code: p.code || '', name: p.name || '',
-        supplierId: 's' + p.supplier_id, categoryId: 'c' + p.category_id,
+        supplierId: p.supplier_id || 0, categoryId: p.category_id || 0,
+        category: p.product_type || '面料',
         type: p.product_type || '面料', classification: p.classification || '定高',
         model: p.model || '', mat: p.material || '',
         width: p.width || 280, weight: p.weight || 0,
-        cf: 0, price: p.unit_price || 0, stock: p.stock || 0,
-        unit: p.unit || '米', remark: '',
+        cf: p.cf || 0, price: p.unit_price || 0, stock: p.stock || 0,
+        unit: p.unit || '米', remark: p.remark || '',
+        series: p.series || '',
       }));
 
       // 客户

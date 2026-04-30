@@ -290,6 +290,14 @@ window.__orderFormModule__ = {
       discount: i.discount || 1,
       price: i.unit_price || i.price || 0,
       amount: i.amount || 0,
+      supplier_id: i.supplier_id || null,
+      material_type: i.material_type || '主料',
+      fold_ratio: i.fold_ratio || 2.0,
+      open_type: i.open_type || '',
+      style_code: i.style_code || '',
+      process_desc: i.process_desc || '',
+      is_custom: i.is_custom !== undefined ? i.is_custom : 1,
+      note: i.note || '',
     }));
     const materials = (order.items || [])
       .filter(i => i.item_type === 'material' || i.item_type === 'accessory')
@@ -316,6 +324,7 @@ window.__orderFormModule__ = {
       orderDate: order.orderDate || '',
       deliveryDate: order.deliveryDate || '',
       installDate: order.installDate || '',
+      installTimeSlot: order.installTimeSlot || '',
       deliveryMethod: order.deliveryMethod || '上门安装',
       salespersonId: order.salespersonId || null,
       installAddress: order.installAddress || '',
@@ -356,6 +365,7 @@ window.__orderFormModule__ = {
       salesperson: (S.employees.find(e => String(e.id) === String(f.salespersonId)) || {}).name || '',
       install_address: f.installAddress || '',
       install_date: f.installDate || '',
+      install_time_slot: f.installTimeSlot || '',
       items: (f.items || []).map(i => ({
         product_id: i.productId,
         product_name: i.productName || '',
@@ -370,6 +380,14 @@ window.__orderFormModule__ = {
         unit_price: i.price || 0,
         width: i.size ? parseFloat(i.size.split('×')[0]) : 0,
         height: i.size ? parseFloat(i.size.split('×')[1]) : 0,
+        supplier_id: i.supplier_id || null,
+        material_type: i.material_type || '主料',
+        fold_ratio: i.fold_ratio || 2.0,
+        open_type: i.open_type || '',
+        style_code: i.style_code || '',
+        process_desc: i.process_desc || '',
+        is_custom: i.is_custom !== undefined ? i.is_custom : 1,
+        note: i.note || '',
       })),
     };
     try {

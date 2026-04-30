@@ -151,6 +151,9 @@ window.apiReports = {
 // ── 码表 ──────────────────────────────────────────────────
 window.apiDicts = {
   list: () => api('/api/dicts'),
+  createItem: (payload) => api('/api/dicts/items', 'POST', payload),
+  updateItem: (payload) => api('/api/dicts/items', 'PUT', payload),
+  deleteItem: (category_key, item_key) => api('/api/dicts/items', 'DELETE', { category_key, item_key }),
 };
 
 // ── 生产反馈 ───────────────────────────────────────────────

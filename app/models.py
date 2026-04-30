@@ -89,10 +89,12 @@ class Product(Base):
     material = Column(String(50))
     width = Column(Integer)  # 门幅 cm
     weight = Column(Integer)  # 克重 g/㎡
+    cf = Column(Integer, default=0)       # 缩率/褶皱系数
     unit_price = Column(DECIMAL(10, 2))
     unit = Column(String(10), default="米")
     stock = Column(Integer, default=0)
     remark = Column(String(500), default="")
+    series = Column(String(100), default="")  # 布板系列（自由文本）
     created_at = Column(DateTime, default=datetime.now)
 
 

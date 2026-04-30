@@ -310,10 +310,17 @@ class ProductListItem(BaseModel):
     category_id: int
     category_name: str
     product_type: str
+    classification: str = ""
+    model: str = ""
     material: str
+    series: str = ""
+    width: int = 280
+    weight: int = 0
+    cf: int = 0
     unit_price: float
     stock: int
     unit: str
+    remark: str = ""
 
 
 class ProductListResponse(BaseModel):
@@ -333,14 +340,17 @@ class ProductDetailData(BaseModel):
     category_id: int
     category_name: str
     product_type: str
-    classification: str
-    model: str
+    classification: str = ""
+    model: str = ""
     material: str
-    width: int
-    weight: int
+    series: str = ""
+    width: int = 280
+    weight: int = 0
+    cf: int = 0
     unit_price: float
     unit: str
     stock: int
+    remark: str = ""
 
 
 class ProductResponse(BaseModel):
