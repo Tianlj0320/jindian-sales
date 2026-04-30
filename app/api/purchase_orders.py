@@ -138,6 +138,12 @@ async def split_order_to_purchase_orders(session: Any, order_id: int) -> list[Pu
             "material_type": getattr(item, "material_type", "主料"),
             "order_item_id": item.id,
         }
+        # P1-3：尝试通过 product_code 查找 Product 表并回填 product_id
+        if product_info["product_code"]:
+            pr = await session.execute(select(Product).where(Product.code == product_info["product_code"]))
+            prod = pr.scalar_one_or_none()
+            if prod:
+                product_info["product_id"] = prod.id
 
         if supplier_id not in supplier_groups:
             # 查询供应商信息
@@ -674,6 +680,12 @@ async def batch_split_orders(
                         "source_order_no": order.order_no,
                     }
                 )
+                # P1-3：尝试通过 product_code 查找 Product 表并回填 product_id
+                if item.product_code:
+                    pr = await session.execute(select(Product).where(Product.code == item.product_code))
+                    prod = pr.scalar_one_or_none()
+                    if prod:
+                        supplier_map[sid]["items"][-1]["product_id"] = prod.id
                 supplier_map[sid]["order_ids"].add(str(order_id))
 
         # ── 生成采购单 ─────────────────────────────────────────────────
