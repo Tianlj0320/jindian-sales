@@ -323,6 +323,7 @@ class FinanceRecord(Base):
     method = Column(String(30), default="转账")
     operator = Column(String(50))
     remark = Column(String(300))
+    purchase_order_id = Column(Integer, nullable=True)  # V3.0 P1-2：付款记录关联采购单
     created_at = Column(DateTime, default=datetime.now)
 
 

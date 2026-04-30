@@ -6,7 +6,7 @@ from sqlalchemy import and_, func, select
 
 from app.core.response import success_response, error_response
 from app.database import async_session
-from app.models import FinanceRecord, Order
+from app.models import FinanceRecord, Order, PurchaseOrder
 from app.schemas import CommonResponse
 
 router = APIRouter(prefix="/api/finance", tags=["财务结算"])
@@ -126,11 +126,26 @@ async def get_summary():
 @router.post("/receive", response_model=CommonResponse)
 async def record_receive(req: dict = Body(...)):
     """记录收款"""
+    order_id = req.get("order_id")
+    order_no = req.get("order_no", "")
+
+    # P1-5：强制追溯订单，拒绝既无 order_id 又无 order_no 的情况
+    if not order_id and not order_no:
+        return error_response(error="收款必须关联订单，请传入 order_id 或 order_no")
+
+    # 如果传了 order_no 但没有 order_id，自动查找
+    if not order_id and order_no:
+        async with async_session() as session:
+            r = await session.execute(select(Order).where(Order.order_no == order_no))
+            o = r.scalar_one_or_none()
+            if o:
+                order_id = o.id
+
     async with async_session() as session:
         record = FinanceRecord(
             record_type="receive",
-            order_id=req.get("order_id"),
-            order_no=req.get("order_no", ""),
+            order_id=order_id,
+            order_no=order_no or "",
             customer_name=req.get("customer_name", ""),
             amount=float(req.get("amount", 0)),
             method=req.get("method", "转账"),
@@ -140,8 +155,8 @@ async def record_receive(req: dict = Body(...)):
         session.add(record)
 
         # 更新订单已收款
-        if req.get("order_id"):
-            r = await session.execute(select(Order).where(Order.id == req.get("order_id")))
+        if order_id:
+            r = await session.execute(select(Order).where(Order.id == order_id))
             o = r.scalar_one_or_none()
             if o:
                 o.received = float(o.received or 0) + float(req.get("amount", 0))
@@ -155,6 +170,7 @@ async def record_receive(req: dict = Body(...)):
 async def record_pay(req: dict = Body(...)):
     """记录付款"""
     async with async_session() as session:
+        purchase_order_id = req.get("purchase_order_id")
         record = FinanceRecord(
             record_type="pay",
             order_id=req.get("order_id"),
@@ -166,6 +182,15 @@ async def record_pay(req: dict = Body(...)):
             remark=req.get("remark", ""),
         )
         session.add(record)
+
+        # P1-2：如果传入了 purchase_order_id，更新采购单已付金额
+        if purchase_order_id:
+            r = await session.execute(select(PurchaseOrder).where(PurchaseOrder.id == purchase_order_id))
+            po = r.scalar_one_or_none()
+            if po:
+                po.paid_amount = float(po.paid_amount or 0) + float(req.get("amount", 0))
+                po.debt_amount = float(po.total_amount or 0) - float(po.paid_amount or 0)
+
         await session.commit()
         return success_response(data={"id": record.id})
 
