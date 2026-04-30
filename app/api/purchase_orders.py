@@ -685,6 +685,7 @@ async def batch_split_orders(
                         supplier_map[sid]["items"][-1]["product_id"] = prod.id
                 supplier_map[sid]["order_ids"].add(str(order_id))
 
+        today_str = datetime.now().strftime("%Y%m%d")
         # P2-4: 使用 SELECT FOR UPDATE 锁避免并发序号冲突
         seq_r = await session.execute(
             select(PurchaseOrder.po_no).where(

@@ -249,9 +249,12 @@ async def complete_task(
             io.status = "已验收"
             io.confirmed_at = datetime.now()
             # InstallationOrder 确认时会同步更新 Order 状态（见 installation_orders.py confirm 逻辑）
-        elif order:
+        else:
             # 兜底：如果没有 InstallationOrder 才直接更新 Order
-            order.status_key = new_order_status
+            r_order = await session.execute(select(Order).where(Order.id == task.order_id))
+            o = r_order.scalar_one_or_none()
+            if o:
+                o.status_key = new_order_status
 
         await session.commit()
 
