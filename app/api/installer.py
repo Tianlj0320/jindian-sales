@@ -238,11 +238,19 @@ async def complete_task(
         task.completed_at = datetime.now()
         task.completion_remark = req.remark or ""
 
-        # 更新关联订单状态
-        order_result = await session.execute(select(Order).where(Order.id == task.order_id))
-        order = order_result.scalar_one_or_none()
+        # 更新 InstallationOrder 状态（主数据源）
+        from app.models import InstallationOrder
+        io_result = await session.execute(
+            select(InstallationOrder).where(InstallationOrder.order_id == task.order_id)
+        )
+        io = io_result.scalar_one_or_none()
         new_order_status = "installed"
-        if order:
+        if io:
+            io.status = "已验收"
+            io.confirmed_at = datetime.now()
+            # InstallationOrder 确认时会同步更新 Order 状态（见 installation_orders.py confirm 逻辑）
+        elif order:
+            # 兜底：如果没有 InstallationOrder 才直接更新 Order
             order.status_key = new_order_status
 
         await session.commit()

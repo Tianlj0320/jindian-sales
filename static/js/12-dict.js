@@ -43,6 +43,7 @@ window.__dictModule__ = {
     } catch (e) {
       console.error('[saveDictItem] API error:', e);
       // 即使 API 失败，仍保留本地状态（本地优先，降级处理）
+      ElementPlus.ElMessage.error('保存失败，已本地暂存，请稍后重试');
     }
 
     // 本地状态更新
@@ -70,6 +71,7 @@ window.__dictModule__ = {
     } catch (e) {
       console.error('[delDictItem] API error:', e);
       // 即使 API 失败，仍保留本地状态
+      ElementPlus.ElMessage.error('删除失败，请稍后重试');
     }
 
     S.dictMap[cat] = items.filter(i => i.k !== row.k);

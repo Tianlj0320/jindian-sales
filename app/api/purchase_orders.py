@@ -4,7 +4,7 @@ from datetime import date, datetime
 from typing import Any
 
 from fastapi import APIRouter, Body, Header, HTTPException, Path, Query
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, select, text
 
 from app.core.response import success_response, error_response
 from app.database import async_session
@@ -231,15 +231,12 @@ async def split_order(
         if not order_status:
             raise HTTPException(status_code=404, detail="订单不存在")
 
-        # 必须已确认（confirmed）才能拆分
-        if order_status != "confirmed":
+        # P2-5: 状态必须是 confirmed/split 才能拆分
+        ALLOWED_SPLIT_STATUS = ["confirmed", "split"]
+        if order_status not in ALLOWED_SPLIT_STATUS:
             raise HTTPException(
-                status_code=400, detail=f"订单状态为「{order_status}」，请先确认订单后再拆分"
+                status_code=400, detail=f"订单状态为「{order_status}」，无法拆分"
             )
-
-        # 已拆分的不能再拆
-        if order_status == "split":
-            raise HTTPException(status_code=400, detail="订单已拆分，不可重复操作")
 
         pos = await split_order_to_purchase_orders(session, order_id)
 
@@ -688,12 +685,19 @@ async def batch_split_orders(
                         supplier_map[sid]["items"][-1]["product_id"] = prod.id
                 supplier_map[sid]["order_ids"].add(str(order_id))
 
-        # ── 生成采购单 ─────────────────────────────────────────────────
-        today_str = datetime.now().strftime("%Y%m%d")
+        # P2-4: 使用 SELECT FOR UPDATE 锁避免并发序号冲突
         seq_r = await session.execute(
-            select(func.count(PurchaseOrder.id)).where(PurchaseOrder.po_no.like(f"PO{today_str}%"))
+            select(PurchaseOrder.po_no).where(
+                PurchaseOrder.po_no.like(f"PO{today_str}%")
+            ).with_for_update().order_by(PurchaseOrder.id.desc()).limit(1)
         )
-        base_seq = seq_r.scalar() or 0
+        last_po = seq_r.scalar_one_or_none()
+        base_seq = 0
+        if last_po:
+            try:
+                base_seq = int(last_po[-3:])
+            except (ValueError, IndexError):
+                base_seq = 0
 
         purchase_orders = []
         for idx, (sid, group) in enumerate(supplier_map.items()):
