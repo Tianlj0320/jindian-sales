@@ -201,6 +201,11 @@ async def split_order_to_purchase_orders(session: Any, order_id: int) -> list[Pu
         session.add(po)
         purchase_orders.append(po)
 
+    # P1-3：拆分成功后更新订单状态为 split 并提交
+    order.status_key = "split"
+    order.status = "已拆分"
+    await session.commit()
+
     return purchase_orders
 
 

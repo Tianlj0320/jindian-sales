@@ -57,13 +57,23 @@ STATUS_STEPS = [
     "accepted",
 ]
 
+# P1-4: 状态推进时跳过不存在的中间状态（production_exception 为异常状态，正常流程不落于此）
+SKIP_STATUSES = frozenset(["production_exception"])
+
 
 def get_next_status(current_key: str) -> str | None:
-    """获取下一个状态"""
+    """获取下一个状态（跳过不存在的中间态）"""
     try:
         idx = STATUS_STEPS.index(current_key)
         if idx < len(STATUS_STEPS) - 1:
-            return STATUS_STEPS[idx + 1]
+            next_key = STATUS_STEPS[idx + 1]
+            # 跳过异常状态
+            if next_key in SKIP_STATUSES:
+                idx += 1
+                if idx < len(STATUS_STEPS) - 1:
+                    return STATUS_STEPS[idx + 1]
+                return None
+            return next_key
     except ValueError:
         pass
     return None
