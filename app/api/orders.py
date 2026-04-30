@@ -21,6 +21,9 @@ from app.schemas import (
 
 router = APIRouter(prefix="/api/orders", tags=["订单管理"])
 
+# 终态（不可推进）
+TERMINAL_STATUSES = {"accepted", "cancelled"}
+
 
 # ─── 订单状态12态映射（V3.0）────────────────────────────────────────────────
 ORDER_STATUS_MAP = {
@@ -472,6 +475,143 @@ async def update_order_status(order_id: int, new_status_key: str = Body(..., emb
                 "status_color": new_color,
                 "auto_action": auto_action_msg,
             },
+        )
+
+
+# ─── P0-1：订单状态推进 ──────────────────────────────────────────────────────
+@router.post("/{order_id}/advance", response_model=CommonResponse)
+async def advance_order(order_id: int):
+    """
+    订单状态推进：自动识别当前状态，跳转到下一个合理状态。
+    规则：
+      created → confirmed
+      confirmed → split（触发采购单拆分）
+      split → purchasing（采购单已生成）
+      purchasing → stocked（采购单到货入库）
+      stocked → processing（生产中）
+      processing → completed（生产完成，自动生成安装单）
+      completed → install_order_generated（安装单已生成）
+      install_order_generated → shipped（已发货）
+      shipped → installed（已安装）
+      installed → accepted（已验收，同时更新安装单）
+    终态 accepted / cancelled 不可推进。
+    """
+    async with async_session() as session:
+        result = await session.execute(select(Order).where(Order.id == order_id))
+        o = result.scalar_one_or_none()
+        if not o:
+            return CommonResponse(success=False, error="订单不存在")
+
+        current_key = o.status_key
+
+        # 终态检查
+        if current_key in TERMINAL_STATUSES:
+            return CommonResponse(
+                success=False,
+                error=f"订单已在终态「{ORDER_STATUS_MAP.get(current_key, {}).get('label', current_key)}」，无法推进",
+            )
+
+        # special-order routes (not simply next in STATUS_STEPS)
+        auto_action_msg = None
+        new_status_key = None
+
+        if current_key == "completed":
+            # completed → 自动生成安装单（内部跳两级：completed→install_order_generated）
+            try:
+                r = await session.execute(
+                    select(InstallationOrder).where(InstallationOrder.order_id == order_id)
+                )
+                existing_ins = r.scalar_one_or_none()
+                if not existing_ins:
+                    INS_NO_PREFIX = "INS"
+                    today_str = datetime.now().strftime("%Y%m%d")
+                    seq_r = await session.execute(
+                        select(func.count(InstallationOrder.id)).where(
+                            InstallationOrder.ins_no.like(f"{INS_NO_PREFIX}{today_str}%")
+                        )
+                    )
+                    seq = (seq_r.scalar() or 0) + 1
+                    ins_no = f"{INS_NO_PREFIX}{today_str}{seq:03d}"
+                    ins = InstallationOrder(
+                        ins_no=ins_no,
+                        order_id=o.id,
+                        order_no=o.order_no or "",
+                        customer_name=o.customer_name or "",
+                        customer_phone=o.customer_phone or "",
+                        address=o.install_address or "",
+                        product_details=o.items or {},
+                        measure_summary=str(getattr(o, "measure_data", "") or ""),
+                        install_requirements=getattr(o, "install_requires", "") or "",
+                        status="待分配",
+                    )
+                    session.add(ins)
+                    await session.flush()
+                    new_status_key = "install_order_generated"
+                    auto_action_msg = f"已自动生成安装单 {ins_no}"
+                else:
+                    # 安装单已存在，直接推进到 shipped
+                    new_status_key = "shipped"
+            except Exception as e:
+                return CommonResponse(success=False, error=f"推进失败：{e!s}")
+
+        elif current_key == "installed":
+            # installed → accepted：同时更新 InstallationOrder 状态
+            new_status_key = "accepted"
+            try:
+                r = await session.execute(
+                    select(InstallationOrder).where(InstallationOrder.order_id == order_id)
+                )
+                ins = r.scalar_one_or_none()
+                if ins:
+                    ins.status = "已验收"
+                    ins.confirmed_at = datetime.now()
+            except Exception:
+                pass  # 安装单更新失败不影响主流程
+
+        else:
+            # 标准线性推进
+            next_key = get_next_status(current_key)
+            if not next_key:
+                return CommonResponse(success=False, error="无法确定下一状态")
+            new_status_key = next_key
+
+        # 执行状态更新
+        old_key = o.status_key
+        old_label = ORDER_STATUS_MAP.get(old_key, {}).get("label", o.status)
+        new_label = ORDER_STATUS_MAP[new_status_key]["label"]
+        new_color = ORDER_STATUS_MAP[new_status_key]["color"]
+
+        o.status_key = new_status_key
+        o.status = new_label
+        o.status_color = new_color
+
+        history = o.history or []
+        history.append(
+            {
+                "s": old_label,
+                "s2": new_label,
+                "c": new_status_key,
+                "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            }
+        )
+        o.history = history
+
+        # completed 推进时债务清零
+        if new_status_key == "completed":
+            o.debt = 0
+
+        await session.commit()
+
+        return CommonResponse(
+            success=True,
+            data={
+                "id": order_id,
+                "status_key": new_status_key,
+                "status_label": new_label,
+                "status_color": new_color,
+                "auto_action": auto_action_msg,
+            },
+            message=f"已从「{old_label}」推进至「{new_label}」",
         )
 
 

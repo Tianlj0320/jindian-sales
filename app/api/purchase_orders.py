@@ -8,7 +8,7 @@ from sqlalchemy import and_, func, select
 
 from app.core.response import success_response, error_response
 from app.database import async_session
-from app.models import Order, OrderItem, PurchaseOrder, Supplier
+from app.models import Order, OrderItem, Product, PurchaseOrder, Supplier, WarehouseRecord
 from app.schemas import CommonResponse
 
 router = APIRouter(prefix="/api/purchase-orders", tags=["V3.0 采购管理"])
@@ -35,6 +35,65 @@ def parse_delivery_date(order: dict) -> date | None:
         return datetime.strptime(str(dd)[:10], "%Y-%m-%d").date()
     except Exception:
         return None
+
+
+# ─── P0-2：采购单到货自动入库 ─────────────────────────────────────────────────
+async def auto_inbound_warehouse(session: Any, po_id: int) -> dict:
+    """
+    当采购单状态推进到「全部到货」时，自动执行以下操作：
+    1. 遍历 PurchaseOrder.items（JSON），按 product_id + qty 写入 WarehouseRecord
+    2. 更新 Product.stock += qty
+    返回入库结果摘要
+    """
+    # 读取采购单
+    r = await session.execute(select(PurchaseOrder).where(PurchaseOrder.id == po_id))
+    po = r.scalar_one_or_none()
+    if not po:
+        return {"success": False, "error": "采购单不存在"}
+
+    items = po.items or []
+    if not items:
+        return {"success": True, "inbound_count": 0, "details": []}
+
+    inbound_details = []
+    operator = "system-auto"
+
+    for item in items:
+        product_id = item.get("product_id")
+        qty = float(item.get("qty", 0))
+        product_name = item.get("product_name", "")
+        if not product_id or qty <= 0:
+            continue
+
+        # 写入入库记录
+        record = WarehouseRecord(
+            record_type="in",
+            product_id=product_id,
+            product_name=product_name,
+            qty=qty,
+            unit=item.get("unit", "米"),
+            remark=f"采购单 {po.po_no} 到货入库",
+            operator=operator,
+        )
+        session.add(record)
+
+        # 更新库存
+        r2 = await session.execute(select(Product).where(Product.id == product_id))
+        prod = r2.scalar_one_or_none()
+        if prod:
+            prod.stock = (prod.stock or 0) + int(qty)
+
+        inbound_details.append({
+            "product_id": product_id,
+            "product_name": product_name,
+            "qty": qty,
+        })
+
+    # 更新采购单到货日期
+    po.arrived_date = datetime.now().date()
+
+    await session.flush()
+    return {"success": True, "inbound_count": len(inbound_details), "details": inbound_details}
 
 
 # ─── 订单拆分核心逻辑 ─────────────────────────────────────────
@@ -341,6 +400,7 @@ async def update_purchase_order(
             return error_response(error="采购单不存在")
 
         new_status = req.get("status")
+        old_status = p.status
         if new_status:
             if new_status not in VALID_STATUSES:
                 raise HTTPException(
@@ -348,6 +408,14 @@ async def update_purchase_order(
                     detail=f"非法状态值「{new_status}」，允许值：{', '.join(sorted(VALID_STATUSES))}",
                 )
             p.status = new_status
+
+        # P0-2：状态推进到「全部到货」→ 自动入库
+        inbound_result = None
+        if old_status != "全部到货" and new_status == "全部到货":
+            inbound_result = await auto_inbound_warehouse(session, po_id)
+            if not inbound_result.get("success"):
+                # 入库失败不影响主流程，仅记录 warning
+                pass
 
         if "items" in req:
             p.items = req["items"]
@@ -367,7 +435,10 @@ async def update_purchase_order(
             p.arrived_date = datetime.strptime(req["arrived_date"], "%Y-%m-%d").date()
 
         await session.commit()
-        return success_response(data={"id": po_id, "status": p.status})
+        resp_data = {"id": po_id, "status": p.status}
+        if inbound_result:
+            resp_data["inbound"] = inbound_result
+        return success_response(data=resp_data)
 
 
 @router.delete("/{po_id}", response_model=CommonResponse)
