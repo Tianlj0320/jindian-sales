@@ -213,7 +213,118 @@ cur-gm@金典软装: [auth] 统一登录响应格式
 
 ---
 
-## 七、Code Review 自检清单
+## 七、API 路由命名规范
+
+### 命名规则：使用连字符（kebab-case）
+
+| 正确 | 错误 | 说明 |
+|------|------|------|
+| `/api/purchase-orders` | `/api/purchase_orders` | 路由路径用连字符 |
+| `/api/installation-orders` | `/api/installation_orders` | 路由路径用连字符 |
+| `/api/production-feedback` | `/api/production_feedback` | 路由路径用连字符 |
+
+### ⚠️ 为什么用连字符？
+- HTTP 路径规范（RFC 3986）：路径区分大小写，下划线易混淆
+- Swagger UI 自动转换：下划线可能被当成参数的一部分
+- V3.0 新增模块全部使用连字符命名
+
+### 路由注册（main.py）
+```python
+from app.api import purchase_orders, production_feedback, installation_orders
+
+app.include_router(purchase_orders.router)      # /api/purchase-orders
+app.include_router(production_feedback.router)  # /api/production-feedback
+app.include_router(installation_orders.router)  # /api/installation-orders
+```
+
+### 路由与文件名对照
+
+| 文件 | 前缀 | 说明 |
+|------|------|------|
+| `purchase_orders.py` | `/api/purchase-orders` | V3.0 采购单 |
+| `installation_orders.py` | `/api/installation-orders` | V3.0 安装单 |
+| `production_feedback.py` | `/api/production-feedback` | V3.0 生产反馈 |
+| `purchase.py` | `/api/purchase` | V2.x 采购（旧） |
+
+---
+
+## 八、测试用例模板
+
+### 8.1 API 功能测试模板
+
+```python
+# tests/test_purchase_orders.py
+import pytest
+from httpx import AsyncClient, ASGITransport
+from main import app
+
+@pytest.mark.asyncio
+async def test_split_order_to_purchase_orders():
+    """测试：订单拆分生成采购单"""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        # 1. 创建测试订单
+        login_resp = await ac.post("/api/auth/login", json={"phone": "13900000001", "password": "jd8888"})
+        token = login_resp.json()["data"]["token"]
+        headers = {"Authorization": f"Bearer {token}"}
+
+        # 2. 创建带供应商的订单
+        order_resp = await ac.post("/api/orders", json={
+            "customer_id": 1,
+            "order_type": "窗帘",
+            "items": [{"product_id": 1, "supplier_id": 1, "qty": 5, "unit_price": 100}]
+        }, headers=headers)
+        order_id = order_resp.json()["data"]["id"]
+
+        # 3. 拆分订单
+        split_resp = await ac.post(f"/api/purchase-orders/split/{order_id}", headers=headers)
+        assert split_resp.json()["success"] is True
+        assert len(split_resp.json()["purchase_orders"]) >= 1
+
+@pytest.mark.asyncio
+async def test_list_purchase_orders_pagination():
+    """测试：采购单列表分页"""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        resp = await ac.get("/api/purchase-orders?page=1&page_size=10")
+        assert resp.json()["success"] is True
+        assert "items" in resp.json()
+        assert "total" in resp.json()
+
+@pytest.mark.asyncio
+async def test_update_installation_order_status():
+    """测试：安装单状态更新"""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        # 登录
+        login_resp = await ac.post("/api/auth/login", json={"phone": "13900000001", "password": "jd8888"})
+        token = login_resp.json()["data"]["token"]
+        headers = {"Authorization": f"Bearer {token}"}
+
+        # 创建安装单
+        ins_resp = await ac.post("/api/installation-orders", json={
+            "order_id": 1,
+            "scheduled_date": "2026-05-01",
+            "installer_id": 2
+        }, headers=headers)
+
+        # 更新状态
+        update_resp = await ac.patch(
+            f"/api/installation-orders/{ins_resp.json()['data']['id']}",
+            json={"status": "已分配"},
+            headers=headers
+        )
+        assert update_resp.json()["success"] is True
+```
+
+### 8.2 测试用例自检清单
+
+- [ ] 测试正常流程（happy path）
+- [ ] 测试边界情况（空列表、极限分页）
+- [ ] 测试权限控制（未登录返回 401）
+- [ ] 测试状态流转（非法状态转换返回 400）
+- [ ] 测试关联数据（删除订单后采购单是否清理）
+
+---
+
+## 九、Code Review 自检清单
 
 修完 Bug 提交前：
 
@@ -223,3 +334,4 @@ cur-gm@金典软装: [auth] 统一登录响应格式
 - [ ] **边界情况**：空值、None、列表为空 都处理了吗？
 - [ ] **删除确认**：删除了关联数据（orders→items）吗？
 - [ ] **日志**：新增的 `print` 或 `logging` 删了吗？
+- [ ] **路由命名**：新 API 是否使用了连字符（kebab-case）？

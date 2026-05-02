@@ -130,6 +130,20 @@ sales-system-dev/
 | `GET /api/purchase` | GET | 采购列表 |
 | `POST /api/purchase` | POST | 新建采购单 |
 | `PUT /api/purchase/{id}/status` | PUT | 变更采购状态 |
+| `GET /api/purchase-orders` | GET | 采购单列表（V3.0，分页+筛选） |
+| `POST /api/purchase-orders/split/{order_id}` | POST | 订单拆分生成采购单（V3.0） |
+| `GET /api/purchase-orders/{po_id}` | GET | 采购单详情（V3.0） |
+| `PATCH /api/purchase-orders/{po_id}` | PATCH | 更新采购单状态/物料（V3.0） |
+| `POST /api/purchase-orders/merge` | POST | 合并采购单（V3.0，同供应商） |
+| `POST /api/production-feedback` | POST | 创建生产反馈（V3.0） |
+| `GET /api/production-feedback` | GET | 生产反馈列表（V3.0） |
+| `GET /api/production-feedback/{fb_id}` | GET | 生产反馈详情（V3.0） |
+| `PATCH /api/production-feedback/{fb_id}` | PATCH | 更新生产反馈（V3.0） |
+| `GET /api/installation-orders` | GET | 安装单列表（V3.0，分页+筛选） |
+| `GET /api/installation-orders/{ins_id}` | GET | 安装单详情（V3.0） |
+| `POST /api/installation-orders` | POST | 手动创建安装单（V3.0） |
+| `PATCH /api/installation-orders/{ins_id}` | PATCH | 更新安装单状态（V3.0） |
+| `POST /api/installation-orders/auto-generate/{order_id}` | POST | 自动生成安装单（V3.0） |
 | `GET /api/warehouse/stock` | GET | 库存查询 |
 | `POST /api/warehouse/in` | POST | 采购入库 |
 | `POST /api/warehouse/out` | POST | 领料出库 |
@@ -148,6 +162,94 @@ sales-system-dev/
 | `POST /api/installer/login` | POST | 安装工登录 |
 | `GET /api/installer/tasks` | GET | 安装任务列表 |
 | `POST /api/installer/tasks/{id}/complete` | POST | 确认安装完成 |
+
+---
+
+cur-gm@金典软装: [purchase_orders] 新增采购单管理 API（列表/详情/拆分）
+cur-gm@金典软装: [production_feedback] 新增生产反馈 API（创建/列表/更新）
+cur-gm@金典软装: [installation_orders] 新增安装单 API（列表/详情/创建/更新/自动生成）
+
+## 六、部署说明
+
+### 6.1 环境要求
+- Python 3.10+
+- SQLite 3
+
+### 6.2 安装依赖
+```bash
+cd /home/tianlj0320/sales-system-dev
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 6.3 数据库初始化
+```bash
+# 初始化数据库结构
+sqlite3 sales.db < migrations/v3.0_add_tables.sql
+
+# 初始化演示数据（可选）
+python seed_data.py
+```
+
+### 6.4 启动服务
+```bash
+source venv/bin/activate
+python main.py
+# 或
+./venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+服务地址：`http://localhost:8000`
+API 文档：`http://localhost:8000/docs`（Swagger UI）
+
+### 6.5 常见问题排查
+
+#### Q1: 启动报错 `No module named 'app'`
+```bash
+cd /home/tianlj0320/sales-system-dev
+source venv/bin/activate
+python main.py
+```
+确保在项目根目录执行，且 venv 已激活。
+
+#### Q2: 接口返回 401 未授权
+检查请求 Header 是否包含：
+```
+Authorization: Bearer <token>
+```
+获取 token：POST `/api/auth/login`
+
+#### Q3: 订单拆分失败，提示 `订单不存在`
+- 确认订单状态为 `已创建`（created）
+- 确认订单有关联的产品明细（order_items）
+- 检查数据库 migrations/v3.0_add_tables.sql 是否已执行
+
+#### Q4: 采购单/安装单接口 404
+确认数据库已执行 v3.0 迁移脚本：
+```bash
+sqlite3 sales.db < migrations/v3.0_add_tables.sql
+```
+
+#### Q5: 手机无法访问服务
+- WSL2 环境需将端口 8000 映射到 Windows：
+  在 PowerShell（Windows端）执行：`netsh interface portproxy add v4tov4 listenport=8000 listenaddress=127.0.0.1 connectport=8000 connectaddress=localhost`
+- 或使用内网穿透工具（如 ngrok）将 WSL 端口暴露到外网
+- 确保手机和电脑在同一局域网
+
+#### Q6: 演示验证码无法收到
+演示环境固定验证码为 `888888`，不需要真实发送短信。
+
+#### Q7: 库表结构与代码不匹配
+执行完整数据库迁移：
+```bash
+sqlite3 sales.db < migrations/v3.0_add_tables.sql
+```
+如仍有问题，可清空数据库后重新初始化：
+```bash
+rm sales.db
+python seed_data.py
+```
 
 ---
 
