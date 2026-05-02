@@ -6,7 +6,7 @@ from typing import Any
 from fastapi import APIRouter, Body, Header, HTTPException, Path, Query
 from sqlalchemy import and_, func, select, text
 
-from app.core.response import success_response, error_response
+from app.core.response import success_response, error_response, list_response
 from app.database import async_session
 from app.models import Order, OrderItem, Product, PurchaseOrder, Supplier, WarehouseRecord
 from app.schemas import CommonResponse
@@ -49,11 +49,11 @@ async def auto_inbound_warehouse(session: Any, po_id: int) -> dict:
     r = await session.execute(select(PurchaseOrder).where(PurchaseOrder.id == po_id))
     po = r.scalar_one_or_none()
     if not po:
-        return {"success": False, "error": "采购单不存在"}
+        return error_response(error="采购单不存在")
 
     items = po.items or []
     if not items:
-        return {"success": True, "inbound_count": 0, "details": []}
+        return success_response(data={"inbound_count": 0, "details": []})
 
     inbound_details = []
     operator = "system-auto"
@@ -93,7 +93,7 @@ async def auto_inbound_warehouse(session: Any, po_id: int) -> dict:
     po.arrived_date = datetime.now().date()
 
     await session.flush()
-    return {"success": True, "inbound_count": len(inbound_details), "details": inbound_details}
+    return success_response(data={"inbound_count": len(inbound_details), "details": inbound_details})
 
 
 # ─── 订单拆分核心逻辑 ─────────────────────────────────────────
