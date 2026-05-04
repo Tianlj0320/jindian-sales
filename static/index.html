@@ -315,7 +315,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
           <div class="page-title" style="margin:0">产品资料</div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <el-button type="primary" size="small" @click="openProductDlg(null)">+ 新建产品</el-button>
-            <el-input v-model="prodSearch" placeholder="搜索名称/编码" size="small" style="width:160px" clearable>
+            <el-input v-model="prodSearch" placeholder="搜索名称/编码" size="small" style="width:140px" clearable @keyup.enter="prodSearch = prodSearch">
               <template #prefix><el-icon><search/></el-icon></template>
             </el-input>
             <el-select v-model="prodSupplierF" placeholder="供应商" size="small" style="width:130px" clearable>
@@ -323,6 +323,12 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
             </el-select>
             <el-select v-model="prodCatF" placeholder="布版" size="small" style="width:120px" clearable>
               <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id"/>
+            </el-select>
+            <el-select v-model="prodCategoryF" placeholder="品类" size="small" style="width:100px" clearable>
+              <el-option v-for="t in (dictMap.productType||[])" :key="t.k" :label="t.v" :value="t.v"/>
+            </el-select>
+            <el-select v-model="prodClassificationF" placeholder="形态" size="small" style="width:100px" clearable>
+              <el-option v-for="t in (dictMap.productForm||[])" :key="t.k" :label="t.v" :value="t.v"/>
             </el-select>
             <span style="color:#888;font-size:12px">共{{filteredProducts.length}}条</span>
           </div>
@@ -372,13 +378,11 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
           <div class="page-title" style="margin:0">客户资料 <span>（必须先录入客户，才能下订单）</span></div>
           <div style="display:flex;gap:8px;align-items:center">
             <el-button type="primary" size="small" @click="openCustomerDlg()">+ 新增客户</el-button>
-            <el-input v-model="customerSearch" placeholder="搜索名称/手机/小区" size="small" style="width:160px" clearable>
+            <el-input v-model="customerSearch" placeholder="搜索名称/手机/小区" size="small" style="width:160px" clearable @keyup.enter="customerSearch = customerSearch">
               <template #prefix><el-icon><search/></el-icon></template>
             </el-input>
             <el-select v-model="customerTypeF" placeholder="客户类型" size="small" style="width:100px" clearable>
-              <el-option label="零售" value="零售"/>
-              <el-option label="工程" value="工程"/>
-              <el-option label="分销" value="分销"/>
+              <el-option v-for="t in (dictMap.customerType||[])" :key="t.k" :label="t.v" :value="t.v"/>
             </el-select>
             <span style="color:#888;font-size:12px">共{{filteredCustomers.length}}条</span>
           </div>
@@ -426,11 +430,11 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
           <div class="page-title" style="margin:0">员工资料</div>
           <div style="display:flex;gap:8px;align-items:center">
             <el-button type="primary" size="small" @click="openEmployeeDlg(null)">+ 新增员工</el-button>
-            <el-input v-model="empSearch" placeholder="搜索姓名/工号/手机" size="small" style="width:160px" clearable>
+            <el-input v-model="empSearch" placeholder="搜索姓名/工号/手机" size="small" style="width:160px" clearable @keyup.enter="empSearch = empSearch">
               <template #prefix><el-icon><search/></el-icon></template>
             </el-input>
             <el-select v-model="empPositionF" placeholder="职务" size="small" style="width:110px" clearable>
-              <el-option v-for="p in [...new Set(employees.map(e=>e.position).filter(Boolean))]" :key="p" :label="p" :value="p"/>
+              <el-option v-for="t in (dictMap.position||[])" :key="t.k" :label="t.v" :value="t.v"/>
             </el-select>
             <span style="color:#888;font-size:12px">共{{filteredEmployees.length}}条</span>
           </div>
@@ -478,7 +482,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
           <div class="page-title" style="margin:0">供应商管理</div>
           <div style="display:flex;gap:8px;align-items:center">
             <el-button type="primary" size="small" @click="openSupplierDlg(null)">+ 新建供应商</el-button>
-            <el-input v-model="suppSearch" placeholder="搜索名称/编号/联系人" size="small" style="width:180px" clearable>
+            <el-input v-model="suppSearch" placeholder="搜索名称/编号/联系人" size="small" style="width:180px" clearable @keyup.enter="suppSearch = suppSearch">
               <template #prefix><el-icon><search/></el-icon></template>
             </el-input>
             <el-select v-model="suppTypeF" placeholder="类型" size="small" style="width:100px" clearable>
@@ -2088,6 +2092,7 @@ const app = createApp({
       S.page = p;
       S.activeMenu = (p === 'basic') ? 'product' : p;
       if (p === 'order') __ordersModule__.loadOrders();
+      if (p === 'product') __productModule__.loadAll();
       if (p === 'purchase') {
         __purchaseModule__.loadPurchases();
         __purchaseModule__.loadPurchaseOrdersForSplit();
@@ -2290,7 +2295,7 @@ const app = createApp({
       __orderFormModule__.calcEditTotals(S);
     };
     const calcEditTotals = () => __orderFormModule__.calcEditTotals(S);
-    const openEditOrderDialog = () => __orderFormModule__.openEditOrder(S, S.selOrder);
+    const openEditOrderDialog = () => { __orderFormModule__.openEditOrder(S, S.selOrder); showEditOrder.value = true; };
     const saveEditOrder = () => __orderFormModule__.saveEditOrder(S);
 
     const loadProduction = () => {
@@ -2598,10 +2603,27 @@ const app = createApp({
       editingProduct,
       products: computed(() => S.products),
       productTree,
-      filteredProducts: computed(() => filteredProductsFn()),
+      filteredProducts: computed(() => {
+        // 强制建立响应式依赖
+        const deps = [S.prodSearch, S.prodSupplierF, S.prodCatF, S.prodCategoryF, S.prodClassificationF];
+        let list = S.products.slice();
+        const q = (S.prodSearch || '').toLowerCase();
+        if (q) list = list.filter(p =>
+          ((p.name||'') + (p.code||'') + (p.category||'') +
+            __productModule__.getSupplierName(p.supplierId, S)).toLowerCase().includes(q)
+        );
+        if (S.prodSupplierF) list = list.filter(p => String(p.supplierId) === String(S.prodSupplierF));
+        if (S.prodCatF) list = list.filter(p => String(p.categoryId) === String(S.prodCatF));
+        if (S.prodCategoryF) list = list.filter(p => p.type === S.prodCategoryF);
+        if (S.prodClassificationF) list = list.filter(p => p.classification === S.prodClassificationF);
+        console.log('[filteredProducts] deps=', deps.map(d => typeof d === 'object' ? JSON.stringify(d) : d), 'result count=', list.length);
+        return list;
+      }),
       prodSearch: { get: () => S.prodSearch, set: v => { S.prodSearch = v; } },
       prodSupplierF: { get: () => S.prodSupplierF, set: v => { S.prodSupplierF = v; } },
       prodCatF: { get: () => S.prodCatF, set: v => { S.prodCatF = v; } },
+      prodCategoryF: { get: () => S.prodCategoryF, set: v => { S.prodCategoryF = v; } },
+      prodClassificationF: { get: () => S.prodClassificationF, set: v => { S.prodClassificationF = v; } },
       openProductDlg,
       saveProduct,
       delProduct,

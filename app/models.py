@@ -65,11 +65,18 @@ class Customer(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(50), nullable=False)
     phone = Column(String(20), nullable=False)
+    customer_type = Column(String(20), default="retail")  # retail/project/designer
     type = Column(String(20), default="零售")
     address = Column(String(300))
     community = Column(String(100))
     source = Column(String(50))
     salesperson = Column(String(50))
+    level = Column(String(10), default="C")  # A/B/C 客户等级
+    tags = Column(JSON, default=list)  # 标签列表
+    next_followup_date = Column(Date, nullable=True)  # 下次跟进日期（V4.0）
+    followup_history = Column(JSON, default=list)  # 跟进历史摘要（V4.0）
+    measure_status = Column(String(20), default="pending")  # pending/measured/confirmed
+    credit_limit = Column(DECIMAL(12, 2), default=0)  # 信用额度
     debt = Column(DECIMAL(12, 2), default=0)
     is_deleted = Column(Boolean, default=False)  # 软删除标记
     created_at = Column(DateTime, default=datetime.now)
@@ -93,6 +100,9 @@ class Product(Base):
     unit_price = Column(DECIMAL(10, 2))
     unit = Column(String(10), default="米")
     stock = Column(Integer, default=0)
+    cost_price = Column(DECIMAL(10, 2), default=0)   # 成本价（V4.0 价格三角）
+    min_price = Column(DECIMAL(10, 2), default=0)  # 最低售价（V4.0 价格三角）
+    selling_price = Column(DECIMAL(10, 2), default=0)  # 销售单价（V4.0 价格三角）
     remark = Column(String(500), default="")
     series = Column(String(100), default="")  # 布板系列（自由文本）
     created_at = Column(DateTime, default=datetime.now)
@@ -408,3 +418,32 @@ class InstallationOrder(Base):
     remark = Column(String(500))
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class InventoryFlow(Base):
+    """库存流水（V4.0）"""
+    __tablename__ = "inventory_flow"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    product_id = Column(Integer)
+    warehouse_id = Column(Integer)
+    flow_type = Column(String(10))  # IN/OUT/TRANSFER/ADJUST
+    qty_before = Column(Integer)
+    qty_change = Column(Integer)
+    qty_after = Column(Integer)
+    ref_type = Column(String(20))  # order/purchase/adjust
+    ref_id = Column(Integer)
+    operator_id = Column(Integer)
+    remark = Column(Text)
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class FollowupRecord(Base):
+    """客户跟进记录（V4.0）"""
+    __tablename__ = "followup_records"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    customer_id = Column(Integer)
+    type = Column(String(20))  # 电话/微信/上门
+    content = Column(Text)
+    next_date = Column(Date)
+    operator_id = Column(Integer)
+    created_at = Column(DateTime, default=datetime.now)

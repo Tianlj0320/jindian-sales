@@ -222,6 +222,11 @@ async def create_order(req: dict = Body(...)):
 
         items = req.get("items", [])
         materials = req.get("materials", [])
+
+        # ⚠️ 防御：items 为空时拒绝创建（防止零金额订单）
+        if not items and not materials:
+            return CommonResponse(success=False, error="订单明细不能为空，请先添加商品")
+
         quote_amount = sum(float(i.get("amount", 0)) for i in items) + sum(
             float(m.get("amount", 0)) for m in materials
         )
@@ -427,14 +432,11 @@ async def update_order_status(order_id: int, new_status_key: str = Body(..., emb
         # 订单生产完成（completed）→ 自动生成安装单
         if new_status_key == "completed":
             try:
-                from sqlalchemy import select as sa_select
-
                 r = await session.execute(
-                    sa_select(InstallationOrder).where(InstallationOrder.order_id == order_id)
+                    select(InstallationOrder).where(InstallationOrder.order_id == order_id)
                 )
                 existing_ins = r.scalar_one_or_none()
                 if not existing_ins:
-                    # 生成安装单
                     INS_NO_PREFIX = "INS"
                     today_str = datetime.now().strftime("%Y%m%d")
                     seq_r = await session.execute(
@@ -455,16 +457,14 @@ async def update_order_status(order_id: int, new_status_key: str = Body(..., emb
                         measure_summary=str(getattr(o, "measure_data", "") or ""),
                         install_requirements=getattr(o, "install_requires", "") or "",
                         status="待分配",
-                        # P1-4：自动带入订单应收信息
                         receivable_amount=o.amount,
                         received_amount=o.received,
                         unpaid_amount=o.debt,
                     )
                     session.add(ins)
                     await session.flush()
-                    o.status_key = "install_order_generated"
-                    o.status = "安装单已生成"
-                    o.status_color = ORDER_STATUS_MAP["install_order_generated"]["color"]
+
+                    # ⚠️ P1-5 Fix: 状态已在上面 commit，此处改为追加历史（不回写数据库）
                     history = o.history or []
                     history.append(
                         {
@@ -474,8 +474,7 @@ async def update_order_status(order_id: int, new_status_key: str = Body(..., emb
                             "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
                         }
                     )
-                    o.history = history
-                    await session.commit()
+                    o.history = history  # 仅内存修改，不重新 commit
                     auto_action_msg = f"已自动生成安装单 {ins_no}"
             except Exception as e:
                 auto_action_msg = f"生成安装单失败：{e!s}"
@@ -564,6 +563,21 @@ async def advance_order(order_id: int):
                     )
                     session.add(ins)
                     await session.flush()
+                    
+                    # P1-5: 必须追加历史记录再更新状态，否则 history 丢失
+                    history = o.history or []
+                    history.append(
+                        {
+                            "s": "已完成",
+                            "s2": "安装单已生成",
+                            "c": "install_order_generated",
+                            "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                        }
+                    )
+                    o.history = history
+                    o.status_key = "install_order_generated"
+                    o.status = "安装单已生成"
+                    o.status_color = ORDER_STATUS_MAP["install_order_generated"]["color"]
                     new_status_key = "install_order_generated"
                     auto_action_msg = f"已自动生成安装单 {ins_no}"
                 else:

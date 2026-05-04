@@ -82,6 +82,8 @@ window.__STATE__ = Vue.reactive({
   prodSearch: '',
   prodSupplierF: '',
   prodCatF: '',
+  prodCategoryF: '',
+  prodClassificationF: '',
 
   // ── 客户 ──
   customers: [],

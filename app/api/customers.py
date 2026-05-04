@@ -98,6 +98,22 @@ async def get_customer(customer_id: int):
 @router.post("", response_model=CommonResponse)
 async def create_customer(req: dict = Body(...)):
     async with async_session() as session:
+        # 手机号查重
+        phone = req.get("phone")
+        if phone:
+            dup_result = await session.execute(
+                select(Customer).where(
+                    Customer.phone == phone,
+                    Customer.is_deleted == False
+                )
+            )
+            if dup_result.scalar_one_or_none():
+                from fastapi.responses import JSONResponse
+                return JSONResponse(
+                    status_code=400,
+                    content={"success": False, "error": "手机号已存在"}
+                )
+
         # 生成客户编号
         today = datetime.now().strftime("%Y%m%d")
         seq_result = await session.execute(

@@ -56,7 +56,7 @@ check("Vue.js 加载", r.status_code == 200 and "<script" in r.text)
 
 # ── 2. 认证 ────────────────────────────────────────
 print("\n[2] 认证")
-code, body = POST("/api/auth/login", {"phone": "13900001111", "password": "jd8888"})
+code, body = POST("/api/auth/login", {"phone": "13900001111", "password": "123456"})
 check("登录成功", code == 200 and body.get("success") and "token" in body.get("data", {}), str(body))
 token = body.get("data", {}).get("token", "") if isinstance(body, dict) else ""
 

@@ -231,12 +231,21 @@ async def update_finance_record(record_id: int, req: dict = Body(...)):
 
 @router.delete("/{record_id}", response_model=CommonResponse)
 async def delete_finance_record(record_id: int):
-    """删除财务记录"""
+    """删除财务记录（同时回滚订单已收款和欠款）"""
     async with async_session() as session:
         r = await session.execute(select(FinanceRecord).where(FinanceRecord.id == record_id))
         record = r.scalar_one_or_none()
         if not record:
             return error_response(error="记录不存在")
+
+        # 回滚订单已收款和欠款（仅对收款记录）
+        if record.record_type == "receive" and record.order_id:
+            r2 = await session.execute(select(Order).where(Order.id == record.order_id))
+            order = r2.scalar_one_or_none()
+            if order:
+                order.received = max(0, float(order.received or 0) - float(record.amount or 0))
+                order.debt = max(0, float(order.amount or 0) - float(order.received or 0))
+
         await session.delete(record)
         await session.commit()
         return success_response(message="删除成功")

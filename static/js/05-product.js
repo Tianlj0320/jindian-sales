@@ -67,6 +67,7 @@ window.__productModule__ = {
 
   // ── 产品筛选计算属性 ──────────────────────────────────────
   filteredProducts(S) {
+    console.log('[filteredProducts] called, prodSearch=', S.prodSearch, 'prodCategoryF=', S.prodCategoryF, 'prodClassificationF=', S.prodClassificationF, 'products count=', S.products.length);
     let list = S.products;
     const q = (S.prodSearch || '').toLowerCase();
     if (q) list = list.filter(p =>
@@ -75,6 +76,8 @@ window.__productModule__ = {
     );
     if (S.prodSupplierF) list = list.filter(p => String(p.supplierId) === String(S.prodSupplierF));
     if (S.prodCatF) list = list.filter(p => String(p.categoryId) === String(S.prodCatF));
+    if (S.prodCategoryF) list = list.filter(p => p.type === S.prodCategoryF);  // 用 type 而非 category（category 始终为 null）
+    if (S.prodClassificationF) list = list.filter(p => p.classification === S.prodClassificationF);  // 直接比对中文值
     return list;
   },
 
