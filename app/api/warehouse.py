@@ -7,7 +7,7 @@ from sqlalchemy import func, or_, select
 
 from app.core.response import success_response, error_response
 from app.database import async_session
-from app.models import Product, WarehouseRecord
+from app.models import Product, WarehouseRecord, InventoryFlow
 from app.schemas import CommonResponse
 
 router = APIRouter(prefix="/api/warehouse", tags=["仓库管理"])
@@ -102,23 +102,44 @@ async def get_stock(keyword: str | None = Query(None)) -> dict:
 @router.post("/in", response_model=CommonResponse)
 async def stock_in(req: dict[str, Any] = Body(...)) -> dict:
     async with async_session() as session:
+        product_id = req.get("product_id")
+        qty = float(req.get("qty", 0))
+
+        # 读取入库前库存
+        qty_before = 0
+        if product_id:
+            pr = await session.execute(select(Product).where(Product.id == product_id))
+            prod = pr.scalar_one_or_none()
+            if prod:
+                qty_before = prod.stock or 0
+                prod.stock = qty_before + qty
+
         record = WarehouseRecord(
             record_type="in",
-            product_id=req.get("product_id"),
+            product_id=product_id,
             product_name=req.get("product_name", ""),
-            qty=float(req.get("qty", 0)),
+            qty=qty,
             unit=req.get("unit", "米"),
             remark=req.get("remark", ""),
             operator=req.get("operator", "系统"),
         )
         session.add(record)
 
-        # 同时更新库存
-        if req.get("product_id"):
-            pr = await session.execute(select(Product).where(Product.id == req.get("product_id")))
-            prod = pr.scalar_one_or_none()
-            if prod:
-                prod.stock = (prod.stock or 0) + float(req.get("qty", 0))
+        # 写入库存流水
+        if product_id and qty:
+            flow = InventoryFlow(
+                product_id=product_id,
+                warehouse_id=1,
+                flow_type="IN",
+                qty_before=int(qty_before),
+                qty_change=int(qty),
+                qty_after=int(qty_before + qty),
+                ref_type="warehouse",
+                ref_id=0,
+                operator_id=None,
+                remark=req.get("remark", "仓库入库"),
+            )
+            session.add(flow)
 
         await session.commit()
         return success_response(data={"id": record.id})
@@ -127,22 +148,44 @@ async def stock_in(req: dict[str, Any] = Body(...)) -> dict:
 @router.post("/out", response_model=CommonResponse)
 async def stock_out(req: dict[str, Any] = Body(...)) -> dict:
     async with async_session() as session:
+        product_id = req.get("product_id")
+        qty = float(req.get("qty", 0))
+
+        # 读取出库前库存
+        qty_before = 0
+        if product_id:
+            pr = await session.execute(select(Product).where(Product.id == product_id))
+            prod = pr.scalar_one_or_none()
+            if prod:
+                qty_before = prod.stock or 0
+                prod.stock = max(0, qty_before - qty)
+
         record = WarehouseRecord(
             record_type="out",
-            product_id=req.get("product_id"),
+            product_id=product_id,
             product_name=req.get("product_name", ""),
-            qty=float(req.get("qty", 0)),
+            qty=qty,
             unit=req.get("unit", "米"),
             remark=req.get("remark", ""),
             operator=req.get("operator", "系统"),
         )
         session.add(record)
 
-        if req.get("product_id"):
-            pr = await session.execute(select(Product).where(Product.id == req.get("product_id")))
-            prod = pr.scalar_one_or_none()
-            if prod:
-                prod.stock = max(0, (prod.stock or 0) - float(req.get("qty", 0)))
+        # 写入库存流水
+        if product_id and qty:
+            flow = InventoryFlow(
+                product_id=product_id,
+                warehouse_id=1,
+                flow_type="OUT",
+                qty_before=int(qty_before),
+                qty_change=-int(qty),
+                qty_after=int(max(0, qty_before - qty)),
+                ref_type="warehouse",
+                ref_id=0,
+                operator_id=None,
+                remark=req.get("remark", "仓库出库"),
+            )
+            session.add(flow)
 
         await session.commit()
         return success_response(data={"id": record.id})
