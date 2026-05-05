@@ -22,34 +22,49 @@ from app.schemas import (
 router = APIRouter(prefix="/api/orders", tags=["订单管理"])
 
 # 终态（不可推进）
-TERMINAL_STATUSES = {"accepted", "cancelled"}
+TERMINAL_STATUSES = {"accepted", "cancelled", "after_sale"}
 
 
-# ─── 订单状态12态映射（V3.0）────────────────────────────────────────────────
+# ─── 订单状态映射（V3.0 + V4.0 扩展）────────────────────────────────────────
 ORDER_STATUS_MAP = {
+    # ── V4.0 扩展态（量尺前置）──────────────────────────────────────────────
+    "initial": {"label": "待量尺", "color": "#909399"},
+    "measured": {"label": "已量尺", "color": "#409eff"},
+    # ── V3.0 核心12态 ────────────────────────────────────────────────────────
     "created": {"label": "待确认", "color": "#909399"},
     "confirmed": {"label": "已确认", "color": "#409eff"},
-    "split": {"label": "已拆分", "color": "#7c3aed"},  # V3.0 采购拆分
-    "purchasing": {"label": "采购中", "color": "#f59e0b"},  # V3.0
+    "split": {"label": "已拆分", "color": "#7c3aed"},
+    "purchasing": {"label": "采购中", "color": "#f59e0b"},
+    "partial_in": {"label": "部分到货", "color": "#f97316"},
     "stocked": {"label": "已到货", "color": "#10b981"},
     "processing": {"label": "生产中", "color": "#f97316"},
-    "production_exception": {"label": "生产异常", "color": "#ef4444"},  # V3.0
+    "production_exception": {"label": "生产异常", "color": "#ef4444"},
     "completed": {"label": "已完成", "color": "#6366f1"},
-    "install_order_generated": {"label": "安装单已生成", "color": "#8b5cf6"},  # V3.0
-    "shipped": {"label": "已发货", "color": "#06b6d4"},  # V3.0
+    "install_order_generated": {"label": "安装单已生成", "color": "#8b5cf6"},
+    "shipped": {"label": "已发货", "color": "#06b6d4"},
     "installed": {"label": "已安装", "color": "#1a3a5c"},
     "accepted": {"label": "已验收", "color": "#059669"},
+    "after_sale": {"label": "售后中", "color": "#ef4444"},
     "cancelled": {"label": "已取消", "color": "#d9d9d9"},
 }
 
+# V3.0 → V4.0 状态 key 兼容映射
+V3_TO_V4_STATUS_MAP = {
+    "created": "initial",
+    "confirmed": "confirmed",
+}
+
 STATUS_STEPS = [
-    "created",
+    # V4.0 量尺前置流程
+    "initial",
+    "measured",
+    # V3.0 核心流程
     "confirmed",
     "split",
     "purchasing",
+    "partial_in",
     "stocked",
     "processing",
-    "production_exception",
     "completed",
     "install_order_generated",
     "shipped",
@@ -57,8 +72,60 @@ STATUS_STEPS = [
     "accepted",
 ]
 
-# P1-4: 状态推进时跳过不存在的中间状态（production_exception 为异常状态，正常流程不落于此）
-SKIP_STATUSES = frozenset(["production_exception"])
+SKIP_STATUSES = frozenset(["partial_in", "production_exception", "after_sale"])
+
+
+def get_status_info(status_key: str) -> dict:
+    """获取状态配置信息"""
+    return ORDER_STATUS_MAP.get(status_key, {})
+
+
+def get_next_status(current_key: str) -> str | None:
+    """获取下一个状态（跳过异常态）"""
+    try:
+        idx = STATUS_STEPS.index(current_key)
+    except ValueError:
+        # 兼容 V3.0 key
+        mapped = V3_TO_V4_STATUS_MAP.get(current_key)
+        if mapped:
+            try:
+                idx = STATUS_STEPS.index(mapped)
+            except ValueError:
+                return None
+        else:
+            return None
+
+    for i in range(idx + 1, len(STATUS_STEPS)):
+        next_key = STATUS_STEPS[i]
+        if next_key not in SKIP_STATUSES:
+            return next_key
+    return None
+
+
+def get_all_next_statuses(current_key: str) -> list[str]:
+    """获取当前状态所有可跳转的目标状态（用于状态机规则）"""
+    info = get_status_info(current_key)
+    if not info and current_key in V3_TO_V4_STATUS_MAP:
+        info = get_status_info(V3_TO_V4_STATUS_MAP[current_key])
+    return info.get("next", [])
+
+
+def can_transition(from_key: str, to_key: str) -> bool:
+    """判断状态转换是否合法"""
+    next_keys = get_all_next_statuses(from_key)
+    if next_keys:
+        return to_key in next_keys
+    return to_key == get_next_status(from_key)
+
+
+def is_terminal(status_key: str) -> bool:
+    """判断是否为终态（不可再推进）"""
+    return len(get_all_next_statuses(status_key)) == 0
+
+
+def normalize_status_key(key: str) -> str:
+    """将 V3.0 status_key 转换为 V4.0 key"""
+    return V3_TO_V4_STATUS_MAP.get(key, key)
 
 
 def get_next_status(current_key: str) -> str | None:
