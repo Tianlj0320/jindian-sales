@@ -325,10 +325,10 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id"/>
             </el-select>
             <el-select v-model="prodCategoryF" placeholder="品类" size="small" style="width:100px" clearable>
-              <el-option v-for="t in (dictMap.productType||[])" :key="t.k" :label="t.v" :value="t.v"/>
+              <el-option v-for="t in (dictMap.productType||[])" :key="t.k" :label="t.v" :value="t.k"/>
             </el-select>
             <el-select v-model="prodClassificationF" placeholder="形态" size="small" style="width:100px" clearable>
-              <el-option v-for="t in (dictMap.productForm||[])" :key="t.k" :label="t.v" :value="t.v"/>
+              <el-option v-for="t in (dictMap.productForm||[])" :key="t.k" :label="t.v" :value="t.k"/>
             </el-select>
             <span style="color:#888;font-size:12px">共{{filteredProducts.length}}条</span>
           </div>
@@ -382,7 +382,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <template #prefix><el-icon><search/></el-icon></template>
             </el-input>
             <el-select v-model="customerTypeF" placeholder="客户类型" size="small" style="width:100px" clearable>
-              <el-option v-for="t in (dictMap.customerType||[])" :key="t.k" :label="t.v" :value="t.v"/>
+              <el-option v-for="t in (dictMap.customerType||[])" :key="t.k" :label="t.v" :value="t.k"/>
             </el-select>
             <span style="color:#888;font-size:12px">共{{filteredCustomers.length}}条</span>
           </div>
@@ -434,7 +434,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <template #prefix><el-icon><search/></el-icon></template>
             </el-input>
             <el-select v-model="empPositionF" placeholder="职务" size="small" style="width:110px" clearable>
-              <el-option v-for="t in (dictMap.position||[])" :key="t.k" :label="t.v" :value="t.v"/>
+              <el-option v-for="t in (dictMap.position||[])" :key="t.k" :label="t.v" :value="t.k"/>
             </el-select>
             <span style="color:#888;font-size:12px">共{{filteredEmployees.length}}条</span>
           </div>
@@ -486,7 +486,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <template #prefix><el-icon><search/></el-icon></template>
             </el-input>
             <el-select v-model="suppTypeF" placeholder="类型" size="small" style="width:100px" clearable>
-              <el-option v-for="t in (dictMap.supplierType||[])" :key="t.k" :label="t.v" :value="t.v"/>
+              <el-option v-for="t in (dictMap.supplierType||[])" :key="t.k" :label="t.v" :value="t.k"/>
             </el-select>
             <span style="color:#888;font-size:12px">共{{filteredSuppliers.length}}条</span>
           </div>
