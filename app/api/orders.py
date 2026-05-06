@@ -128,24 +128,6 @@ def normalize_status_key(key: str) -> str:
     return V3_TO_V4_STATUS_MAP.get(key, key)
 
 
-def get_next_status(current_key: str) -> str | None:
-    """获取下一个状态（跳过不存在的中间态）"""
-    try:
-        idx = STATUS_STEPS.index(current_key)
-        if idx < len(STATUS_STEPS) - 1:
-            next_key = STATUS_STEPS[idx + 1]
-            # 跳过异常状态
-            if next_key in SKIP_STATUSES:
-                idx += 1
-                if idx < len(STATUS_STEPS) - 1:
-                    return STATUS_STEPS[idx + 1]
-                return None
-            return next_key
-    except ValueError:
-        pass
-    return None
-
-
 @router.get("", response_model=OrderListResponse)
 async def list_orders(
     status_key: str | None = Query(None, description="状态key筛选"),

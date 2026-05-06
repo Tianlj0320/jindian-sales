@@ -131,6 +131,7 @@ class Product(Base):
     selling_price = Column(DECIMAL(10, 2), default=0)  # 销售单价（V4.0 价格三角）
     remark = Column(String(500), default="")
     series = Column(String(100), default="")  # 布板系列（自由文本）
+    category = Column(String(50), default="")  # 自由文本类别（区别于 category_id 外键）
     created_at = Column(DateTime, default=datetime.now)
 
 
