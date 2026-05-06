@@ -58,9 +58,11 @@ window.__orderFormModule__ = {
         row.code = p.code || '';
         row.productName = p.name || '';
         // 记录产品分类（定高/定宽），用于金额计算
+        // 定高：面料按宽度下单（高度固定），用 width 算金额
+        // 定宽：面料按高度下单（宽度固定），用 height 算金额
         row.classification = p.classification || '';
-        row.calc_by = row.classification === '定宽' ? 'width' : 'height';
-        // 自动计算金额：定高用高度，定宽用宽度
+        row.calc_by = row.classification === '定高' ? 'width' : (row.classification === '定宽' ? 'height' : '');
+        // 自动计算金额
         const dim = this._parseDim(row);
         if (dim > 0 && row.price && row.qty) {
           row.amount = Math.round(dim * row.price * row.qty * (row.discount || 1) * 100) / 100;
@@ -123,6 +125,8 @@ window.__orderFormModule__ = {
   },
 
   // ── 解析尺寸中的宽/高 ─────────────────────────────────
+  // 定高：用 width（宽度下单，高度固定）
+  // 定宽：用 height（高度下单，宽度固定）
   _parseDim(row) {
     if (!row || !row.size) return 0;
     const parts = (row.size || '').split('×');
@@ -130,7 +134,8 @@ window.__orderFormModule__ = {
     const w = parseFloat(parts[0]) || 0;
     const h = parseFloat(parts[1]) || 0;
     if (row.calc_by === 'width') return w;
-    return h; // 默认用高度（定高）
+    if (row.calc_by === 'height') return h;
+    return 0;
   },
 
   calcItem(row, S) {
