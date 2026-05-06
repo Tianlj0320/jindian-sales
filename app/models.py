@@ -56,6 +56,27 @@ class Order(Base):
     measure_data = Column(JSON)  # V3.0 测量数据 JSON
     install_requires = Column(Text)  # V3.0 安装特殊要求
 
+    # V4.0 扩展字段（与数据库 orders 表对齐）
+    salesperson_id = Column(Integer, nullable=True)  # 导购ID
+    creator_id = Column(Integer, nullable=True)  # 创建人ID
+    reviewer_id = Column(Integer, nullable=True)  # 审核人ID
+    remark = Column(String(500), nullable=True)  # 订单备注
+    deleted_at = Column(DateTime, nullable=True)  # 软删除时间
+    order_type_ext = Column(String(20), nullable=True)  # 订单类型扩展 retail/project
+    price_locked_at = Column(String(30), nullable=True)  # 价格锁定时间
+    discount_reason = Column(String(200), nullable=True)  # 折扣原因
+    install_slot = Column(String(10), nullable=True)  # 安装时段
+    paid_amount = Column(DECIMAL(12, 2), default=0)  # 已付款金额
+    after_sale_reason = Column(String(500), nullable=True)  # 售后原因
+    after_sale_status = Column(String(30), nullable=True)  # 售后状态
+    last_contact_at = Column(String(30), nullable=True)  # 最近联系时间
+    measure_width = Column(DECIMAL(8, 2), nullable=True)  # 量尺宽度
+    measure_height = Column(DECIMAL(8, 2), nullable=True)  # 量尺高度
+    window_width = Column(DECIMAL(8, 2), nullable=True)  # 窗户宽度
+    window_height = Column(DECIMAL(8, 2), nullable=True)  # 窗户高度
+    measure_datetime = Column(String(30), nullable=True)  # 量尺时间
+    measure_operator_id = Column(Integer, nullable=True)  # 量尺操作员ID
+
     created_at = Column(DateTime, default=datetime.now)
 
 
@@ -71,6 +92,7 @@ class Customer(Base):
     community = Column(String(100))
     source = Column(String(50))
     salesperson = Column(String(50))
+    salesperson_id = Column(Integer)  # V4.0 新增
     level = Column(String(10), default="C")  # A/B/C 客户等级
     tags = Column(JSON, default=list)  # 标签列表
     next_followup_date = Column(Date, nullable=True)  # 下次跟进日期（V4.0）
@@ -79,6 +101,10 @@ class Customer(Base):
     credit_limit = Column(DECIMAL(12, 2), default=0)  # 信用额度
     debt = Column(DECIMAL(12, 2), default=0)
     is_deleted = Column(Boolean, default=False)  # 软删除标记
+    deleted_at = Column(DateTime, nullable=True)  # 软删除时间（V4.0）
+    last_contact_at = Column(String(30), nullable=True)  # 最后联系时间（V4.0）
+    total_orders = Column(Integer, default=0)  # 累计订单数（V4.0）
+    total_amount = Column(DECIMAL(14, 2), default=0)  # 累计金额（V4.0）
     created_at = Column(DateTime, default=datetime.now)
 
 
