@@ -251,6 +251,9 @@ async def get_order(order_id: int = Path(..., description="订单ID")):
                 "install_address": o.install_address or "",
                 "install_date": str(o.install_date) if o.install_date else "",
                 "install_time_slot": o.install_time_slot or "",
+                "remark": o.remark or "",
+                "salesperson_id": o.salesperson_id,
+                "paid_amount": float(o.paid_amount or 0),
                 "created_at": str(o.created_at) if o.created_at else "",
             },
         )

@@ -246,6 +246,9 @@ class OrderDetailData(BaseModel):
     install_address: str
     install_date: str
     install_time_slot: str
+    remark: str = ""
+    salesperson_id: int | None = None
+    paid_amount: float = 0
     created_at: str
 
 
