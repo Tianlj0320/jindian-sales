@@ -9,6 +9,21 @@ from app.schemas import CommonResponse, EmployeeListItem, EmployeeListResponse
 
 router = APIRouter(prefix="/api/employees", tags=["员工管理"])
 
+# 职务 key → label
+POSITION_LABEL_MAP = {
+    "boss": "老板",
+    "manager": "经理",
+    "sales": "导购",
+    "店长": "店长",
+    "installer": "安装工",
+    "高级导购": "高级导购",
+    "finance": "财务",
+}
+
+def _norm_position(v):
+    return POSITION_LABEL_MAP.get(v, v or "导购")
+
+
 
 @router.get("", response_model=EmployeeListResponse)
 async def list_employees(
@@ -58,7 +73,7 @@ async def create_employee(req: dict = Body(...)):
             name=req.get("name", ""),
             gender=req.get("gender", "男"),
             phone=req.get("phone", ""),
-            position=req.get("position", "导购"),
+            position=_norm_position(req.get("position")),
             department=req.get("department", ""),
             max_discount=req.get("max_discount", 1.0),
             round_limit=req.get("round_limit", 0),
@@ -91,7 +106,10 @@ async def update_employee(employee_id: int, req: dict = Body(...)):
             "status",
         ]:
             if field in req:
-                setattr(e, field, req[field])
+                val = req[field]
+                if field == "position":
+                    val = _norm_position(val)
+                setattr(e, field, val)
 
         await session.commit()
         return CommonResponse(success=True, data={"id": employee_id})

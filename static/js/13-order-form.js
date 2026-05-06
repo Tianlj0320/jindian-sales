@@ -54,7 +54,7 @@ window.__orderFormModule__ = {
       const p = (S.products || []).find(x => String(x.id) === String(productId));
       if (p) {
         row.model = p.model || '';
-        row.price = p.unit_price || 0;
+        row.price = p.selling_price || p.unit_price || 0;
         row.code = p.code || '';
         row.productName = p.name || '';
         // 自动计算金额
@@ -80,7 +80,7 @@ window.__orderFormModule__ = {
         row.model = p.model || '';
         row.name = p.name || '';
         row.code = p.code || '';
-        row.price = p.unit_price || 0;
+        row.price = p.selling_price || p.unit_price || 0;
         if (row.price && row.qty) {
           row.amount = Math.round(row.price * row.qty * 100) / 100;
         }

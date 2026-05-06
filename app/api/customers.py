@@ -14,6 +14,19 @@ from app.schemas import (
     CustomerResponse,
 )
 
+# 客户类型 key → label
+CUSTOMER_TYPE_LABEL_MAP = {
+    "retail": "零售",
+    "project": "工程",
+    "designer": "设计师",
+    "个人": "个人",
+    "全屋": "全屋",
+}
+
+def _norm_customer_type(v):
+    return CUSTOMER_TYPE_LABEL_MAP.get(v, v or "零售")
+
+
 router = APIRouter(prefix="/api/customers", tags=["客户管理"])
 
 
@@ -125,7 +138,7 @@ async def create_customer(req: dict = Body(...)):
         customer = Customer(
             name=req.get("name", ""),
             phone=req.get("phone", ""),
-            type=req.get("type", "零售"),
+            type=_norm_customer_type(req.get("type")),
             address=req.get("address", ""),
             community=req.get("community", ""),
             source=req.get("source", ""),
@@ -149,7 +162,10 @@ async def update_customer(customer_id: int, req: dict = Body(...)):
 
         for field in ["name", "phone", "type", "address", "community", "source", "salesperson"]:
             if field in req:
-                setattr(c, field, req[field])
+                val = req[field]
+                if field == "type":
+                    val = _norm_customer_type(val)
+                setattr(c, field, val)
 
         await session.commit()
         return CommonResponse(success=True, data={"id": customer_id})

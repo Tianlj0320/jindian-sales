@@ -48,6 +48,18 @@ ORDER_STATUS_MAP = {
     "cancelled": {"label": "已取消", "color": "#d9d9d9"},
 }
 
+# 订单类型 key → label 转换
+ORDER_TYPE_LABEL_MAP = {
+    "curtain": "窗帘",
+    "wallpaper": "墙布",
+    "hardsheet": "硬包",
+    "rockboard": "岩板",
+    "wholehouse": "全屋",
+}
+
+def _norm_order_type(v):
+    return ORDER_TYPE_LABEL_MAP.get(v, v or "窗帘")
+
 # V3.0 → V4.0 状态 key 兼容映射
 V3_TO_V4_STATUS_MAP = {
     "created": "initial",
@@ -329,7 +341,7 @@ async def create_order(req: dict = Body(...)):
             customer_id=customer_id,
             customer_name=customer_name,
             customer_phone=customer_phone,
-            order_type=req.get("order_type", "窗帘"),
+            order_type=_norm_order_type(req.get("order_type")),
             status="待确认",
             status_key="created",
             status_color="#909399",
@@ -720,7 +732,10 @@ async def update_order(order_id: int, req: dict = Body(...)):
             "install_time_slot",
         ]:
             if field in req:
-                setattr(o, field, req[field])
+                val = req[field]
+                if field == "order_type":
+                    val = _norm_order_type(val)
+                setattr(o, field, val)
 
         if "install_date" in req:
             install_date_raw = req.get("install_date")

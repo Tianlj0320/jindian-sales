@@ -16,6 +16,32 @@ from app.schemas import (
     SupplierListResponse,
 )
 
+# 供应商类型 key → label
+SUPPLIER_TYPE_LABEL_MAP = {
+    "fabric": "面料供应商",
+    "布艺": "布艺",
+    "accessory": "辅料供应商",
+    "配件": "配件",
+    "hardware": "配件供应商",
+}
+
+def _norm_supplier_type(v):
+    return SUPPLIER_TYPE_LABEL_MAP.get(v, v or "布艺")
+
+# 产品类型 key → label
+PRODUCT_TYPE_LABEL_MAP = {
+    "curtain": "窗帘",
+    "wallpaper": "墙纸墙布",
+    "hardsheet": "硬包",
+    "rockboard": "岩板",
+    "accessory": "辅料",
+    "面料": "面料",
+}
+
+def _norm_product_type(v):
+    return PRODUCT_TYPE_LABEL_MAP.get(v, v or "窗帘")
+
+
 router = APIRouter(prefix="/api/products", tags=["产品资料"])
 
 
@@ -56,7 +82,7 @@ async def create_supplier(req: dict = Body(...)):
         supplier = Supplier(
             code=code,
             name=req.get("name", ""),
-            type=req.get("type", "布艺"),
+            type=_norm_supplier_type(req.get("type")),
             contact=req.get("contact", ""),
             phone=req.get("phone", ""),
             delivery_days=req.get("delivery_days", 7),
@@ -80,7 +106,7 @@ async def update_supplier(supplier_id: int, req: dict = Body(...)):
         if "name" in req:
             supplier.name = req["name"]
         if "type" in req:
-            supplier.type = req["type"]
+            supplier.type = _norm_supplier_type(req["type"])
         if "contact" in req:
             supplier.contact = req["contact"]
         if "phone" in req:
@@ -361,7 +387,7 @@ async def create_product(req: dict = Body(...)):
             name=req.get("name", ""),
             supplier_id=supplier_id,
             category_id=category_id,
-            product_type=req.get("product_type", "面料"),
+            product_type=_norm_product_type(req.get("product_type")),
             classification=req.get("classification", "定高"),
             model=req.get("model", ""),
             material=req.get("material", ""),
@@ -411,7 +437,7 @@ async def update_product(product_id: int, req: dict = Body(...)):
         if "category_id" in req:
             product.category_id = req["category_id"]
         if "product_type" in req:
-            product.product_type = req["product_type"]
+            product.product_type = _norm_product_type(req["product_type"])
         if "classification" in req:
             product.classification = req["classification"]
         if "model" in req:

@@ -661,9 +661,9 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
                         <td style="padding:6px 5px;text-align:left;color:#333">{{row.product_name||'-'}}</td>
                         <td style="padding:6px 5px;text-align:center;color:#666">{{row.width||''}}×{{row.height||''}}</td>
                         <td style="padding:6px 5px;text-align:center;color:#666">{{row.qty||0}}</td>
-                        <td style="padding:6px 5px;text-align:right;color:#666">¥{{(row.unit_price||0).toLocaleString()}}</td>
+                        <td style="padding:6px 5px;text-align:right;color:#666">¥{{((row.price||row.unit_price)||(row.amount/row.qty)||0).toLocaleString()}}</td>
                         <td style="padding:6px 5px;text-align:center;color:#666">{{row.discount?((row.discount)*10).toFixed(1)+'折':'-'}}</td>
-                        <td style="padding:6px 5px;text-align:right;font-weight:bold;color:#1a3a5c">¥{{((row.amount)||((row.unit_price||0)*(row.qty||0))).toLocaleString()}}</td>
+                        <td style="padding:6px 5px;text-align:right;font-weight:bold;color:#1a3a5c">¥{{(row.amount||((row.price||row.unit_price||0)*(row.qty||0))).toLocaleString()}}</td>
                       </tr>
                       <tr v-if="(selOrder.items||[]).filter(i=>i.item_type!=='accessory'&&i.item_type!=='material').length===0">
                         <td colspan="7" style="text-align:center;color:#ccc;padding:16px">暂无主料</td>
@@ -689,8 +689,8 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
                         <td style="padding:6px 5px;text-align:center;color:#666">{{row.item_type==='accessory'?'配件':row.item_type==='material'?'辅料':'-'}}</td>
                         <td style="padding:6px 5px;text-align:left;color:#333">{{row.product_name||'-'}}</td>
                         <td style="padding:6px 5px;text-align:center;color:#666">{{row.qty||0}}</td>
-                        <td style="padding:6px 5px;text-align:right;color:#666">¥{{(row.unit_price||0).toLocaleString()}}</td>
-                        <td style="padding:6px 5px;text-align:right;font-weight:bold;color:#67c23a">¥{{((row.amount)||((row.unit_price||0)*(row.qty||0))).toLocaleString()}}</td>
+                        <td style="padding:6px 5px;text-align:right;color:#666">¥{{((row.price||row.unit_price)||(row.amount/row.qty)||0).toLocaleString()}}</td>
+                        <td style="padding:6px 5px;text-align:right;font-weight:bold;color:#67c23a">¥{{(row.amount||((row.price||row.unit_price||0)*(row.qty||0))).toLocaleString()}}</td>
                       </tr>
                       <tr v-if="(selOrder.items||[]).filter(i=>i.item_type==='accessory'||i.item_type==='material').length===0">
                         <td colspan="5" style="text-align:center;color:#ccc;padding:16px">暂无辅料</td>
@@ -2136,6 +2136,12 @@ const app = createApp({
     const dictItems = computed(() => S.dictMap[S.dictCat] || []);
     const orderStatusAll = computed(() => S.dictMap.orderStatus || []);
 
+    // 通用：把数据库存储的 label 转回 key，用于筛选比对
+    const label2key = (dictArr, label) => {
+      const item = (dictArr || []).find(d => d.v === label);
+      return item ? item.k : label; // 兼容已存 key 的旧数据（直接返回）
+    };
+
     const filteredOrders = computed(() => {
       let list = [...S.orders];
       if (S.orderSearch) {
@@ -2146,7 +2152,7 @@ const app = createApp({
         );
       }
       if (S.orderStatusF) list = list.filter(o => o.statusKey === S.orderStatusF);
-      if (S.orderTypeF) list = list.filter(o => o.orderType === S.orderTypeF);
+      if (S.orderTypeF) list = list.filter(o => label2key(S.dictMap.orderType, o.orderType) === S.orderTypeF);
       return list;
     });
 
@@ -2166,7 +2172,7 @@ const app = createApp({
       if (q) list = list.filter(s =>
         ((s.name||'') + (s.code||'') + (s.contact||'') + (s.phone||'')).toLowerCase().includes(q)
       );
-      if (S.suppTypeF) list = list.filter(s => s.type === S.suppTypeF);
+      if (S.suppTypeF) list = list.filter(s => label2key(S.dictMap.supplierType, s.type) === S.suppTypeF);
       return list;
     });
 
@@ -2178,7 +2184,7 @@ const app = createApp({
         (c.phone||'').toLowerCase().includes(q) ||
         (c.community||'').toLowerCase().includes(q)
       );
-      if (S.customerTypeF) list = list.filter(c => c.type === S.customerTypeF);
+      if (S.customerTypeF) list = list.filter(c => label2key(S.dictMap.customerType, c.type) === S.customerTypeF);
       return list;
     });
 
@@ -2188,7 +2194,7 @@ const app = createApp({
       if (q) list = list.filter(e =>
         ((e.name||'') + (e.code||'') + (e.phone||'')).toLowerCase().includes(q)
       );
-      if (S.empPositionF) list = list.filter(e => e.position === S.empPositionF);
+      if (S.empPositionF) list = list.filter(e => label2key(S.dictMap.position, e.position) === S.empPositionF);
       return list;
     });
 
