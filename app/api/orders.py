@@ -409,6 +409,7 @@ async def create_order(req: dict = Body(...)):
                 note=item.get("note", ""),
                 supplier_id=supplier_id,
                 material_type=material_type,
+                classification=item.get("classification", ""),
             )
             session.add(oi)
         await session.commit()
@@ -803,6 +804,7 @@ async def update_order(order_id: int, req: dict = Body(...)):
                     note=item.get("note", ""),
                     supplier_id=supplier_id,
                     material_type=item.get("material_type", "主料"),
+                    classification=item.get("classification", ""),
                 )
                 session.add(oi)
 

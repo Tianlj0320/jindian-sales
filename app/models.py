@@ -324,6 +324,7 @@ class OrderItem(Base):
     note = Column(Text)
     supplier_id = Column(Integer)  # V3.0 新增：关联供应商
     material_type = Column(String(20), default="主料")  # V3.0 新增：主料/辅料
+    classification = Column(String(20), default="")  # 定高/定宽，影响金额计算维度
     created_at = Column(DateTime, default=datetime.now)
 
 

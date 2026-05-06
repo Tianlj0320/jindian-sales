@@ -24,7 +24,7 @@ window.__orderFormModule__ = {
       itemsTotal: 0, materialsTotal: 0,
       quoteAmount: 0, discountAmount: 0, roundAmount: 0, amount: 0, received: 0,
     };
-    S.orderF.items.push({ productType: '窗帘', itemType: '帷幔', location: '客厅', style: '韩褶', productId: null, code: '', model: '', size: '', qty: 1, discount: 1, price: null, amount: null });
+    S.orderF.items.push({ productType: '窗帘', itemType: '帷幔', location: '客厅', style: '韩褶', productId: null, code: '', model: '', size: '', qty: 1, discount: 1, price: null, amount: null, classification: '', calc_by: 'height' });
     S.orderF.materials.push({ itemType: '电动轨', productId: null, code: '', name: '', model: '', qty: 1, unit: '米', price: null, amount: null, remark: '' });
     S.showNewOrder = true;
     S.page = 'order';
@@ -57,14 +57,20 @@ window.__orderFormModule__ = {
         row.price = p.selling_price || p.unit_price || 0;
         row.code = p.code || '';
         row.productName = p.name || '';
-        // 自动计算金额
-        if (row.price && row.qty) {
+        // 记录产品分类（定高/定宽），用于金额计算
+        row.classification = p.classification || '';
+        row.calc_by = row.classification === '定宽' ? 'width' : 'height';
+        // 自动计算金额：定高用高度，定宽用宽度
+        const dim = this._parseDim(row);
+        if (dim > 0 && row.price && row.qty) {
+          row.amount = Math.round(dim * row.price * row.qty * (row.discount || 1) * 100) / 100;
+        } else if (row.price && row.qty) {
           row.amount = Math.round(row.price * row.qty * (row.discount || 1) * 100) / 100;
         }
       }
     } else {
       row.model = ''; row.price = null; row.code = ''; row.productName = '';
-      row.amount = null;
+      row.classification = ''; row.calc_by = ''; row.amount = null;
     }
     __orderFormModule__.calcTotals(S);
   },
@@ -105,6 +111,7 @@ window.__orderFormModule__ = {
       productType: '窗帘', itemType: '帷幔', location: '客厅', style: '韩褶',
       productId: null, code: '', model: '', productName: '',
       size: '', qty: 1, discount: 1, price: null, amount: null,
+      classification: '', calc_by: 'height',
     });
   },
 
@@ -115,10 +122,26 @@ window.__orderFormModule__ = {
     });
   },
 
+  // ── 解析尺寸中的宽/高 ─────────────────────────────────
+  _parseDim(row) {
+    if (!row || !row.size) return 0;
+    const parts = (row.size || '').split('×');
+    if (parts.length < 2) return 0;
+    const w = parseFloat(parts[0]) || 0;
+    const h = parseFloat(parts[1]) || 0;
+    if (row.calc_by === 'width') return w;
+    return h; // 默认用高度（定高）
+  },
+
   calcItem(row, S) {
     try {
       if (row && row.price && row.qty) {
-        row.amount = Math.round(row.price * row.qty * (row.discount || 1) * 100) / 100;
+        const dim = this._parseDim(row);
+        if (dim > 0) {
+          row.amount = Math.round(dim * row.price * row.qty * (row.discount || 1) * 100) / 100;
+        } else {
+          row.amount = Math.round(row.price * row.qty * (row.discount || 1) * 100) / 100;
+        }
       }
       __orderFormModule__.calcTotals(S);
     } catch (e) {
@@ -161,7 +184,12 @@ window.__orderFormModule__ = {
   calcEditItem(row, S2) {
     const S = S2 || window.__STATE__;
     if (row && row.price && row.qty) {
-      row.amount = Math.round(row.price * row.qty * (row.discount || 1) * 100) / 100;
+      const dim = this._parseDim(row);
+      if (dim > 0) {
+        row.amount = Math.round(dim * row.price * row.qty * (row.discount || 1) * 100) / 100;
+      } else {
+        row.amount = Math.round(row.price * row.qty * (row.discount || 1) * 100) / 100;
+      }
     }
     this.calcEditTotals(S);
   },
@@ -228,6 +256,7 @@ window.__orderFormModule__ = {
           discount: i.discount || 1,
           price: i.price || 0,
           amount: i.amount || 0,
+          classification: i.classification || '',
         })),
       materials: (S.orderF.materials || [])
         .filter(i => i.productId)
@@ -290,6 +319,8 @@ window.__orderFormModule__ = {
       discount: i.discount || 1,
       price: i.unit_price || i.price || 0,
       amount: i.amount || 0,
+      classification: i.classification || '',
+      calc_by: i.calc_by || (i.classification === '定宽' ? 'width' : 'height'),
       supplier_id: i.supplier_id || null,
       material_type: i.material_type || '主料',
       fold_ratio: i.fold_ratio || 2.0,
@@ -388,6 +419,7 @@ window.__orderFormModule__ = {
         process_desc: i.process_desc || '',
         is_custom: i.is_custom !== undefined ? i.is_custom : 1,
         note: i.note || '',
+        classification: i.classification || '',
       })),
     };
     try {
