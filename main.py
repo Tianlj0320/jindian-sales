@@ -8,7 +8,7 @@ from app.database import init_db
 from app.middleware import AuthMiddleware
 from app.api import track, installer, sms, orders, customers, products, employees, dashboard, purchase, warehouse, finance, reports, auth, print_api, dicts
 from app.api import purchase_orders, production_feedback, installation_orders
-from app.api import customers_v4, installations_v4, inventory_v4, reports_v4, products_v4, warehouses_v4, purchases_v4
+from app.api import customers_v4, installations_v4, inventory_v4, reports_v4, products_v4, warehouses_v4, purchases_v4, op_logs
 from app.api import followups
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -63,6 +63,7 @@ app.include_router(reports_v4.router)
 app.include_router(products_v4.router)
 app.include_router(warehouses_v4.router)
 app.include_router(purchases_v4.router)
+app.include_router(op_logs.router)
 app.include_router(followups.router)
 
 

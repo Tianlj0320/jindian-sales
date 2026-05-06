@@ -300,27 +300,34 @@ async def receive_purchase_v4(purchase_id: int = Path(...), req: dict = Body(...
             inbound_details.append({"product_id": product_id, "product_name": product_name, "qty": qty})
 
         # 更新采购单已到货数量和状态
-        # 正确逻辑：按实际到货品种数判断是否全部到齐
+        # 正确逻辑：查 inventory_flow 累计已到货品种数，判断是否全部到齐
         import json
         total_items = 0
-        arrived_items_count = 0
         if po.items:
             try:
                 items_list = json.loads(po.items) if isinstance(po.items, str) else po.items
                 total_items = len(items_list)
             except Exception:
-                total_items = 1  # 保底
+                total_items = 1
 
-        # 已到货品种数 = 当前 inbound_details 品种数
-        # 简化：每次到货都累加品种数，超过1个品种就视为部分到货，全部到了才标全部
-        if po.status not in ("部分到货", "全部到货"):
+        # 累计已到货品种（来自 inventory_flow，跨多次收货累加）
+        flow_result = await session.execute(
+            select(func.count(func.distinct(InventoryFlow.product_id))).where(
+                and_(
+                    InventoryFlow.ref_type == "purchase",
+                    InventoryFlow.ref_id == purchase_id,
+                    InventoryFlow.flow_type == "IN",
+                )
+            )
+        )
+        arrived_unique_products = flow_result.scalar() or 0
+
+        # 状态判断：本次新增品种后（含本次 inbound_details）累计达到 total_items 则全部到货
+        total_arrived = arrived_unique_products + len(inbound_details)
+        if total_arrived >= total_items and total_items > 0:
+            po.status = "全部到货"
+        else:
             po.status = "部分到货"
-        elif po.status == "部分到货":
-            # 已有部分到货记录，检查是否所有品种都已到货
-            # 简单逻辑：本次到货品种数达到总品种数则标全部
-            if total_items > 0 and len(inbound_details) >= total_items:
-                po.status = "全部到货"
-            # 否则保持"部分到货"（多次部分到货场景）
 
         po.arrived_date = datetime.now().date()
         await session.commit()

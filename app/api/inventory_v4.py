@@ -236,15 +236,19 @@ async def transfer_inventory(req: dict = Body(...)):
         if (p.stock or 0) < qty:
             return error_response(f"库存不足，当前{p.stock}，调拨{qty}")
 
-        # 出库
-        p.stock = (p.stock or 0) - qty
+        # 计算调拨后库存（同一产品对象，先算最终值再赋值）
+        current_stock = p.stock or 0
+        new_stock = current_stock - qty
+
+        # 出库（减库存）
+        p.stock = new_stock
         flow_out = InventoryFlow(
             product_id=product_id,
             warehouse_id=req.get("from_warehouse_id"),
             flow_type="TRANSFER_OUT",
-            qty_before=(p.stock + qty),
+            qty_before=current_stock,
             qty_change=-qty,
-            qty_after=p.stock,
+            qty_after=new_stock,
             ref_type="transfer",
             ref_id=product_id,
             operator_id=req.get("operator_id"),
@@ -252,15 +256,15 @@ async def transfer_inventory(req: dict = Body(...)):
         )
         session.add(flow_out)
 
-        # 入库
-        p.stock = (p.stock or 0) + qty
+        # 入库（加库存，在内存对象上直接加，避免同一对象先减再加导致数据错乱）
+        p.stock = new_stock + qty
         flow_in = InventoryFlow(
             product_id=product_id,
             warehouse_id=req.get("to_warehouse_id"),
             flow_type="TRANSFER_IN",
-            qty_before=(p.stock - qty),
+            qty_before=new_stock,
             qty_change=qty,
-            qty_after=p.stock,
+            qty_after=new_stock + qty,
             ref_type="transfer",
             ref_id=product_id,
             operator_id=req.get("operator_id"),
@@ -275,6 +279,7 @@ async def transfer_inventory(req: dict = Body(...)):
                 "qty": qty,
                 "from_warehouse_id": req.get("from_warehouse_id"),
                 "to_warehouse_id": req.get("to_warehouse_id"),
-                "stock_after": p.stock,
+                "stock_before": current_stock,
+                "stock_after": new_stock + qty,
             }
         )

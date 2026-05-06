@@ -480,3 +480,18 @@ class FollowupRecord(Base):
     next_date = Column(Date)
     operator_id = Column(Integer)
     created_at = Column(DateTime, default=datetime.now)
+
+
+class OperationalLog(Base):
+    """操作日志（V4.0 审计追踪）"""
+    __tablename__ = "operational_logs"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    operator_id = Column(Integer)
+    operator_name = Column(String(50))
+    action = Column(String(20))  # CREATE/UPDATE/DELETE/RESTORE
+    resource = Column(String(50))  # order/customer/purchase/backup/system_settings
+    resource_id = Column(Integer)
+    before_state = Column(Text)
+    after_state = Column(Text)
+    ip_address = Column(String(50))
+    created_at = Column(DateTime, default=datetime.now)
