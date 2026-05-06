@@ -76,12 +76,13 @@ async def list_purchases(
 @router.post("", response_model=CommonResponse)
 async def create_purchase(req: dict = Body(...)):
     async with async_session() as session:
-        today = datetime.now().strftime("%Y%m%d")
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        today_po = datetime.now().strftime("%Y%m%d")
         seq_r = await session.execute(
-            select(func.count(Purchase.id)).where(Purchase.po_no.like(f"PO{today}%"))
+            select(func.count(Purchase.id)).where(Purchase.po_no.like(f"PO{today_po}%"))
         )
         seq = (seq_r.scalar() or 0) + 1
-        po_no = f"PO{today}{seq:03d}"
+        po_no = f"PO{today_po}{seq:03d}"
 
         items = req.get("items", [])
         amount = sum(float(i.get("price", 0)) * float(i.get("qty", 0)) for i in items)
@@ -96,8 +97,8 @@ async def create_purchase(req: dict = Body(...)):
             paid=0,
             debt=amount,
             status="待采购",
-            order_date=datetime.strptime(req.get("order_date", today), "%Y-%m-%d").date(),
-            expected_date=datetime.strptime(req.get("expected_date", today), "%Y-%m-%d").date()
+            order_date=datetime.strptime(req.get("order_date", today_str), "%Y-%m-%d").date(),
+            expected_date=datetime.strptime(req.get("expected_date", today_str), "%Y-%m-%d").date()
             if req.get("expected_date")
             else None,
             items=items,

@@ -258,8 +258,12 @@ async def list_products(
                 weight=p.weight or 0,
                 cf=p.cf or 0,
                 unit_price=float(p.unit_price or 0),
+                cost_price=float(p.cost_price or 0),
+                min_price=float(p.min_price or 0),
+                selling_price=float(p.selling_price or 0),
                 stock=p.stock or 0,
                 unit=p.unit or "米",
+                category=p.category or "",
                 remark=p.remark or "",
             )
             for p in products
@@ -314,8 +318,12 @@ async def get_product(product_id: int):
                 weight=p.weight or 0,
                 cf=p.cf or 0,
                 unit_price=float(p.unit_price or 0),
+                cost_price=float(p.cost_price or 0),
+                min_price=float(p.min_price or 0),
+                selling_price=float(p.selling_price or 0),
                 unit=p.unit or "米",
                 stock=p.stock or 0,
+                category=p.category or "",
                 remark=p.remark or "",
             ),
         )
@@ -365,6 +373,11 @@ async def create_product(req: dict = Body(...)):
             stock=req.get("stock", 0),
             series=req.get("series", ""),
             remark=req.get("remark", ""),
+            # V4.0 价格三角
+            cost_price=req.get("cost_price", 0),
+            min_price=req.get("min_price", 0),
+            selling_price=req.get("selling_price", 0),
+            category=req.get("category", ""),
         )
         session.add(product)
         await session.commit()
@@ -419,5 +432,13 @@ async def update_product(product_id: int, req: dict = Body(...)):
             product.remark = req.get("remark", "")
         if "series" in req:
             product.series = req.get("series", "")
+        if "cost_price" in req:
+            product.cost_price = req["cost_price"]
+        if "min_price" in req:
+            product.min_price = req["min_price"]
+        if "selling_price" in req:
+            product.selling_price = req["selling_price"]
+        if "category" in req:
+            product.category = req["category"]
         await session.commit()
         return CommonResponse(success=True, data={"id": product.id})

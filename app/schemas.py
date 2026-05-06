@@ -321,8 +321,12 @@ class ProductListItem(BaseModel):
     weight: int = 0
     cf: int = 0
     unit_price: float
+    cost_price: float = 0  # V4.0 成本价
+    min_price: float = 0  # V4.0 最低售价
+    selling_price: float = 0  # V4.0 销售单价
     stock: int
     unit: str
+    category: str = ""  # V4.0 自由文本类别
     remark: str = ""
 
 
@@ -351,8 +355,12 @@ class ProductDetailData(BaseModel):
     weight: int = 0
     cf: int = 0
     unit_price: float
+    cost_price: float = 0  # V4.0 成本价
+    min_price: float = 0  # V4.0 最低售价
+    selling_price: float = 0  # V4.0 销售单价
     unit: str
     stock: int
+    category: str = ""  # V4.0 自由文本类别
     remark: str = ""
 
 
