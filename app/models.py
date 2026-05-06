@@ -427,15 +427,15 @@ class InstallationOrder(Base):
     customer_name = Column(String(50))
     customer_phone = Column(String(20))
     address = Column(String(300))
-    product_details = Column(JSON, default=dict)  # {windows: [{location, product, qty, remark}]}
+    product_details = Column(JSON, default=dict)
     measure_summary = Column(Text)
     install_requirements = Column(Text)
     scheduled_date = Column(Date)
     installer_id = Column(Integer)
     installer_name = Column(String(50))
     install_time_slot = Column(String(20))
-    status = Column(String(20), default="待分配")  # 待分配/已分配/已安装/已验收/已取消
-    install_photo = Column(JSON, default=list)  # [url1, url2]
+    status = Column(String(20), default="待分配")
+    install_photo = Column(JSON, default=list)
     customer_signature = Column(Text)
     confirmed_at = Column(DateTime)
     receivable_amount = Column(DECIMAL(12, 2), default=0)
@@ -444,6 +444,12 @@ class InstallationOrder(Base):
     remark = Column(String(500))
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    # V4.0 扩展字段
+    team_id = Column(Integer, nullable=True)
+    actual_start_time = Column(DateTime, nullable=True)
+    actual_end_time = Column(DateTime, nullable=True)
+    quality_score = Column(Integer, nullable=True)  # 验收评分 1-5
+    contact_phone = Column(String(20), nullable=True)
 
 
 class InventoryFlow(Base):
