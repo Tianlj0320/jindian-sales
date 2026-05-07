@@ -1916,6 +1916,9 @@ const app = createApp({
     const customerTypeF = ref('');
     const empSearch = ref('');
     const empPositionF = ref('');
+    const orderSearch = ref('');
+    const orderStatusF = ref('');
+    const orderTypeF = ref('');
     const doSplitOrder = async () => {
       const o = S.selOrder;
       if (!o?.id) return;
@@ -2160,15 +2163,15 @@ const app = createApp({
 
     const filteredOrders = computed(() => {
       let list = [...S.orders];
-      if (S.orderSearch) {
-        const q = S.orderSearch.toLowerCase();
+      if (orderSearch.value) {
+        const q = orderSearch.value.toLowerCase();
         list = list.filter(o =>
-          (o.orderNo || '').includes(S.orderSearch) ||
+          (o.orderNo || '').includes(orderSearch.value) ||
           (o.customerName || '').toLowerCase().includes(q)
         );
       }
-      if (S.orderStatusF) list = list.filter(o => o.statusKey === S.orderStatusF);
-      if (S.orderTypeF) list = list.filter(o => labelOf(S.dictMap.orderType, o.orderType) === S.orderTypeF);
+      if (orderStatusF.value) list = list.filter(o => o.statusKey === orderStatusF.value);
+      if (orderTypeF.value) list = list.filter(o => labelOf(S.dictMap.orderType, o.orderType) === orderTypeF.value);
       return list;
     });
 
@@ -2685,9 +2688,9 @@ const app = createApp({
       orders: computed(() => S.orders),
       filteredOrders,
       selOrder: computed(() => S.selOrder),
-      orderSearch: { get: () => S.orderSearch, set: v => { S.orderSearch = v; } },
-      orderStatusF: { get: () => S.orderStatusF, set: v => { S.orderStatusF = v; } },
-      orderTypeF: { get: () => S.orderTypeF, set: v => { S.orderTypeF = v; } },
+      orderSearch,
+      orderStatusF,
+      orderTypeF,
       selectOrder: o => __ordersModule__.selectOrder(o),
       updateOrderStatusByKey: () => __ordersModule__.updateOrderStatusByKey(),
       delOrder: () => __ordersModule__.delOrder(),
