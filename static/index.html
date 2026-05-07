@@ -325,10 +325,10 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id"/>
             </el-select>
             <el-select v-model="prodCategoryF" placeholder="品类" size="small" style="width:100px" clearable>
-              <el-option v-for="t in (dictMap.productType||[])" :key="t.k" :label="t.v" :value="t.k"/>
+              <el-option v-for="t in (dictMap.productType||[])" :key="t.k" :label="t.v" :value="t.v"/>
             </el-select>
             <el-select v-model="prodClassificationF" placeholder="形态" size="small" style="width:100px" clearable>
-              <el-option v-for="t in (dictMap.productForm||[])" :key="t.k" :label="t.v" :value="t.k"/>
+              <el-option v-for="t in (dictMap.productForm||[])" :key="t.k" :label="t.v" :value="t.v"/>
             </el-select>
             <span style="color:#888;font-size:12px">共{{filteredProducts.length}}条</span>
           </div>
@@ -382,7 +382,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <template #prefix><el-icon><search/></el-icon></template>
             </el-input>
             <el-select v-model="customerTypeF" placeholder="客户类型" size="small" style="width:100px" clearable>
-              <el-option v-for="t in (dictMap.customerType||[])" :key="t.k" :label="t.v" :value="t.k"/>
+              <el-option v-for="t in (dictMap.customerType||[])" :key="t.k" :label="t.v" :value="t.v"/>
             </el-select>
             <span style="color:#888;font-size:12px">共{{filteredCustomers.length}}条</span>
           </div>
@@ -434,7 +434,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <template #prefix><el-icon><search/></el-icon></template>
             </el-input>
             <el-select v-model="empPositionF" placeholder="职务" size="small" style="width:110px" clearable>
-              <el-option v-for="t in (dictMap.position||[])" :key="t.k" :label="t.v" :value="t.k"/>
+              <el-option v-for="t in (dictMap.position||[])" :key="t.k" :label="t.v" :value="t.v"/>
             </el-select>
             <span style="color:#888;font-size:12px">共{{filteredEmployees.length}}条</span>
           </div>
@@ -486,7 +486,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
               <template #prefix><el-icon><search/></el-icon></template>
             </el-input>
             <el-select v-model="suppTypeF" placeholder="类型" size="small" style="width:100px" clearable>
-              <el-option v-for="t in (dictMap.supplierType||[])" :key="t.k" :label="t.v" :value="t.k"/>
+              <el-option v-for="t in (dictMap.supplierType||[])" :key="t.k" :label="t.v" :value="t.v"/>
             </el-select>
             <span style="color:#888;font-size:12px">共{{filteredSuppliers.length}}条</span>
           </div>
@@ -586,7 +586,7 @@ body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#eef2f7;c
             <el-option v-for="s in orderStatusAll" :key="s.k" :label="s.v" :value="s.k"/>
           </el-select>
           <el-select v-model="orderTypeF" size="small" placeholder="订单类型" clearable style="width:120px">
-            <el-option v-for="t in dictMap.orderType" :key="t.k" :label="t.v" :value="t.k"/>
+            <el-option v-for="t in dictMap.orderType" :key="t.k" :label="t.v" :value="t.v"/>
           </el-select>
         </div>
         <div class="order-layout">
@@ -2136,10 +2136,15 @@ const app = createApp({
     const dictItems = computed(() => S.dictMap[S.dictCat] || []);
     const orderStatusAll = computed(() => S.dictMap.orderStatus || []);
 
-    // 通用：把数据库存储的 label 转回 key，用于筛选比对
-    const label2key = (dictArr, label) => {
-      const item = (dictArr || []).find(d => d.v === label);
-      return item ? item.k : label; // 兼容已存 key 的旧数据（直接返回）
+    // 通用：把数据库存储的 label 或 key 转成 label，用于筛选比对
+    const labelOf = (dictArr, val) => {
+      if (!val) return '';
+      // 先当 key 找
+      const byKey = (dictArr || []).find(d => d.k === val);
+      if (byKey) return byKey.v;
+      // 再当 label 找
+      const byVal = (dictArr || []).find(d => d.v === val);
+      return byVal ? byVal.v : val;
     };
 
     const filteredOrders = computed(() => {
@@ -2152,7 +2157,7 @@ const app = createApp({
         );
       }
       if (S.orderStatusF) list = list.filter(o => o.statusKey === S.orderStatusF);
-      if (S.orderTypeF) list = list.filter(o => label2key(S.dictMap.orderType, o.orderType) === S.orderTypeF);
+      if (S.orderTypeF) list = list.filter(o => labelOf(S.dictMap.orderType, o.orderType) === S.orderTypeF);
       return list;
     });
 
@@ -2172,7 +2177,7 @@ const app = createApp({
       if (q) list = list.filter(s =>
         ((s.name||'') + (s.code||'') + (s.contact||'') + (s.phone||'')).toLowerCase().includes(q)
       );
-      if (S.suppTypeF) list = list.filter(s => label2key(S.dictMap.supplierType, s.type) === S.suppTypeF);
+      if (S.suppTypeF) list = list.filter(s => labelOf(S.dictMap.supplierType, s.type) === S.suppTypeF);
       return list;
     });
 
@@ -2184,7 +2189,7 @@ const app = createApp({
         (c.phone||'').toLowerCase().includes(q) ||
         (c.community||'').toLowerCase().includes(q)
       );
-      if (S.customerTypeF) list = list.filter(c => label2key(S.dictMap.customerType, c.type) === S.customerTypeF);
+      if (S.customerTypeF) list = list.filter(c => labelOf(S.dictMap.customerType, c.type) === S.customerTypeF);
       return list;
     });
 
@@ -2194,7 +2199,7 @@ const app = createApp({
       if (q) list = list.filter(e =>
         ((e.name||'') + (e.code||'') + (e.phone||'')).toLowerCase().includes(q)
       );
-      if (S.empPositionF) list = list.filter(e => label2key(S.dictMap.position, e.position) === S.empPositionF);
+      if (S.empPositionF) list = list.filter(e => labelOf(S.dictMap.position, e.position) === S.empPositionF);
       return list;
     });
 
