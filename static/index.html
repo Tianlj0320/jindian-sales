@@ -1907,6 +1907,15 @@ const app = createApp({
     const showEditOrder = ref(false);
     const suppSearch = ref('');
     const suppTypeF = ref('');
+    const prodSearch = ref('');
+    const prodSupplierF = ref('');
+    const prodCatF = ref('');
+    const prodCategoryF = ref('');
+    const prodClassificationF = ref('');
+    const customerSearch = ref('');
+    const customerTypeF = ref('');
+    const empSearch = ref('');
+    const empPositionF = ref('');
     const doSplitOrder = async () => {
       const o = S.selOrder;
       if (!o?.id) return;
@@ -2185,23 +2194,23 @@ const app = createApp({
 
     const filteredCustomers = computed(() => {
       let list = S.customers;
-      const q = (S.customerSearch || '').toLowerCase();
+      const q = (customerSearch.value || '').toLowerCase();
       if (q) list = list.filter(c =>
         (c.name||'').toLowerCase().includes(q) ||
         (c.phone||'').toLowerCase().includes(q) ||
         (c.community||'').toLowerCase().includes(q)
       );
-      if (S.customerTypeF) list = list.filter(c => labelOf(S.dictMap.customerType, c.type) === S.customerTypeF);
+      if (customerTypeF.value) list = list.filter(c => labelOf(S.dictMap.customerType, c.type) === customerTypeF.value);
       return list;
     });
 
     const filteredEmployees = computed(() => {
       let list = S.employees;
-      const q = (S.empSearch || '').toLowerCase();
+      const q = (empSearch.value || '').toLowerCase();
       if (q) list = list.filter(e =>
         ((e.name||'') + (e.code||'') + (e.phone||'')).toLowerCase().includes(q)
       );
-      if (S.empPositionF) list = list.filter(e => labelOf(S.dictMap.position, e.position) === S.empPositionF);
+      if (empPositionF.value) list = list.filter(e => labelOf(S.dictMap.position, e.position) === empPositionF.value);
       return list;
     });
 
@@ -2225,7 +2234,7 @@ const app = createApp({
 
     const filteredProduction = computed(() => {
       let list = S.productionOrders;
-      const q = (S.prodSearch || '').toLowerCase();
+      const q = (prodSearch.value || '').toLowerCase();
       if (q) list = list.filter(o =>
         ((o.orderNo||'') + (o.customerName||'')).toLowerCase().includes(q)
       );
@@ -2618,33 +2627,33 @@ const app = createApp({
       productTree,
       filteredProducts: computed(() => {
         // 强制建立响应式依赖
-        const deps = [S.prodSearch, S.prodSupplierF, S.prodCatF, S.prodCategoryF, S.prodClassificationF];
+        const deps = [prodSearch.value, prodSupplierF.value, prodCatF.value, prodCategoryF.value, prodClassificationF.value];
         let list = S.products.slice();
-        const q = (S.prodSearch || '').toLowerCase();
+        const q = (prodSearch.value || '').toLowerCase();
         if (q) list = list.filter(p =>
           ((p.name||'') + (p.code||'') + (p.category||'') +
             __productModule__.getSupplierName(p.supplierId, S)).toLowerCase().includes(q)
         );
-        if (S.prodSupplierF) list = list.filter(p => String(p.supplierId) === String(S.prodSupplierF));
-        if (S.prodCatF) list = list.filter(p => String(p.categoryId) === String(S.prodCatF));
-        if (S.prodCategoryF) list = list.filter(p => p.type === S.prodCategoryF);
-        if (S.prodClassificationF) list = list.filter(p => p.classification === S.prodClassificationF);
-        console.log('[filteredProducts] deps=', deps.map(d => typeof d === 'object' ? JSON.stringify(d) : d), 'result count=', list.length);
+        if (prodSupplierF.value) list = list.filter(p => String(p.supplierId) === String(prodSupplierF.value));
+        if (prodCatF.value) list = list.filter(p => String(p.categoryId) === String(prodCatF.value));
+        if (prodCategoryF.value) list = list.filter(p => p.type === prodCategoryF.value);
+        if (prodClassificationF.value) list = list.filter(p => p.classification === prodClassificationF.value);
+        console.log('[filteredProducts] deps=', deps, 'result count=', list.length);
         return list;
       }),
-      prodSearch: { get: () => S.prodSearch, set: v => { S.prodSearch = v; } },
-      prodSupplierF: { get: () => S.prodSupplierF, set: v => { S.prodSupplierF = v; } },
-      prodCatF: { get: () => S.prodCatF, set: v => { S.prodCatF = v; } },
-      prodCategoryF: { get: () => S.prodCategoryF, set: v => { S.prodCategoryF = v; } },
-      prodClassificationF: { get: () => S.prodClassificationF, set: v => { S.prodClassificationF = v; } },
+      prodSearch,
+      prodSupplierF,
+      prodCatF,
+      prodCategoryF,
+      prodClassificationF,
       openProductDlg,
       saveProduct,
       delProduct,
       getSupplierName, getCatName, supCategories,
       customers: computed(() => S.customers),
       filteredCustomers,
-      customerSearch: { get: () => S.customerSearch, set: v => { S.customerSearch = v; } },
-      customerTypeF: { get: () => S.customerTypeF, set: v => { S.customerTypeF = v; } },
+      customerSearch,
+      customerTypeF,
       openCustomerDlg,
       saveCustomer,
       delCustomer,
@@ -2653,8 +2662,8 @@ const app = createApp({
       editingCustomer,
       employees: computed(() => S.employees),
       filteredEmployees,
-      empSearch: { get: () => S.empSearch, set: v => { S.empSearch = v; } },
-      empPositionF: { get: () => S.empPositionF, set: v => { S.empPositionF = v; } },
+      empSearch,
+      empPositionF,
       openEmployeeDlg,
       saveEmployee,
       delEmployee,
@@ -2710,7 +2719,6 @@ const app = createApp({
       productionOrders: computed(() => S.productionOrders),
       filteredProduction,
       prodStep: computed(() => S.prodStep),
-      prodSearch: { get: () => S.prodSearch, set: v => { S.prodSearch = v; } },
       prodStepF: { get: () => S.prodStepF, set: v => { S.prodStepF = v; } },
       loadProduction,
       prodStepNext: row => { if (row.step < 6) row.step++; },
