@@ -1909,6 +1909,7 @@ const app = createApp({
     const suppTypeF = ref('');
     const prodSearch = ref('');
     const prodStepF = ref('');
+    const fbSearch = ref('');
     const prodSupplierF = ref('');
     const prodCatF = ref('');
     const prodCategoryF = ref('');
@@ -2391,7 +2392,7 @@ const app = createApp({
       }
     };
     const filteredFb = computed(() => {
-      const kw = (S.fbSearch || '').toLowerCase();
+      const kw = (fbSearch.value || '').toLowerCase();
       let list = S.prodFeedbacks || [];
       if (kw) list = list.filter(f =>
         (f.orderNo||'').toLowerCase().includes(kw) ||
@@ -2801,7 +2802,7 @@ const app = createApp({
       // 生产反馈
       prodFeedbacks: computed(() => S.prodFeedbacks),
       filteredFb,
-      fbSearch: { get: () => S.fbSearch, set: v => { S.fbSearch = v; } },
+      fbSearch,
       dlgFb,
       editingFb: computed(() => S.editingFb),
       fbForm: computed(() => S.fbForm),
