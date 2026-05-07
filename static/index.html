@@ -1919,6 +1919,10 @@ const app = createApp({
     const orderSearch = ref('');
     const orderStatusF = ref('');
     const orderTypeF = ref('');
+    const purchaseSearch = ref('');
+    const purchaseStatusF = ref('');
+    const installSearch = ref('');
+    const installStatusF = ref('');
     const doSplitOrder = async () => {
       const o = S.selOrder;
       if (!o?.id) return;
@@ -2219,19 +2223,19 @@ const app = createApp({
 
     const filteredPurchase = computed(() => {
       let list = S.purchases;
-      if (S.purchaseSearch) list = list.filter(p =>
-        ((p.supplierName||'') + (p.purchaseNo||'') + (p.orderIds||'')).includes(S.purchaseSearch)
+      if (purchaseSearch.value) list = list.filter(p =>
+        ((p.supplierName||'') + (p.purchaseNo||'') + (p.orderIds||'')).includes(purchaseSearch.value)
       );
-      if (S.purchaseStatusF) list = list.filter(p => p.status === S.purchaseStatusF);
+      if (purchaseStatusF.value) list = list.filter(p => p.status === purchaseStatusF.value);
       return list;
     });
 
     const filteredInstall = computed(() => {
       let list = S.installOrders;
-      if (S.installSearch) list = list.filter(i =>
-        ((i.customerName||'') + (i.address||'')).includes(S.installSearch)
+      if (installSearch.value) list = list.filter(i =>
+        ((i.customerName||'') + (i.address||'')).includes(installSearch.value)
       );
-      if (S.installStatusF) list = list.filter(i => i.status === S.installStatusF);
+      if (installStatusF.value) list = list.filter(i => i.status === installStatusF.value);
       return list;
     });
 
@@ -2698,8 +2702,8 @@ const app = createApp({
       showNewOrder,
       purchases: computed(() => S.purchases),
       filteredPurchase,
-      purchaseSearch: { get: () => S.purchaseSearch, set: v => { S.purchaseSearch = v; } },
-      purchaseStatusF: { get: () => S.purchaseStatusF, set: v => { S.purchaseStatusF = v; } },
+      purchaseSearch,
+      purchaseStatusF,
       dlgPurchase,
       editingPurchase,
       purchaseForm,
@@ -2728,8 +2732,8 @@ const app = createApp({
       installOrders: computed(() => S.installOrders),
       installers: computed(() => S.installers || []),
       filteredInstall,
-      installSearch: { get: () => S.installSearch, set: v => { S.installSearch = v; } },
-      installStatusF: { get: () => S.installStatusF, set: v => { S.installStatusF = v; } },
+      installSearch,
+      installStatusF,
       openAssignDlg: row => __installModule__.openAssignDlg(row),
       doAssignInstaller: () => __installModule__.doAssignInstaller(),
       confirmAccept: async row => {
