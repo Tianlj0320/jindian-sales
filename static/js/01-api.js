@@ -88,7 +88,10 @@ window.apiProducts = {
   updateCategory: (id, payload) =>
     api(`/api/products/categories/${id}`, 'PUT', payload),
 
-  list: () => api('/api/products'),
+  list: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return api('/api/products' + (q ? '?' + q : ''));
+  },
   create: (payload) => api('/api/products', 'POST', payload),
   update: (id, payload) => api(`/api/products/${id}`, 'PUT', payload),
   delete: (id) => api(`/api/products/${id}`, 'DELETE'),
@@ -96,7 +99,10 @@ window.apiProducts = {
 
 // ── 客户 ──────────────────────────────────────────────────
 window.apiCustomers = {
-  list: () => api('/api/customers'),
+  list: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return api('/api/customers' + (q ? '?' + q : ''));
+  },
   create: (payload) => api('/api/customers', 'POST', payload),
   update: (id, payload) => api(`/api/customers/${id}`, 'PUT', payload),
   delete: (id) => api(`/api/customers/${id}`, 'DELETE'),
@@ -104,7 +110,10 @@ window.apiCustomers = {
 
 // ── 员工 ──────────────────────────────────────────────────
 window.apiEmployees = {
-  list: () => api('/api/employees'),
+  list: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return api('/api/employees' + (q ? '?' + q : ''));
+  },
   create: (payload) => api('/api/employees', 'POST', payload),
   update: (id, payload) => api(`/api/employees/${id}`, 'PUT', payload),
   delete: (id) => api(`/api/employees/${id}`, 'DELETE'),
@@ -112,7 +121,10 @@ window.apiEmployees = {
 
 // ── 仓库 ──────────────────────────────────────────────────
 window.apiWarehouse = {
-  records: () => api('/api/warehouse/records'),
+  records: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return api('/api/warehouse/records' + (q ? '?' + q : ''));
+  },
   createRecord: (payload) =>
     api('/api/warehouse/records', 'POST', payload),
   updateRecord: (id, payload) =>
