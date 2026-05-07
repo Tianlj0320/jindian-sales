@@ -1908,6 +1908,7 @@ const app = createApp({
     const suppSearch = ref('');
     const suppTypeF = ref('');
     const prodSearch = ref('');
+    const prodStepF = ref('');
     const prodSupplierF = ref('');
     const prodCatF = ref('');
     const prodCategoryF = ref('');
@@ -2245,7 +2246,7 @@ const app = createApp({
       if (q) list = list.filter(o =>
         ((o.orderNo||'') + (o.customerName||'')).toLowerCase().includes(q)
       );
-      if (S.prodStepF) list = list.filter(o => o.step === S.prodStepF);
+      if (prodStepF.value) list = list.filter(o => o.step === prodStepF.value);
       return list;
     });
 
@@ -2726,7 +2727,7 @@ const app = createApp({
       productionOrders: computed(() => S.productionOrders),
       filteredProduction,
       prodStep: computed(() => S.prodStep),
-      prodStepF: { get: () => S.prodStepF, set: v => { S.prodStepF = v; } },
+      prodStepF,
       loadProduction,
       prodStepNext: row => { if (row.step < 6) row.step++; },
       installOrders: computed(() => S.installOrders),
