@@ -1,0 +1,87 @@
+/* ── 主题2：暖檀/棕茶色系 ─────────────────────────────
+   主色：#8B6F47 檀棕
+   辅助：#A88B5A 茶色
+   ──────────────────────────────────────────────────── */
+
+:root {
+  --el-color-primary: #8B6F47;
+  --el-color-primary-dark-2: #6F5635;
+  --el-color-primary-light-3: #A58B63;
+  --el-color-primary-light-5: #C0AA85;
+  --el-color-primary-light-7: #DACCB5;
+  --el-color-primary-light-8: #E8DECE;
+  --el-color-primary-light-9: #F3EDE2;
+
+  --el-color-success: #7A9E6B;
+  --el-color-warning: #C49B47;
+  --el-color-danger: #C46A56;
+  --el-color-info: #8E8273;
+
+  --el-text-color-primary: #3C3228;
+  --el-text-color-regular: #5A4E40;
+  --el-text-color-secondary: #8E8273;
+  --el-text-color-placeholder: #B0A494;
+
+  --el-border-color: #DDD4C8;
+  --el-border-color-light: #E8E0D6;
+  --el-border-color-lighter: #F0EAE2;
+
+  --el-fill-color: #F5F1EC;
+  --el-fill-color-light: #F8F5F1;
+  --el-fill-color-lighter: #FBF9F7;
+  --el-fill-color-blank: #FFFFFF;
+
+  --el-bg-color: #F2EFEA;
+  --el-bg-color-overlay: #FFFFFF;
+  --el-bg-color-page: #F2EFEA;
+}
+
+.el-button--primary {
+  --el-button-bg-color: var(--el-color-primary);
+  --el-button-border-color: var(--el-color-primary);
+  --el-button-hover-bg-color: var(--el-color-primary-light-3);
+  --el-button-hover-border-color: var(--el-color-primary-light-3);
+  --el-button-active-bg-color: var(--el-color-primary-dark-2);
+  --el-button-active-border-color: var(--el-color-primary-dark-2);
+}
+
+.el-button--warning {
+  --el-button-bg-color: #C49B47;
+  --el-button-border-color: #C49B47;
+  --el-button-hover-bg-color: #D4AE62;
+  --el-button-hover-border-color: #D4AE62;
+  --el-button-active-bg-color: #A88334;
+  --el-button-active-border-color: #A88334;
+}
+
+.el-tag--warning {
+  --el-tag-bg-color: #F5F0E0;
+  --el-tag-border-color: #E0D5B0;
+  --el-tag-text-color: #8B7D4E;
+}
+
+.sidebar { background: #2E2318 !important; }
+.sidebar .el-menu { background-color: #2E2318 !important; }
+.sidebar .el-menu-item { color: rgba(255, 255, 255, 0.72) !important; }
+.sidebar .el-menu-item:hover { background-color: #423624 !important; }
+.sidebar .el-menu-item.is-active { background-color: #8B6F47 !important; color: #fff !important; }
+.sidebar .el-sub-menu__title { color: rgba(255, 255, 255, 0.72) !important; }
+.sidebar .el-sub-menu__title:hover { background-color: #423624 !important; }
+.sidebar .el-menu--inline { background-color: #231A13 !important; }
+.sidebar .el-menu--inline .el-menu-item { background-color: transparent !important; }
+.sidebar .el-menu--inline .el-menu-item:hover { background-color: #423624 !important; }
+
+.el-header.header { background: #fff; border-bottom: 2px solid #8B6F47; }
+.logo { background: #231A13 !important; border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important; }
+.logo-text { color: #C0AA85 !important; letter-spacing: 3px !important; }
+.logo-mini { color: #C0AA85 !important; }
+
+.el-table { --el-table-header-bg-color: #F5F1EC; --el-table-row-hover-bg-color: #EFE9E1; }
+.el-dropdown-menu__item:not(.is-disabled):hover { background-color: #F3EDE2; color: #8B6F47; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f2efea; }
+::-webkit-scrollbar-thumb { background: #DACCB5; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #C0AA85; }
+
+.login-container { background: linear-gradient(135deg, #2E2318 0%, #8B6F47 50%, #A58B63 100%) !important; }

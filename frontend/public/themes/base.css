@@ -1,0 +1,234 @@
+/* ── 全局布局与细节优化 ────────────────────────────────
+   本文件存放所有与颜色无关的结构性样式：
+   字体、圆角、阴影、间距、过渡动画等。
+   各配色主题共用，不随主题切换而变化。
+   ──────────────────────────────────────────────────── */
+
+/* ═══════════════ 字体排印 ═══════════════ */
+
+:root {
+  --app-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --app-font-size: 14px;
+  --app-line-height: 1.6;
+}
+
+body {
+  font-family: var(--app-font-family);
+  font-size: var(--app-font-size);
+  line-height: var(--app-line-height);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── 标题 ── */
+h3, .el-card__header h3 {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+h4 {
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+/* ── 描述列表 ── */
+.el-descriptions__title {
+  font-weight: 600;
+}
+
+.el-descriptions__label {
+  font-weight: 500;
+}
+
+/* ═══════════════ 卡片 ═══════════════ */
+
+.el-card {
+  border-radius: 10px !important;
+  border: 1px solid var(--el-border-color-light) !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04) !important;
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.el-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06) !important;
+}
+
+.el-card__header {
+  padding: 16px 20px !important;
+  border-bottom: 1px solid var(--el-border-color-lighter) !important;
+}
+
+.el-card__body {
+  padding: 20px !important;
+}
+
+/* ═══════════════ 对话框 ═══════════════ */
+
+.el-dialog {
+  border-radius: 12px !important;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12) !important;
+}
+
+.el-dialog__header {
+  padding: 20px 24px 0 !important;
+  font-weight: 600;
+}
+
+.el-dialog__body {
+  padding: 20px 24px !important;
+}
+
+.el-dialog__footer {
+  padding: 0 24px 20px !important;
+}
+
+/* ═══════════════ 表单 ═══════════════ */
+
+.el-form-item {
+  margin-bottom: 20px !important;
+}
+
+.el-form-item__label {
+  font-weight: 500 !important;
+  padding-right: 12px !important;
+}
+
+/* ── 按钮间距 ── */
+.el-button + .el-button {
+  margin-left: 8px;
+}
+
+/* ═══════════════ 表格 ═══════════════ */
+
+.el-table th.el-table__cell {
+  font-weight: 600 !important;
+  font-size: 13px;
+}
+
+.el-table--small {
+  font-size: 13px;
+}
+
+.el-table--small td.el-table__cell {
+  padding: 8px 0;
+}
+
+/* ═══════════════ 标签 ───────────────── */
+
+.el-tag {
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+/* ═══════════════ 输入框 ───────────────── */
+
+.el-input__wrapper {
+  border-radius: 6px !important;
+}
+
+/* ═══════════════ 侧边栏 ──────────────── */
+
+/* 折叠过渡动画 */
+.sidebar {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.el-menu {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.el-menu-item, .el-sub-menu__title {
+  transition: all 0.2s ease !important;
+}
+
+/* 折叠后文字隐藏用透明 */
+.el-menu--collapse .el-menu-item .el-tooltip,
+.el-menu--collapse .el-sub-menu__title span {
+  visibility: hidden;
+}
+
+/* ═══════════════ 主内容区 ─────────────── */
+
+.main-content {
+  padding: 24px !important;
+  transition: padding 0.3s ease;
+}
+
+.main-content .el-card + .el-card,
+.main-content .el-card + div,
+.main-content div + .el-card {
+  margin-top: 16px;
+}
+
+/* ═══════════════ 分割线 ──────────────── */
+
+.el-divider__text {
+  font-weight: 500;
+  font-size: 13px;
+}
+
+/* ═══════════════ 消息弹窗 ─────────────── */
+
+.el-message-box {
+  border-radius: 10px !important;
+}
+
+/* ═══════════════ 空状态 ──────────────── */
+
+.el-empty__description p {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ═══════════════ 步骤条 ──────────────── */
+
+.el-step__title {
+  font-size: 14px;
+}
+
+/* ═══════════════ 时间线 ──────────────── */
+
+.el-timeline-item__timestamp {
+  font-size: 12px !important;
+  color: var(--el-text-color-secondary) !important;
+}
+
+/* ═══════════════ 提示 ────────────────── */
+
+.el-alert {
+  border-radius: 8px !important;
+}
+
+/* ═══════════════ 滚动条 ──────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--el-border-color);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--el-text-color-secondary);
+}
+
+/* ═══════════════ 页面标题 ─────────────── */
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.page-header h3 {
+  font-size: 18px;
+  margin: 0;
+}

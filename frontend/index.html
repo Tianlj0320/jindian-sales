@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>金典软装ERP</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <script>
+    // 在页面渲染前同步加载基底样式和已保存的主题，避免闪白
+    (function() {
+      document.write('<link rel="stylesheet" href="/themes/base.css">');
+      var key = 'app-theme';
+      var id = localStorage.getItem(key);
+      if (id && ['theme1','theme2','theme3','theme4','theme5','theme6','theme7'].indexOf(id) !== -1) {
+        document.write('<link rel="stylesheet" id="theme-css" href="/themes/' + id + '.css">');
+      } else {
+        document.write('<link rel="stylesheet" id="theme-css" href="/themes/theme1.css">');
+      }
+    })();
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

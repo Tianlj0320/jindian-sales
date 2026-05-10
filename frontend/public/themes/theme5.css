@@ -1,0 +1,81 @@
+/* ── 主题5：秋枫/暖橙色系 ─────────────────────────────
+   主色：#D4733B 秋枫橙
+   辅助：#E8A25E 暖金色
+   ──────────────────────────────────────────────────── */
+
+:root {
+  --el-color-primary: #D4733B;
+  --el-color-primary-dark-2: #B05E2E;
+  --el-color-primary-light-3: #DD9162;
+  --el-color-primary-light-5: #E8B08C;
+  --el-color-primary-light-7: #F0CEB5;
+  --el-color-primary-light-8: #F6E0CF;
+  --el-color-primary-light-9: #FBF0E7;
+
+  --el-color-success: #7AA85E;
+  --el-color-warning: #D4A24B;
+  --el-color-danger: #D46A5A;
+  --el-color-info: #9A8A7A;
+
+  --el-text-color-primary: #3D2E22;
+  --el-text-color-regular: #5E4C3C;
+  --el-text-color-secondary: #9A8A7A;
+  --el-text-color-placeholder: #B8A898;
+
+  --el-border-color: #E6D8CC;
+  --el-border-color-light: #EDE2D8;
+  --el-border-color-lighter: #F3EBE4;
+
+  --el-fill-color: #F8F2EC;
+  --el-fill-color-light: #FAF6F2;
+  --el-fill-color-lighter: #FCFAF8;
+  --el-fill-color-blank: #FFFFFF;
+
+  --el-bg-color: #F5EFE8;
+  --el-bg-color-overlay: #FFFFFF;
+  --el-bg-color-page: #F5EFE8;
+}
+
+.el-button--primary {
+  --el-button-bg-color: var(--el-color-primary);
+  --el-button-border-color: var(--el-color-primary);
+  --el-button-hover-bg-color: var(--el-color-primary-light-3);
+  --el-button-hover-border-color: var(--el-color-primary-light-3);
+  --el-button-active-bg-color: var(--el-color-primary-dark-2);
+  --el-button-active-border-color: var(--el-color-primary-dark-2);
+}
+
+.el-button--warning {
+  --el-button-bg-color: #D4A24B;
+  --el-button-border-color: #D4A24B;
+  --el-button-hover-bg-color: #DEB56A;
+  --el-button-hover-border-color: #DEB56A;
+  --el-button-active-bg-color: #B88C39;
+  --el-button-active-border-color: #B88C39;
+}
+
+.sidebar { background: #2E1E14 !important; }
+.sidebar .el-menu { background-color: #2E1E14 !important; }
+.sidebar .el-menu-item { color: rgba(255, 255, 255, 0.72) !important; }
+.sidebar .el-menu-item:hover { background-color: #46301E !important; }
+.sidebar .el-menu-item.is-active { background-color: #D4733B !important; color: #fff !important; }
+.sidebar .el-sub-menu__title { color: rgba(255, 255, 255, 0.72) !important; }
+.sidebar .el-sub-menu__title:hover { background-color: #46301E !important; }
+.sidebar .el-menu--inline { background-color: #1F130D !important; }
+.sidebar .el-menu--inline .el-menu-item { background-color: transparent !important; }
+.sidebar .el-menu--inline .el-menu-item:hover { background-color: #46301E !important; }
+
+.el-header.header { background: #fff; border-bottom: 2px solid #D4733B; }
+.logo { background: #1F130D !important; border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important; }
+.logo-text { color: #E8B08C !important; letter-spacing: 3px !important; }
+.logo-mini { color: #E8B08C !important; }
+
+.el-table { --el-table-header-bg-color: #F8F2EC; --el-table-row-hover-bg-color: #F0E8DE; }
+.el-dropdown-menu__item:not(.is-disabled):hover { background-color: #FBF0E7; color: #D4733B; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f5efe8; }
+::-webkit-scrollbar-thumb { background: #E6D8CC; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #C4B0A0; }
+
+.login-container { background: linear-gradient(135deg, #2E1E14 0%, #D4733B 50%, #E8A25E 100%) !important; }
