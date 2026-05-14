@@ -18,7 +18,7 @@ from app.database import engine
 from app.domain.base import Base
 
 # 路由
-from app.api.v1 import auth, customers, products, orders, purchases, warehouses, installations, finance, dashboard, system, production, roles, processing
+from app.api.v1 import auth, customers, deposits, products, orders, purchases, warehouses, installations, finance, dashboard, system, production, roles, processing, after_sales, processing_orders, daily_report
 
 setup_logging()
 
@@ -37,6 +37,7 @@ register_middlewares(app)
 # ── 注册路由 ──────────────────────────────────────────────────
 app.include_router(auth.router)
 app.include_router(customers.router)
+app.include_router(deposits.router)
 app.include_router(products.router)
 app.include_router(orders.router)
 app.include_router(purchases.router)
@@ -48,6 +49,9 @@ app.include_router(system.router)
 app.include_router(production.router)
 app.include_router(roles.router)
 app.include_router(processing.router)
+app.include_router(processing_orders.router)
+app.include_router(after_sales.router)
+app.include_router(daily_report.router)
 
 
 # ── 启动事件 ──────────────────────────────────────────────────
@@ -106,6 +110,240 @@ async def startup():
                         f"ALTER TABLE purchase_orders ADD COLUMN {col_spec[0]} {col_spec[1]}"
                     ))
                     logger.info(f"迁移: purchase_orders 表添加了 {col_spec[0]} 列")
+
+            # 迁移4: orders → 补单关联字段
+            ocols = [c["name"] for c in inspector.get_columns("orders")]
+            if "parent_order_id" not in ocols:
+                sync_conn.execute(text(
+                    "ALTER TABLE orders ADD COLUMN parent_order_id INTEGER REFERENCES orders(id)"
+                ))
+                sync_conn.execute(text(
+                    "ALTER TABLE orders ADD COLUMN orig_order_no VARCHAR(30) DEFAULT ''"
+                ))
+                logger.info("迁移: orders 表添加了 parent_order_id/orig_order_no 列（补单支持）")
+
+            # 迁移5: order_fees 表（订单费用管理模块）
+            table_names = inspector.get_table_names()
+            if "order_fees" not in table_names:
+                sync_conn.execute(text("""
+                    CREATE TABLE order_fees (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+                        fee_type VARCHAR(30) NOT NULL,
+                        fee_type_label VARCHAR(50) DEFAULT '',
+                        amount DECIMAL(12,2) DEFAULT 0,
+                        remark VARCHAR(200) DEFAULT '',
+                        operator_name VARCHAR(50) DEFAULT '',
+                        created_at TIMESTAMP,
+                        updated_at TIMESTAMP
+                    )
+                """))
+                sync_conn.execute(text(
+                    "CREATE INDEX ix_order_fees_order_id ON order_fees(order_id)"
+                ))
+                logger.info("迁移: 创建了 order_fees 表（订单费用管理）")
+
+            # 迁移6: after_sale_services 表（售后管理模块）
+            if "after_sale_services" not in table_names:
+                sync_conn.execute(text("""
+                    CREATE TABLE after_sale_services (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        service_no VARCHAR(30) NOT NULL UNIQUE,
+                        order_id INTEGER,
+                        order_no VARCHAR(30) DEFAULT '',
+                        customer_name VARCHAR(50) DEFAULT '',
+                        customer_phone VARCHAR(20) DEFAULT '',
+                        service_type VARCHAR(30) NOT NULL,
+                        service_type_label VARCHAR(50) DEFAULT '',
+                        description TEXT DEFAULT '',
+                        status VARCHAR(20) DEFAULT '待处理',
+                        handler_id INTEGER,
+                        handler_name VARCHAR(50) DEFAULT '',
+                        resolution TEXT DEFAULT '',
+                        resolved_at TIMESTAMP,
+                        remark VARCHAR(500) DEFAULT '',
+                        created_at TIMESTAMP,
+                        updated_at TIMESTAMP
+                    )
+                """))
+                logger.info("迁移: 创建了 after_sale_services 表（售后管理）")
+
+            # 迁移7: warehouse_storage 表 + inventory 新增列（三级分类）
+            if "warehouse_storage" not in table_names:
+                sync_conn.execute(text("""
+                    CREATE TABLE warehouse_storage (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        warehouse_id INTEGER NOT NULL REFERENCES warehouses(id),
+                        level INTEGER NOT NULL,
+                        name VARCHAR(50) NOT NULL,
+                        code VARCHAR(30) DEFAULT '',
+                        parent_id INTEGER,
+                        remark VARCHAR(200) DEFAULT '',
+                        created_at TIMESTAMP,
+                        updated_at TIMESTAMP
+                    )
+                """))
+                logger.info("迁移: 创建了 warehouse_storage 表（仓库三级分类）")
+            # 给 inventories 表添加三级分类字段
+            inv_cols = [c["name"] for c in inspector.get_columns("inventories")]
+            if "zone" not in inv_cols:
+                sync_conn.execute(text("ALTER TABLE inventories ADD COLUMN zone VARCHAR(50) DEFAULT ''"))
+                sync_conn.execute(text("ALTER TABLE inventories ADD COLUMN shelf VARCHAR(50) DEFAULT ''"))
+                sync_conn.execute(text("ALTER TABLE inventories ADD COLUMN bin VARCHAR(50) DEFAULT ''"))
+                logger.info("迁移: inventories 表添加了 zone/shelf/bin 三级分类字段")
+
+            # 迁移8: order_items → procurement_type（采购类型：物料/成品/辅料）
+            oi_cols = [c["name"] for c in inspector.get_columns("order_items")]
+            if "procurement_type" not in oi_cols:
+                sync_conn.execute(text(
+                    "ALTER TABLE order_items ADD COLUMN procurement_type VARCHAR(10) DEFAULT '物料'"
+                ))
+                logger.info("迁移: order_items 表添加了 procurement_type 列（物料/成品/辅料）")
+
+            # 迁移9: customers → deposit_balance
+            cust_cols = [c["name"] for c in inspector.get_columns("customers")]
+            if "deposit_balance" not in cust_cols:
+                sync_conn.execute(text(
+                    "ALTER TABLE customers ADD COLUMN deposit_balance DECIMAL(12,2) DEFAULT 0"
+                ))
+                logger.info("迁移: customers 表添加了 deposit_balance 列")
+
+            # 迁移10: deposits 表（定金管理）
+            if "deposits" not in table_names:
+                sync_conn.execute(text("""
+                    CREATE TABLE deposits (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        customer_id INTEGER NOT NULL REFERENCES customers(id),
+                        amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+                        balance DECIMAL(12,2) NOT NULL DEFAULT 0,
+                        payment_method VARCHAR(20) DEFAULT '',
+                        received_at DATE,
+                        operator_id INTEGER REFERENCES users(id),
+                        operator_name VARCHAR(50) DEFAULT '',
+                        remark TEXT DEFAULT '',
+                        created_at TIMESTAMP,
+                        updated_at TIMESTAMP
+                    )
+                """))
+                sync_conn.execute(text(
+                    "CREATE INDEX ix_deposits_customer_id ON deposits(customer_id)"
+                ))
+                logger.info("迁移: 创建了 deposits 表（定金管理）")
+
+            # 迁移11: processing_orders 表（加工单）
+            if "processing_orders" not in table_names:
+                sync_conn.execute(text("""
+                    CREATE TABLE processing_orders (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        po_no VARCHAR(50) NOT NULL UNIQUE,
+                        order_id INTEGER NOT NULL REFERENCES orders(id),
+                        order_no VARCHAR(30) DEFAULT '',
+                        customer_name VARCHAR(50) DEFAULT '',
+                        warehouse_id INTEGER REFERENCES warehouses(id),
+                        processing_factory VARCHAR(100) DEFAULT '',
+                        total_items INTEGER DEFAULT 0,
+                        total_process_fee DECIMAL(12,2) DEFAULT 0,
+                        status VARCHAR(20) DEFAULT 'pending',
+                        printed INTEGER DEFAULT 0,
+                        remark TEXT DEFAULT '',
+                        completed_at TIMESTAMP,
+                        created_at TIMESTAMP,
+                        updated_at TIMESTAMP
+                    )
+                """))
+                logger.info("迁移: 创建了 processing_orders 表（加工单）")
+
+            # 迁移12: processing_order_items 表（加工单明细）
+            if "processing_order_items" not in table_names:
+                sync_conn.execute(text("""
+                    CREATE TABLE processing_order_items (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        processing_order_id INTEGER NOT NULL REFERENCES processing_orders(id),
+                        order_item_id INTEGER NOT NULL REFERENCES order_items(id),
+                        product_name VARCHAR(200) DEFAULT '',
+                        product_code VARCHAR(100) DEFAULT '',
+                        width DECIMAL(10,2) DEFAULT 0,
+                        height DECIMAL(10,2) DEFAULT 0,
+                        qty DECIMAL(10,2) DEFAULT 0,
+                        unit VARCHAR(20) DEFAULT '',
+                        process_desc TEXT DEFAULT '',
+                        process_fee_unit DECIMAL(10,2) DEFAULT 0,
+                        process_fee_subtotal DECIMAL(12,2) DEFAULT 0,
+                        checked INTEGER DEFAULT 0,
+                        remark TEXT DEFAULT '',
+                        created_at TIMESTAMP,
+                        updated_at TIMESTAMP
+                    )
+                """))
+                sync_conn.execute(text(
+                    "CREATE INDEX ix_po_items_po_id ON processing_order_items(processing_order_id)"
+                ))
+                logger.info("迁移: 创建了 processing_order_items 表（加工单明细）")
+
+            # 迁移13: products → is_purchase（是否需采购）
+            prod_cols = [c["name"] for c in inspector.get_columns("products")]
+            if "is_purchase" not in prod_cols:
+                sync_conn.execute(text(
+                    "ALTER TABLE products ADD COLUMN is_purchase INTEGER DEFAULT 1"
+                ))
+                logger.info("迁移: products 表添加了 is_purchase 列（True=需采购, False=外加工）")
+
+            # 迁移14: order_items → is_purchase（订单级采购覆盖）
+            oi_cols2 = [c["name"] for c in inspector.get_columns("order_items")]
+            if "is_purchase" not in oi_cols2:
+                sync_conn.execute(text(
+                    "ALTER TABLE order_items ADD COLUMN is_purchase INTEGER DEFAULT 1"
+                ))
+                logger.info("迁移: order_items 表添加了 is_purchase 列（订单级是否采购覆盖）")
+
+            # 迁移15: purchase_order_items → procurement_type（采购类型）
+            poi_cols = [c["name"] for c in inspector.get_columns("purchase_order_items")]
+            if "procurement_type" not in poi_cols:
+                sync_conn.execute(text(
+                    "ALTER TABLE purchase_order_items ADD COLUMN procurement_type VARCHAR(10) DEFAULT '物料'"
+                ))
+                logger.info("迁移: purchase_order_items 表添加了 procurement_type 列（物料/成品/辅料）")
+
+            # 迁移16: order_items → panel_count（幅数）
+            oi_cols3 = [c["name"] for c in inspector.get_columns("order_items")]
+            if "panel_count" not in oi_cols3:
+                sync_conn.execute(text(
+                    "ALTER TABLE order_items ADD COLUMN panel_count DECIMAL(8,2) DEFAULT 0"
+                ))
+                logger.info("迁移: order_items 表添加了 panel_count 列（幅数）")
+
+            # 迁移17: product_series 表 + products → series_id（系列/木板分类）
+            if "product_series" not in table_names:
+                sync_conn.execute(text("""
+                    CREATE TABLE product_series (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name VARCHAR(100) NOT NULL,
+                        code VARCHAR(30) DEFAULT '',
+                        supplier_id INTEGER NOT NULL REFERENCES suppliers(id),
+                        sort_order INTEGER DEFAULT 0,
+                        remark TEXT DEFAULT '',
+                        created_at TIMESTAMP,
+                        updated_at TIMESTAMP
+                    )
+                """))
+                sync_conn.execute(text(
+                    "CREATE INDEX ix_product_series_supplier_id ON product_series(supplier_id)"
+                ))
+                logger.info("迁移: 创建了 product_series 表（系列/木板分类）")
+            prod_cols2 = [c["name"] for c in inspector.get_columns("products")]
+            if "series_id" not in prod_cols2:
+                sync_conn.execute(text(
+                    "ALTER TABLE products ADD COLUMN series_id INTEGER REFERENCES product_series(id)"
+                ))
+                logger.info("迁移: products 表添加了 series_id 列（系列/木板ID）")
+
+            # 迁移18: warehouses → warehouse_type（仓库分类）
+            wh_cols = [c["name"] for c in inspector.get_columns("warehouses")]
+            if "warehouse_type" not in wh_cols:
+                sync_conn.execute(text(
+                    "ALTER TABLE warehouses ADD COLUMN warehouse_type VARCHAR(20) DEFAULT 'main'"
+                ))
+                logger.info("迁移: warehouses 表添加了 warehouse_type 列（main/auxiliary/finished）")
 
         await conn.run_sync(run_migration)
 
@@ -223,6 +461,7 @@ async def _ensure_dict_data(session):
         ("product_category", "产品分类", 26),
         ("warehouse", "仓库", 27),
         ("store_info", "店铺信息", 28),
+        ("processing_type", "加工类型", 29),
     ]
 
     # V3.0 全量字典项数据
@@ -406,6 +645,16 @@ async def _ensure_dict_data(session):
         ("store_info", "order_tips", "订单提示/声明", 7),
         ("store_info", "contract_header", "合同抬头", 8),
         ("store_info", "contract_tips", "合同提示/声明", 9),
+        # 加工类型
+        ("processing_type", "curtain", "常规窗帘", 1),
+        ("processing_type", "roman_rod", "罗马杆窗帘", 2),
+        ("processing_type", "electric", "电动窗帘", 3),
+        ("processing_type", "blind", "百叶帘", 4),
+        ("processing_type", "soft_sheer", "柔纱帘", 5),
+        ("processing_type", "roller", "卷帘", 6),
+        ("processing_type", "valance", "幔头", 7),
+        ("processing_type", "wallpaper", "墙布", 8),
+        ("processing_type", "hard_package", "硬包", 9),
     ]
 
     # 插入缺失的字典类型
@@ -427,6 +676,26 @@ async def _ensure_dict_data(session):
                 dict_label=dict_label, sort_order=sort_order, is_active=True, remark=""
             ))
 
+    await session.flush()
+
+    # ── 同步加工类型字典项到 ProcessingType 表 ──
+    from app.domain.processing import ProcessingType
+    proc_dict_items = (await session.execute(
+        select(DictItem).where(DictItem.dict_type == "processing_type", DictItem.is_active == True)
+        .order_by(DictItem.sort_order)
+    )).scalars().all()
+    for item in proc_dict_items:
+        exists = (await session.execute(
+            select(ProcessingType).where(ProcessingType.code == item.dict_code)
+        )).scalar_one_or_none()
+        if not exists:
+            session.add(ProcessingType(
+                name=item.dict_label,
+                code=item.dict_code,
+                description=item.remark or "",
+                sort_order=item.sort_order,
+                is_active=True,
+            ))
     await session.flush()
 
 
@@ -457,7 +726,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8001,
+        port=8102,
         reload=True,
         log_level=settings.LOG_LEVEL.lower(),
     )

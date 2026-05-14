@@ -16,6 +16,7 @@ class PurchaseOrderItemCreate(BaseModel):
     unit: str = Field(default="米")
     unit_price: float = Field(default=0)
     material_type: str = Field(default="主料")
+    procurement_type: str = Field(default="物料", description="采购类型: 物料/成品/辅料")
 
 
 class PurchaseOrderCreate(BaseModel):
@@ -40,6 +41,7 @@ class PurchaseOrderItemResponse(BaseModel):
     subtotal: float
     arrived_qty: float
     material_type: str
+    procurement_type: str = "物料"
 
 
 class PurchaseOrderResponse(BaseModel):
@@ -72,6 +74,24 @@ class ReceiveCreate(BaseModel):
     """收货请求"""
     items: list[ReceiveItem] = Field(default_factory=list)
     operator: str = Field(default="系统")
+    warehouse_id: int = Field(default=1, description="收货仓库ID，默认1号仓库")
+
+
+class BatchReceiveRequest(BaseModel):
+    """批量收货请求"""
+    po_ids: list[int] = Field(..., description="采购单ID列表")
+    warehouse_id: int = Field(default=1, description="收货仓库ID，默认1号仓库")
+
+
+class ReceiveRollbackItem(BaseModel):
+    product_id: int
+    qty: float = Field(default=0, description="回退数量，0=全部回退")
+    unit: str = Field(default="")
+
+
+class ReceiveRollbackCreate(BaseModel):
+    """收货回退请求"""
+    items: list[ReceiveRollbackItem] = Field(default_factory=list)
     warehouse_id: int = Field(default=1, description="收货仓库ID，默认1号仓库")
 
 

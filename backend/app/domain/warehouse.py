@@ -20,6 +20,7 @@ class Warehouse(Base, TimestampMixin):
     code: Mapped[str] = mapped_column(String(20), default="", comment="仓库编码")
     address: Mapped[str] = mapped_column(String(300), default="", comment="仓库地址")
     is_active: Mapped[bool] = mapped_column(default=True, comment="是否启用")
+    warehouse_type: Mapped[str] = mapped_column(String(20), default="main", comment="仓库类型: main=主仓库, auxiliary=辅料仓, finished=成品仓")
     remark: Mapped[str] = mapped_column(String(200), default="", comment="备注")
 
 
@@ -34,7 +35,26 @@ class Inventory(Base, TimestampMixin):
     quantity: Mapped[float] = mapped_column(DECIMAL(10, 2), default=0, comment="当前库存数量")
     safety_stock: Mapped[float] = mapped_column(DECIMAL(10, 2), default=0, comment="安全库存")
 
+    # 三级分类：区域 → 货架 → 库位
+    zone: Mapped[str] = mapped_column(String(50), default="", comment="存放区域（一级）")
+    shelf: Mapped[str] = mapped_column(String(50), default="", comment="货架（二级）")
+    bin: Mapped[str] = mapped_column(String(50), default="", comment="库位（三级）")
+
     product = relationship("Product", lazy="joined")
+
+
+class WarehouseStorage(Base, TimestampMixin):
+    """仓库存储位置定义（三级分类：区域 → 货架 → 库位）"""
+
+    __tablename__ = "warehouse_storage"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    warehouse_id: Mapped[int] = mapped_column(Integer, ForeignKey("warehouses.id"), nullable=False, index=True, comment="所属仓库")
+    level: Mapped[int] = mapped_column(Integer, nullable=False, comment="层级: 1=区域, 2=货架, 3=库位")
+    name: Mapped[str] = mapped_column(String(50), nullable=False, comment="名称")
+    code: Mapped[str] = mapped_column(String(30), default="", comment="编码")
+    parent_id: Mapped[int | None] = mapped_column(Integer, nullable=True, comment="父级ID")
+    remark: Mapped[str] = mapped_column(String(200), default="", comment="备注")
 
 
 class InventoryFlow(Base, TimestampMixin):

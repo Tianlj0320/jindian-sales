@@ -51,7 +51,7 @@ async def get_dashboard():
             select(func.count(Order.id)).where(
                 and_(
                     Order.status_key.notin_(["completed", "installed", "cancelled", "accepted"]),
-                    Order.delivery_date is not None,
+                    Order.delivery_date.isnot(None),
                     Order.delivery_date < str(today),
                 )
             )
@@ -159,7 +159,7 @@ async def get_dashboard_v4():
             select(func.count(Order.id)).where(
                 and_(
                     Order.status_key.notin_(["completed", "installed", "cancelled", "accepted"]),
-                    Order.delivery_date is not None,
+                    Order.delivery_date.isnot(None),
                     Order.delivery_date < str(today),
                 )
             )
@@ -184,7 +184,7 @@ async def get_dashboard_v4():
         # 库存预警数（stock <= min_stock 的产品）
         r = await session.execute(
             select(func.count()).select_from(Product).where(
-                and_(Product.stock is not None, Product.stock <= 0)
+                and_(Product.stock.isnot(None), Product.stock <= 0)
             )
         )
         low_stock_count = r.scalar() or 0

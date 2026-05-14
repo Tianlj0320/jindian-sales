@@ -65,6 +65,10 @@ class Order(Base, TimestampMixin):
     # 历史记录
     history: Mapped[list | None] = mapped_column(JSON, default=list, comment="状态变更历史")
 
+    # 补单关联
+    parent_order_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("orders.id"), nullable=True, comment="原订单ID（补单专用）")
+    orig_order_no: Mapped[str] = mapped_column(String(30), default="", comment="原订单号（补单专用）")
+
     # 关系
     items = relationship("OrderItem", back_populates="order", lazy="selectin",
                          cascade="all, delete-orphan",
@@ -106,7 +110,10 @@ class OrderItem(Base, TimestampMixin):
     process_desc: Mapped[str] = mapped_column(String(200), default="", comment="工艺描述")
     classification: Mapped[str] = mapped_column(String(20), default="", comment="定高/定宽")
     material_type: Mapped[str] = mapped_column(String(20), default="主料", comment="主料/辅料")
+    procurement_type: Mapped[str] = mapped_column(String(10), default="物料", comment="采购类型: 物料/成品/辅料")
+    is_purchase: Mapped[bool] = mapped_column(Boolean, default=True, comment="订单级是否采购覆盖: False=跳过此明细不生成采购单")
     calc_type: Mapped[str] = mapped_column(String(20), default="per_meter", comment="计价方式")
+    panel_count: Mapped[float] = mapped_column(DECIMAL(8, 2), default=0, comment="幅数")
     note: Mapped[str] = mapped_column(Text, default="", comment="备注")
 
     # 关系

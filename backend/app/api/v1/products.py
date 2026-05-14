@@ -10,13 +10,15 @@ from sqlalchemy import and_, func, or_, select
 from app.api.deps import CurrentUserDep, PageDep, SessionDep
 from app.core.exceptions import NotFoundError
 from app.core.response import paginated, success
-from app.domain.product import Product, ProductCategory, Supplier
+from app.domain.product import Product, ProductCategory, ProductSeries, Supplier
 from app.domain.processing import ProcessingType
 from app.schemas.product import (
     CategoryCreate,
     CategoryUpdate,
     ProductCreate,
     ProductUpdate,
+    SeriesCreate,
+    SeriesUpdate,
     SupplierCreate,
     SupplierUpdate,
 )
@@ -63,6 +65,10 @@ async def search_products(
             "processing_type_id": p.processing_type_id,
             "supplier_id": p.supplier_id,
             "supplier_name": p.supplier.name if p.supplier else None,
+            "supplier_code": p.supplier.code if p.supplier else None,
+            "series_id": p.series_id,
+            "series_name": p.series_rel.name if p.series_rel else "",
+            "is_purchase": p.is_purchase if hasattr(p, 'is_purchase') else True,
         }
         for p in products
     ])
@@ -153,18 +159,39 @@ async def delete_category(session: SessionDep, current_user: CurrentUserDep, cat
 # ══════════════════════════════════════════════════════════════
 
 
+@router.get("/suppliers/all")
+async def list_all_suppliers(session: SessionDep, current_user: CurrentUserDep):
+    """所有供应商列表（无分页，用于左侧树形面板）"""
+    result = await session.execute(
+        select(Supplier).where(Supplier.is_active == True).order_by(Supplier.code, Supplier.id)
+    )
+    suppliers = result.scalars().all()
+    return success(data=[
+        {"id": s.id, "name": s.name, "code": s.code or "", "type": s.type}
+        for s in suppliers
+    ])
+
+
 @router.get("/suppliers")
 async def list_suppliers(
     session: SessionDep,
     page: PageDep,
     current_user: CurrentUserDep,
-    keyword: str | None = Query(None),
+    keyword: str | None = Query(None, description="搜索名称/联系人/手机号"),
+    type: str | None = Query(None, description="类型: 布艺/成品/配件/其他"),
 ):
-    """供应商列表"""
+    """供应商列表（支持关键字搜索和类型筛选）"""
     conditions = []
     if keyword:
         kw = f"%{keyword}%"
-        conditions.append(or_(Supplier.name.ilike(kw), Supplier.contact.ilike(kw)))
+        conditions.append(or_(
+            Supplier.code.ilike(kw),
+            Supplier.name.ilike(kw),
+            Supplier.contact.ilike(kw),
+            Supplier.phone.ilike(kw),
+        ))
+    if type:
+        conditions.append(Supplier.type == type)
 
     where = and_(*conditions) if conditions else True
     total = (await session.execute(select(func.count()).select_from(Supplier).where(where))).scalar() or 0
@@ -239,6 +266,87 @@ async def delete_supplier(session: SessionDep, current_user: CurrentUserDep, sup
 
 
 # ══════════════════════════════════════════════════════════════
+# 系列/木板（二级分类，隶属于供应商）
+# ══════════════════════════════════════════════════════════════
+
+
+@router.get("/series")
+async def list_series(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    supplier_id: int | None = Query(None, description="按供应商筛选"),
+):
+    """系列列表（可按供应商筛选）"""
+    conditions = []
+    if supplier_id is not None:
+        conditions.append(ProductSeries.supplier_id == supplier_id)
+
+    where = and_(*conditions) if conditions else True
+    result = await session.execute(
+        select(ProductSeries).where(where).order_by(ProductSeries.sort_order, ProductSeries.id)
+    )
+    series_list = result.scalars().all()
+
+    return success(data=[
+        {
+            "id": s.id,
+            "name": s.name,
+            "code": s.code or "",
+            "supplier_id": s.supplier_id,
+            "sort_order": s.sort_order,
+            "product_count": 0,  # 前端自行统计或后续优化
+        }
+        for s in series_list
+    ])
+
+
+@router.post("/series")
+async def create_series(session: SessionDep, current_user: CurrentUserDep, req: SeriesCreate):
+    """创建系列/木板"""
+    series = ProductSeries(name=req.name, code=req.code, supplier_id=req.supplier_id, sort_order=req.sort_order)
+    session.add(series)
+    await session.flush()
+    return success(data={"id": series.id}, message="系列创建成功")
+
+
+@router.put("/series/{series_id}")
+async def update_series(
+    session: SessionDep, current_user: CurrentUserDep, series_id: int, req: SeriesUpdate
+):
+    """更新系列/木板"""
+    result = await session.execute(select(ProductSeries).where(ProductSeries.id == series_id))
+    s = result.scalar_one_or_none()
+    if not s:
+        raise NotFoundError("系列不存在")
+
+    for field, value in req.model_dump(exclude_none=True).items():
+        setattr(s, field, value)
+    await session.flush()
+    return success(data={"id": series_id}, message="系列更新成功")
+
+
+@router.delete("/series/{series_id}")
+async def delete_series(session: SessionDep, current_user: CurrentUserDep, series_id: int):
+    """删除系列/木板"""
+    result = await session.execute(select(ProductSeries).where(ProductSeries.id == series_id))
+    s = result.scalar_one_or_none()
+    if not s:
+        raise NotFoundError("系列不存在")
+
+    # 检查是否有产品使用此系列
+    prod_count = (await session.execute(
+        select(func.count()).select_from(Product).where(Product.series_id == series_id)
+    )).scalar() or 0
+    if prod_count > 0:
+        from app.core.exceptions import BusinessError
+        raise BusinessError(f"该系列下有 {prod_count} 个产品，无法删除")
+
+    await session.delete(s)
+    await session.flush()
+    return success(message="系列已删除")
+
+
+# ══════════════════════════════════════════════════════════════
 # 产品
 # ══════════════════════════════════════════════════════════════
 
@@ -252,6 +360,7 @@ async def list_products(
     product_type: str | None = Query(None),
     category_id: int | None = Query(None),
     supplier_id: int | None = Query(None),
+    series_id: int | None = Query(None),
 ):
     """产品列表"""
     conditions = []
@@ -264,6 +373,8 @@ async def list_products(
         conditions.append(Product.category_id == category_id)
     if supplier_id:
         conditions.append(Product.supplier_id == supplier_id)
+    if series_id is not None:
+        conditions.append(Product.series_id == series_id)
 
     where = and_(*conditions) if conditions else True
     total = (await session.execute(select(func.count()).select_from(Product).where(where))).scalar() or 0
@@ -289,6 +400,9 @@ async def list_products(
             "category_name": p.category.name if p.category else "",
             "supplier_id": p.supplier_id,
             "supplier_name": p.supplier.name if p.supplier else "",
+            "supplier_code": p.supplier.code if p.supplier else "",
+            "series_id": p.series_id,
+            "series_name": p.series_rel.name if p.series_rel else "",
             "processing_type_id": p.processing_type_id,
             "processing_type_name": p.processing_type.name if p.processing_type else "",
             "model": p.model,
@@ -307,6 +421,7 @@ async def list_products(
             "stock": p.stock,
             "safety_stock": p.safety_stock,
             "series": p.series,
+            "is_purchase": p.is_purchase if hasattr(p, 'is_purchase') else True,
             "is_active": p.is_active,
             "remark": p.remark,
         })
@@ -337,6 +452,9 @@ async def get_product(session: SessionDep, current_user: CurrentUserDep, product
         "category_name": p.category.name if p.category else "",
         "supplier_id": p.supplier_id,
         "supplier_name": p.supplier.name if p.supplier else "",
+        "supplier_code": p.supplier.code if p.supplier else "",
+        "series_id": p.series_id,
+        "series_name": p.series_rel.name if p.series_rel else "",
         "processing_type_id": p.processing_type_id,
         "processing_type_name": p.processing_type.name if p.processing_type else "",
         "model": p.model,
@@ -355,6 +473,7 @@ async def get_product(session: SessionDep, current_user: CurrentUserDep, product
         "stock": p.stock,
         "safety_stock": p.safety_stock,
         "series": p.series,
+        "is_purchase": p.is_purchase if hasattr(p, 'is_purchase') else True,
         "is_active": p.is_active,
         "remark": p.remark,
     })

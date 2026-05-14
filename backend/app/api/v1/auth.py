@@ -7,11 +7,12 @@ from __future__ import annotations
 from fastapi import APIRouter
 from sqlalchemy import select
 
-from app.api.deps import CurrentUserDep, SessionDep
+from app.api.deps import CurrentUserDep, SessionDep, require_permission
 from app.core.exceptions import BusinessError, NotFoundError, UnauthorizedError
 from app.core.response import success
 from app.core.security import create_access_token, hash_password, verify_password
 from app.domain.auth import User
+from app.domain.role import Role
 from app.schemas.auth import LoginRequest, LoginResponse, UserInfo, UserCreate
 
 router = APIRouter(prefix="/api/v1/auth", tags=["认证"])
@@ -64,11 +65,25 @@ async def get_me(session: SessionDep, current_user: CurrentUserDep):
     })
 
 
+@router.get("/permissions")
+async def get_my_permissions(session: SessionDep, current_user: CurrentUserDep):
+    """获取当前用户的权限列表"""
+    result = await session.execute(
+        select(Role).where(Role.code == current_user.role, Role.is_active == True)
+    )
+    role = result.scalar_one_or_none()
+    permissions = role.permissions if role else []
+    return success(data={
+        "role": current_user.role,
+        "permissions": permissions,
+    })
+
+
 # ── 用户管理（管理员用） ──────────────────────────────────────
 
 
 @router.get("/users")
-async def list_users(session: SessionDep, current_user: CurrentUserDep):
+async def list_users(session: SessionDep, current_user: CurrentUserDep, _: None = require_permission("system")):
     """用户列表"""
     result = await session.execute(select(User).order_by(User.id))
     users = result.scalars().all()

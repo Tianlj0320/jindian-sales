@@ -1,16 +1,16 @@
 <template>
   <div>
-    <el-button text @click="$router.back()" style="margin-bottom:16px">← 返回</el-button>
+    <el-button text @click="$router.back()" style="margin-bottom:8px">← 返回</el-button>
 
     <el-card shadow="never">
       <template #header>
-        <h3>{{ isEdit ? '编辑订单' : '新建订单' }}</h3>
+        <h3 style="font-size:15px;margin:0">{{ isEdit ? '编辑订单' : '新建订单' }}</h3>
       </template>
 
-      <el-form :model="form" label-width="100px" style="max-width:900px">
+      <el-form :model="form" label-width="80px">
         <!-- 客户信息 -->
         <el-divider content-position="left">客户信息</el-divider>
-        <el-row :gutter="16">
+        <el-row :gutter="10">
           <el-col :span="8">
             <el-form-item label="客户姓名">
               <el-autocomplete
@@ -53,7 +53,7 @@
 
         <!-- 订单信息 -->
         <el-divider content-position="left">订单信息</el-divider>
-        <el-row :gutter="16">
+        <el-row :gutter="10">
           <el-col :span="8">
             <el-form-item label="订单类型">
               <el-select v-model="form.order_type" style="width:100%">
@@ -75,7 +75,7 @@
             </el-form-item>
           </el-col>
         </el-row>
-        <el-row :gutter="16">
+        <el-row :gutter="10">
           <el-col :span="12">
             <el-form-item label="交货方式">
               <el-select v-model="form.delivery_method" style="width:100%">
@@ -91,7 +91,7 @@
             </el-form-item>
           </el-col>
         </el-row>
-        <el-row :gutter="16">
+        <el-row :gutter="10">
           <el-col :span="12">
             <el-form-item label="安装日期">
               <el-date-picker v-model="form.install_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
@@ -110,10 +110,10 @@
 
         <!-- ============= 主料明细 ============= -->
         <el-divider content-position="left">主料明细</el-divider>
-        <el-table :data="mainItems" stripe style="width:100%" size="small">
-          <el-table-column label="空间" width="90">
+        <el-table :data="mainItems" stripe style="width:100%" size="small" class="compact-table">
+          <el-table-column label="空间" width="70">
             <template #default="{ $index }">
-              <el-select v-model="mainItems[$index].room" placeholder="空间" style="width:80px" size="small">
+              <el-select v-model="mainItems[$index].room" placeholder="空间" style="width:60px" size="small">
                 <el-option label="客厅" value="客厅" />
                 <el-option label="主卧" value="主卧" />
                 <el-option label="次卧" value="次卧" />
@@ -126,7 +126,7 @@
               </el-select>
             </template>
           </el-table-column>
-          <el-table-column label="产品编码" width="140">
+          <el-table-column label="产品编码" width="130">
             <template #default="{ $index }">
               <el-autocomplete
                 v-model="mainItems[$index].product_code"
@@ -149,49 +149,65 @@
               </el-autocomplete>
             </template>
           </el-table-column>
-          <el-table-column label="产品名称" width="120">
+          <el-table-column label="产品名称" width="90">
             <template #default="{ $index }">
               <el-input v-model="mainItems[$index].product_name" placeholder="自动带出" size="small" disabled />
             </template>
           </el-table-column>
-          <el-table-column label="供应商" width="100">
-            <template #default="{ $index }">
-              <span style="color:#909399;font-size:12px">{{ mainItems[$index].supplier_name || '待定' }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="宽(m)" width="80">
+          <el-table-column label="宽(m)" width="65">
             <template #default="{ $index }">
               <el-input v-model.number="mainItems[$index].width" placeholder="0" size="small" @input="onMainItemInput($index)" />
             </template>
           </el-table-column>
-          <el-table-column label="高(m)" width="80">
+          <el-table-column label="高(m)" width="65">
             <template #default="{ $index }">
               <el-input v-model.number="mainItems[$index].height" placeholder="0" size="small" @input="onMainItemInput($index)" />
             </template>
           </el-table-column>
-          <el-table-column label="倍率" width="70">
+          <el-table-column label="倍率" width="55">
             <template #default="{ $index }">
               <el-input v-model.number="mainItems[$index].fold_ratio" placeholder="2.0" size="small" @input="onMainItemInput($index)" />
             </template>
           </el-table-column>
-          <el-table-column label="数量" width="80">
+          <el-table-column label="数量" width="65">
             <template #default="{ $index }">
               <el-input v-model.number="mainItems[$index].qty" placeholder="自动" size="small" @input="onMainItemInput($index)" />
             </template>
           </el-table-column>
-          <el-table-column label="单价" width="100">
+          <el-table-column label="单价" width="80">
             <template #default="{ $index }">
               <el-input v-model.number="mainItems[$index].unit_price" placeholder="0" size="small" @input="onMainItemInput($index)" />
             </template>
           </el-table-column>
-          <el-table-column label="折率" width="70">
+          <el-table-column label="折率" width="55">
             <template #default="{ $index }">
               <el-input v-model.number="mainItems[$index].discount" placeholder="1.0" size="small" @input="onMainItemInput($index)" />
             </template>
           </el-table-column>
-          <el-table-column label="金额" width="110" align="right">
+          <el-table-column label="金额" width="90" align="right">
             <template #default="{ $index }">
               ¥{{ (mainItems[$index].amount || 0).toFixed(2) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="采购类型" width="80">
+            <template #default="{ $index }">
+              <el-select v-model="mainItems[$index].procurement_type" size="small" style="width:68px" @change="onMainItemInput($index)">
+                <el-option label="物料" value="物料" />
+                <el-option label="成品" value="成品" />
+                <el-option label="辅料" value="辅料" />
+              </el-select>
+            </template>
+          </el-table-column>
+          <el-table-column label="采购" width="55" align="center">
+            <template #default="{ $index }">
+              <el-tag :type="mainItems[$index].is_purchase === false ? 'warning' : 'success'" size="small">
+                {{ mainItems[$index].is_purchase === false ? '外加工' : '需采购' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="工艺" min-width="80">
+            <template #default="{ $index }">
+              <el-input v-model="mainItems[$index].process_desc" placeholder="工艺" size="small" />
             </template>
           </el-table-column>
           <el-table-column label="操作" width="50" fixed="right">
@@ -203,11 +219,15 @@
         <div style="margin:8px 0">
           <el-button size="small" @click="addMainItem">+ 添加主料</el-button>
         </div>
+        <!-- 主料小计 -->
+        <div style="text-align:right;margin:4px 16px;padding:4px 12px;background:#f5f7fa;border-radius:4px">
+          <strong>主料小计：¥{{ mainSubtotal.toFixed(2) }}</strong>
+        </div>
 
         <!-- ============= 辅料明细 ============= -->
         <el-divider content-position="left">辅料明细</el-divider>
-        <el-table :data="auxItems" stripe style="width:100%" size="small">
-          <el-table-column label="产品编码" width="140">
+        <el-table :data="auxItems" stripe style="width:100%" size="small" class="compact-table">
+          <el-table-column label="产品编码" width="130">
             <template #default="{ $index }">
               <el-autocomplete
                 v-model="auxItems[$index].product_code"
@@ -230,34 +250,43 @@
               </el-autocomplete>
             </template>
           </el-table-column>
-          <el-table-column label="产品名称" width="150">
+          <el-table-column label="产品名称" width="120">
             <template #default="{ $index }">
               <el-input v-model="auxItems[$index].product_name" placeholder="自动带出" size="small" />
             </template>
           </el-table-column>
-          <el-table-column label="供应商" width="100">
-            <template #default="{ $index }">
-              <span style="color:#909399;font-size:12px">{{ auxItems[$index].supplier_name || '待定' }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="单位" width="70">
+          <el-table-column label="单位" width="60">
             <template #default="{ $index }">
               <el-input v-model="auxItems[$index].unit" size="small" placeholder="自动" disabled />
             </template>
           </el-table-column>
-          <el-table-column label="数量" width="80">
+          <el-table-column label="数量" width="65">
             <template #default="{ $index }">
               <el-input v-model.number="auxItems[$index].qty" placeholder="1" size="small" @input="calcTotal" />
             </template>
           </el-table-column>
-          <el-table-column label="单价" width="100">
+          <el-table-column label="单价" width="80">
             <template #default="{ $index }">
               <el-input v-model.number="auxItems[$index].unit_price" placeholder="0" size="small" @input="onAuxItemInput($index)" />
             </template>
           </el-table-column>
-          <el-table-column label="金额" width="110" align="right">
+          <el-table-column label="采购类型" width="80">
+            <template #default="{ $index }">
+              <el-select v-model="auxItems[$index].procurement_type" size="small" style="width:68px" @change="onAuxItemInput($index)">
+                <el-option label="物料" value="物料" />
+                <el-option label="成品" value="成品" />
+                <el-option label="辅料" value="辅料" />
+              </el-select>
+            </template>
+          </el-table-column>
+          <el-table-column label="金额" width="90" align="right">
             <template #default="{ $index }">
               ¥{{ ((auxItems[$index].qty || 0) * (auxItems[$index].unit_price || 0)).toFixed(2) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="工艺" min-width="80">
+            <template #default="{ $index }">
+              <el-input v-model="auxItems[$index].process_desc" placeholder="工艺" size="small" />
             </template>
           </el-table-column>
           <el-table-column label="操作" width="50">
@@ -269,17 +298,21 @@
         <div style="margin:8px 0">
           <el-button size="small" @click="addAuxItem">+ 添加辅料</el-button>
         </div>
+        <!-- 辅料小计 -->
+        <div style="text-align:right;margin:4px 16px;padding:4px 12px;background:#f5f7fa;border-radius:4px">
+          <strong>辅料小计：¥{{ auxSubtotal.toFixed(2) }}</strong>
+        </div>
 
         <!-- 金额汇总 -->
         <el-divider content-position="left">金额结算</el-divider>
-        <el-row :gutter="16">
+        <el-row :gutter="10">
           <el-col :span="6">
-            <el-form-item label="报价金额">
+            <el-form-item label="折前总额">
               <el-input v-model="form.quoteAmount" disabled placeholder="自动计算" />
             </el-form-item>
           </el-col>
           <el-col :span="6">
-            <el-form-item label="优惠金额">
+            <el-form-item label="折扣优惠">
               <el-input v-model.number="form.discount_amount" placeholder="0" @input="onSettlementChange" />
             </el-form-item>
           </el-col>
@@ -294,7 +327,7 @@
             </el-form-item>
           </el-col>
         </el-row>
-        <el-row :gutter="16">
+        <el-row :gutter="10">
           <el-col :span="6">
             <el-form-item label="已收定金">
               <el-input v-model.number="form.received" placeholder="0" @input="onSettlementChange" />
@@ -314,7 +347,7 @@
 
         <!-- 备注 -->
         <el-divider content-position="left">其他</el-divider>
-        <el-row :gutter="16">
+        <el-row :gutter="10">
           <el-col :span="12">
             <el-form-item label="订单备注">
               <el-input v-model="form.remark" type="textarea" :rows="2" placeholder="备注" />
@@ -369,10 +402,12 @@ function emptyMainItem() {
     style_code: '',
     process_desc: '',
     classification: '',
+    procurement_type: '物料',
     material_type: '主料',
     calc_type: 'per_meter',
     supplier_id: null,
     supplier_name: '',
+    is_purchase: true,
     note: '',
   }
 }
@@ -396,10 +431,12 @@ function emptyAuxItem() {
     style_code: '',
     process_desc: '',
     classification: '',
+    procurement_type: '辅料',
     material_type: '辅料',
     calc_type: 'per_meter',
     supplier_id: null,
     supplier_name: '',
+    is_purchase: true,
     note: '',
   }
 }
@@ -442,6 +479,10 @@ const computedDebt = computed(() => {
   return Math.max(0, (form.amount || 0) - (form.received || 0)).toFixed(2)
 })
 
+// 主料/辅料小计
+const mainSubtotal = computed(() => mainItems.reduce((s, i) => s + (i.amount || 0), 0))
+const auxSubtotal = computed(() => auxItems.reduce((s, i) => s + (i.qty || 0) * (i.unit_price || 0), 0))
+
 // 主料和辅料分开存储
 const mainItems = reactive([emptyMainItem()])
 const auxItems = reactive([])
@@ -480,7 +521,7 @@ function handleCustomerClear() {
 async function searchProducts(queryString, cb, index) {
   try {
     const res = await productApi.search(queryString || '')
-    const items = res.data || []
+    const items = (res.data || []).filter(p => p.product_type === '面料')
     cb(items.map(p => ({
       value: p.code,
       ...p,
@@ -502,6 +543,10 @@ async function handleProductSelect(item, index) {
   it.unit = item.unit || '米'
   it.supplier_id = item.supplier_id || null
   it.supplier_name = item.supplier_name || ''
+  it.is_purchase = item.is_purchase !== undefined ? item.is_purchase : true
+  // 根据产品类型自动设置采购类型：面料→物料，成品→成品，辅料→辅料
+  const typeMap = { '面料': '物料', '成品': '成品', '辅料': '辅料' }
+  it.procurement_type = typeMap[item.product_type] || '物料'
 
   // 自动生成辅料（如果产品有加工类型）
   if (item.processing_type_id) {
@@ -526,7 +571,7 @@ function handleProductClear(index) {
 async function searchAuxProducts(queryString, cb, index) {
   try {
     const res = await productApi.search(queryString || '')
-    const items = res.data || []
+    const items = (res.data || []).filter(p => p.product_type === '辅料' || p.product_type === '成品')
     cb(items.map(p => ({
       value: p.code,
       ...p,
@@ -545,6 +590,9 @@ function handleAuxProductSelect(item, index) {
   it.unit = item.unit || '米'
   it.supplier_id = item.supplier_id || null
   it.supplier_name = item.supplier_name || ''
+  it.is_purchase = item.is_purchase !== undefined ? item.is_purchase : true
+  const typeMap = { '面料': '物料', '成品': '成品', '辅料': '辅料' }
+  it.procurement_type = typeMap[item.product_type] || '辅料'
   updateAuxItemAmount(index)
 }
 
@@ -595,6 +643,7 @@ async function autoGenerateAuxItems(processingTypeId, mainItem) {
     aux.unit = rule.unit || '米'
     aux.qty = Math.round(qty * 100) / 100 || 1
     aux.unit_price = rule.unit_price || 0
+    aux.is_purchase = mainItem.is_purchase !== undefined ? mainItem.is_purchase : true
     auxItems.push(aux)
   }
   calcTotal()
@@ -816,4 +865,28 @@ onMounted(async () => {
 <style scoped>
 .page-header { display: flex; justify-content: space-between; align-items: center; }
 .page-header h3 { font-size: 18px; }
+
+/* 紧凑表格样式 */
+.compact-table { font-size: 11px; }
+.compact-table :deep(.el-table__header th) { padding: 1px 0; font-size: 11px; line-height: 1.4; }
+.compact-table :deep(.el-table__cell) { padding: 1px 2px; }
+.compact-table :deep(.el-table__body td) { padding: 1px 2px; line-height: 1.4; }
+.compact-table :deep(.el-table__inner-wrapper) { border: none; }
+.compact-table :deep(.el-table__border) { display: none; }
+.compact-table :deep(table) { border-collapse: collapse; }
+
+/* 页面紧凑 */
+:deep(.el-card__body) { padding: 10px 14px; }
+:deep(.el-card__header) { padding: 8px 14px; }
+h4 { margin: 0 0 4px 0; font-size: 13px; }
+:deep(.el-divider) { margin: 6px 0; }
+:deep(.el-form-item) { margin-bottom: 4px; }
+:deep(.el-form-item__label) { font-size: 12px; line-height: 28px; padding: 0 6px 0 0; }
+:deep(.el-form-item__content) { line-height: 28px; }
+:deep(.el-row) { margin-bottom: 0 !important; }
+:deep(.el-form-item--default) { margin-bottom: 4px; }
+:deep(.el-col) { padding-left: 6px !important; padding-right: 6px !important; }
+:deep(.el-input__wrapper) { padding: 1px 8px; }
+:deep(.el-input__inner) { height: 28px; line-height: 28px; }
+:deep(.el-autocomplete) { height: 28px; }
 </style>

@@ -9,6 +9,9 @@
             <el-button :type="tab === 'payable' ? 'primary' : 'default'" size="small" @click="tab = 'payable'">应付款</el-button>
             <el-button :type="tab === 'expense' ? 'primary' : 'default'" size="small" @click="tab = 'expense'">费用</el-button>
             <el-button :type="tab === 'summary' ? 'primary' : 'default'" size="small" @click="tab = 'summary'">汇总</el-button>
+            <el-button :type="tab === 'monthly' ? 'primary' : 'default'" size="small" @click="tab = 'monthly'; loadMonthlyReport()">月度报表</el-button>
+            <el-divider direction="vertical" />
+            <el-button :type="tab === 'deposit' ? 'primary' : 'default'" size="small" @click="tab = 'deposit'">定金管理</el-button>
           </div>
         </div>
       </template>
@@ -191,7 +194,67 @@
         </el-row>
         <el-empty v-else description="暂无汇总数据" />
       </div>
+
+      <!-- 月度报表 -->
+      <div v-show="tab === 'monthly'">
+        <el-form :inline="true" style="margin-bottom:16px">
+          <el-form-item label="年份">
+            <el-date-picker v-model="reportYear" type="year" placeholder="选择年份" value-format="YYYY" style="width:140px" @change="loadMonthlyReport" />
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="loadMonthlyReport">查询</el-button>
+          </el-form-item>
+        </el-form>
+
+        <el-table :data="monthlyReport?.months" v-loading="loadingReport" stripe style="width:100%">
+          <el-table-column label="月份" width="120">
+            <template #default="{ row }">{{ row.month }}</template>
+          </el-table-column>
+          <el-table-column label="收入" width="160" align="right">
+            <template #default="{ row }">
+              <span style="color:#67c23a">¥{{ row.revenue?.toFixed(2) }}</span>
+              <span style="color:#999;font-size:12px;margin-left:4px">({{ row.revenue_count }}笔)</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="支出" width="160" align="right">
+            <template #default="{ row }">
+              <span style="color:#f56c6c">¥{{ row.expense?.toFixed(2) }}</span>
+              <span style="color:#999;font-size:12px;margin-left:4px">({{ row.expense_count }}笔)</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="净利润" width="160" align="right">
+            <template #default="{ row }">
+              <span :style="{ color: row.net_profit >= 0 ? '#67c23a' : '#f56c6c', fontWeight: 'bold' }">
+                ¥{{ row.net_profit?.toFixed(2) }}
+              </span>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <!-- 汇总行 -->
+        <el-card v-if="monthlyReport" shadow="never" style="margin-top:16px">
+          <el-row :gutter="24">
+            <el-col :span="8" style="text-align:center">
+              <div style="color:#999;font-size:13px">年度总收入</div>
+              <div style="font-size:22px;font-weight:bold;color:#67c23a">¥{{ monthlyReport.total_revenue?.toFixed(2) }}</div>
+            </el-col>
+            <el-col :span="8" style="text-align:center">
+              <div style="color:#999;font-size:13px">年度总支出</div>
+              <div style="font-size:22px;font-weight:bold;color:#f56c6c">¥{{ monthlyReport.total_expense?.toFixed(2) }}</div>
+            </el-col>
+            <el-col :span="8" style="text-align:center">
+              <div style="color:#999;font-size:13px">年度净利润</div>
+              <div :style="{ fontSize: '22px', fontWeight: 'bold', color: monthlyReport.total_net_profit >= 0 ? '#67c23a' : '#f56c6c' }">
+                ¥{{ monthlyReport.total_net_profit?.toFixed(2) }}
+              </div>
+            </el-col>
+          </el-row>
+        </el-card>
+      </div>
     </el-card>
+
+    <!-- 定金管理 -->
+    <DepositPanel v-show="tab === 'deposit'" />
 
     <!-- 收款对话框 -->
     <el-dialog v-model="showReceive" title="收款确认" width="450px">
@@ -286,6 +349,7 @@
 import { ref, reactive, onMounted, watch } from 'vue'
 import { financeApi } from '@/api'
 import { ElMessage } from 'element-plus'
+import DepositPanel from './DepositPanel.vue'
 
 const tab = ref('receivable')
 const receivables = ref([])
@@ -303,6 +367,11 @@ const showPay = ref(false)
 const showExpenseDialog = ref(false)
 const receiveTarget = ref(null)
 const payTarget = ref(null)
+
+// 月度报表
+const monthlyReport = ref(null)
+const loadingReport = ref(false)
+const reportYear = ref(new Date().getFullYear().toString())
 
 const recQuery = reactive({ keyword: '', status: '', page: 1, page_size: 100 })
 const payQuery = reactive({ keyword: '', status: '', page: 1, page_size: 100 })
@@ -368,6 +437,14 @@ function showReceiveDialog(row) {
   showReceive.value = true
 }
 
+async function loadMonthlyReport() {
+  loadingReport.value = true
+  try {
+    const res = await financeApi.monthlyReport({ year: reportYear.value || undefined })
+    monthlyReport.value = res.data
+  } catch {} finally { loadingReport.value = false }
+}
+
 async function handleReceive() {
   receiving.value = true
   try {
@@ -418,6 +495,7 @@ watch(tab, (val) => {
   else if (val === 'payable') loadPayables()
   else if (val === 'expense') loadExpenses()
   else if (val === 'summary') loadSummary()
+  else if (val === 'monthly') loadMonthlyReport()
 })
 
 onMounted(() => {

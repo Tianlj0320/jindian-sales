@@ -27,7 +27,10 @@ class OrderItemCreate(BaseModel):
     process_desc: str = Field(default="")
     classification: str = Field(default="")
     material_type: str = Field(default="主料")
+    procurement_type: str = Field(default="物料")
+    is_purchase: bool = Field(default=True, description="是否采购: False=跳过此明细不生成采购单")
     calc_type: str = Field(default="per_meter")
+    panel_count: float = Field(default=0, description="幅数")
     supplier_id: int | None = None
     note: str = Field(default="")
 
@@ -47,6 +50,7 @@ class OrderCreate(BaseModel):
     round_amount: float = Field(default=0)
     discount_reason: str = Field(default="")
     received: float = Field(default=0)
+    deposit_deduction: float = Field(default=0, description="定金抵扣金额")
     content: str = Field(default="")
     remark: str = Field(default="")
     install_address: str = Field(default="")
@@ -109,6 +113,9 @@ class OrderItemResponse(BaseModel):
     classification: str
     calc_type: str = "per_meter"
     material_type: str
+    procurement_type: str = "物料"
+    is_purchase: bool = True
+    panel_count: float = 0
     supplier_id: int | None = None
     supplier_name: str = ""
     note: str

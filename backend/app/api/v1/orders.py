@@ -9,10 +9,14 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Query
 from sqlalchemy import and_, func, or_, select
 
-from app.api.deps import CurrentUserDep, PageDep, SessionDep
+from app.api.deps import CurrentUserDep, PageDep, SessionDep, require_permission
 from app.core.exceptions import BusinessError, NotFoundError
 from app.core.response import paginated, success
+from app.domain.after_sale import AfterSaleService
+from app.domain.customer import Customer
+from app.domain.deposit import Deposit
 from app.domain.order import Order, OrderItem
+from app.domain.order_fee import OrderFee
 from app.domain.installation import InstallationOrder
 from app.domain.purchase import PurchaseOrder, PurchaseOrderItem
 from app.services.status_engine import (
@@ -27,12 +31,13 @@ from app.services.status_engine import (
     normalize_status_key,
 )
 from app.schemas.order import OrderCreate, OrderItemCreate, OrderUpdate, OrderRollbackRequest
+from app.schemas.order_fee import OrderFeeCreate, OrderFeeUpdate
 
 router = APIRouter(prefix="/api/v1/orders", tags=["订单管理"])
 
 
 def _generate_order_no(session, today_str: str, seq: int) -> str:
-    """生成订单号：YYYYMMDD + 3位序号"""
+    """生成订单号：YYMMDD + 3位序号"""
     return f"{today_str}{seq:03d}"
 
 
@@ -56,6 +61,50 @@ def _build_history_entry(old_label: str, new_label: str, new_key: str) -> dict:
     }
 
 
+def _parse_order_ids(order_ids: str) -> list[int]:
+    """安全解析逗号分隔的 order_ids 字符串为 int 列表"""
+    if not order_ids:
+        return []
+    ids = []
+    for x in order_ids.split(","):
+        x = x.strip()
+        if x and x.isdigit():
+            ids.append(int(x))
+    return ids
+
+
+async def _check_po_rollback_safety(session, order) -> tuple[bool, str | None, list[dict]]:
+    """检查订单关联采购单的状态是否允许回退。
+
+    Returns:
+        (allowed, block_reason, po_details)
+        - allowed: True 表示安全，False 表示被阻塞
+        - block_reason: 仅当 allowed=False 时提供阻塞原因
+        - po_details: 关联采购单的 [{po_no, status}] 列表
+    """
+    # 查询 PurchaseOrder 表中 order_ids（逗号分隔的订单ID列表）包含当前订单的记录
+    result = await session.execute(
+        select(PurchaseOrder).where(PurchaseOrder.order_ids != '')
+    )
+    all_pos = result.scalars().all()
+    oid_str = str(order.id)
+    pos = [po for po in all_pos if oid_str in (po.order_ids or '').split(',')]
+
+    po_details = [{"po_no": po.po_no, "status": po.status} for po in pos]
+
+    for po in pos:
+        if po.status not in ("待采购", "已取消"):
+            return (
+                False,
+                f"采购单「{po.po_no}」状态为「{po.status}」，"
+                f"已涉及供应商环节。请联系供应商确认能否取消，"
+                f"将采购单状态改为「已取消」后再操作。",
+                po_details,
+            )
+
+    return True, None, po_details
+
+
 # ─── 订单列表 ─────────────────────────────────────────────────
 
 
@@ -67,6 +116,8 @@ async def list_orders(
     status_key: str | None = Query(None, description="状态筛选"),
     order_type: str | None = Query(None, description="订单类型"),
     keyword: str | None = Query(None, description="搜索订单号/客户名"),
+    date_from: str | None = Query(None, description="开始日期 YYYY-MM-DD"),
+    date_to: str | None = Query(None, description="结束日期 YYYY-MM-DD"),
     year: int | None = Query(None, description="年份"),
     month: int | None = Query(None, description="月份"),
 ):
@@ -80,6 +131,10 @@ async def list_orders(
     if keyword:
         kw = f"%{keyword}%"
         conditions.append(or_(Order.order_no.ilike(kw), Order.customer_name.ilike(kw)))
+    if date_from:
+        conditions.append(Order.order_date >= date_from)
+    if date_to:
+        conditions.append(Order.order_date <= date_to)
     if year:
         conditions.append(Order.order_date >= f"{year}-01-01")
         conditions.append(Order.order_date < f"{year + 1}-01-01")
@@ -99,7 +154,7 @@ async def list_orders(
     result = await session.execute(
         select(Order)
         .where(where)
-        .order_by(Order.created_at.desc())
+        .order_by(Order.id.desc())
         .offset(page.offset)
         .limit(page.page_size)
     )
@@ -201,7 +256,10 @@ async def get_order(session: SessionDep, current_user: CurrentUserDep, order_id:
             "process_desc": item.process_desc or "",
             "classification": item.classification or "",
             "calc_type": item.calc_type or "per_meter",
+            "panel_count": float(item.panel_count or 0),
             "material_type": item.material_type or "主料",
+            "procurement_type": item.procurement_type or "物料",
+            "is_purchase": item.is_purchase if hasattr(item, 'is_purchase') else True,
             "supplier_id": item.supplier_id,
             "supplier_name": sup_map.get(item.supplier_id, "") if item.supplier_id else "",
             "note": item.note or "",
@@ -236,6 +294,8 @@ async def get_order(session: SessionDep, current_user: CurrentUserDep, order_id:
         "install_time_slot": o.install_time_slot or "",
         "history": o.history or [],
         "items": items_data,
+        "parent_order_id": o.parent_order_id,
+        "orig_order_no": o.orig_order_no or "",
         "created_at": str(o.created_at)[:19] if o.created_at else "",
     })
 
@@ -247,7 +307,7 @@ async def get_order(session: SessionDep, current_user: CurrentUserDep, order_id:
 async def create_order(session: SessionDep, current_user: CurrentUserDep, req: OrderCreate):
     """创建订单"""
     now = datetime.now(timezone.utc)
-    today_str = now.strftime("%Y%m%d")
+    today_str = now.strftime("%y%m%d")
 
     # 生成订单号
     seq_result = await session.execute(
@@ -338,11 +398,32 @@ async def create_order(session: SessionDep, current_user: CurrentUserDep, req: O
             process_desc=item_data.process_desc,
             classification=item_data.classification,
             material_type=item_data.material_type,
+            procurement_type=item_data.procurement_type,
+            is_purchase=item_data.is_purchase,
             calc_type=item_data.calc_type,
+            panel_count=item_data.panel_count,
             supplier_id=item_data.supplier_id,
             note=item_data.note,
         )
         session.add(item)
+
+    # 定金抵扣
+    deposit_deduction = float(req.deposit_deduction or 0)
+    if deposit_deduction > 0 and req.customer_id:
+        cust_result = await session.execute(select(Customer).where(Customer.id == req.customer_id))
+        cust = cust_result.scalar_one_or_none()
+        if cust and float(cust.deposit_balance or 0) >= deposit_deduction:
+            cust.deposit_balance = float(cust.deposit_balance or 0) - deposit_deduction
+            session.add(Deposit(
+                customer_id=req.customer_id,
+                amount=-deposit_deduction,
+                balance=cust.deposit_balance,
+                payment_method="抵扣",
+                received_at=datetime.now(),
+                operator_id=current_user.id,
+                operator_name=current_user.name,
+                remark=f"订单 {order_no} 抵扣定金",
+            ))
 
     await session.flush()
 
@@ -439,8 +520,11 @@ async def update_order(
                 process_desc=item_data.process_desc,
                 classification=item_data.classification,
                 calc_type=item_data.calc_type,
+                panel_count=item_data.panel_count,
                 supplier_id=item_data.supplier_id,
                 material_type=item_data.material_type,
+                procurement_type=item_data.procurement_type,
+                is_purchase=item_data.is_purchase,
                 note=item_data.note,
             )
             session.add(item)
@@ -449,18 +533,35 @@ async def update_order(
     return success(data={"id": order_id}, message="订单更新成功")
 
 
-# ─── 采购拆分逻辑 ─────────────────────────────────────────────
+# ─── 采购拆分逻辑（V4: 按 procurement_type 分类） ──────────────
 
 
 async def _build_split_plan(session) -> dict:
-    """构建拆分计划（预览用），从已确认订单中提取数据，按供应商分组、合并产品，不写入数据库
+    """构建拆分计划 - 按 procurement_type + supplier 分组
+
+    采购分类逻辑:
+    - procurement_type='成品' → 跳过加工，直接采购
+    - procurement_type='物料' → 采购物料，送加工
+    - procurement_type='辅料' → 采购辅料
+    - 同一供应商的 物料+成品+辅料 合并到一张采购单，分区显示
+    - is_purchase=False → 跳过（外加工单位负责）
 
     Returns:
     {
-        "main_orders": [{supplier info, items[], total_amount}, ...],
-        "aux_orders": [{supplier info, items[], total_amount}, ...],
+        "orders": [{
+            supplier_id, supplier_name, contact, phone, qq, wechat,
+            bank_account, bank_name, payee,
+            "sections": {
+                "物料": {"items": [...], "count": N, "total_amount": X},
+                "成品": {"items": [...], "count": N, "total_amount": X},
+                "辅料": {"items": [...], "count": N, "total_amount": X},
+            },
+            "total_amount": X,
+            "item_count": N
+        }, ...],
         "order_ids": [1,2,3],
         "order_nos": ["20260508001", ...],
+        "order_count": N
     }
     """
     from app.domain.product import Supplier as SupModel
@@ -471,20 +572,29 @@ async def _build_split_plan(session) -> dict:
     )
     orders = result.scalars().all()
     if not orders:
-        return {"main_orders": [], "aux_orders": [], "order_ids": [], "order_nos": []}
+        return {"orders": [], "order_ids": [], "order_nos": [], "order_count": 0}
 
     order_ids = [o.id for o in orders]
     order_nos = [o.order_no for o in orders]
 
-    # 获取所有订单明细
+    from app.domain.product import Product as ProdModel
+
+    # 获取所有订单明细，仅包含 is_purchase=True 的项（同时检查产品和订单级配置）
     items_result = await session.execute(
-        select(OrderItem).where(OrderItem.order_id.in_(order_ids))
+        select(OrderItem).join(ProdModel, OrderItem.product_id == ProdModel.id, isouter=True).where(
+            OrderItem.order_id.in_(order_ids),
+            OrderItem.is_purchase == True,
+            or_(
+                ProdModel.is_purchase == True,
+                ProdModel.is_purchase.is_(None),
+                ProdModel.id.is_(None),
+            ),
+        )
     )
     all_items = items_result.scalars().all()
 
-    # 分离主料和辅料
-    main_items = [it for it in all_items if it.material_type == "主料"]
-    aux_items = [it for it in all_items if it.material_type != "主料"]
+    if not all_items:
+        return {"orders": [], "order_ids": order_ids, "order_nos": order_nos, "order_count": len(orders)}
 
     async def _resolve_supplier(sid: int | str) -> dict:
         """根据 supplier_id 获取供应商全套信息"""
@@ -494,6 +604,7 @@ async def _build_split_plan(session) -> dict:
             )).scalar_one_or_none()
             return {
                 "id": placeholder.id if placeholder else None,
+                "code": "",
                 "name": placeholder.name if placeholder else "待定供应商",
                 "contact": "", "phone": "",
                 "qq": "", "wechat": "",
@@ -505,6 +616,7 @@ async def _build_split_plan(session) -> dict:
         if sup:
             return {
                 "id": sup.id,
+                "code": sup.code or "",
                 "name": sup.name,
                 "contact": sup.contact or "",
                 "phone": sup.phone or "",
@@ -515,13 +627,13 @@ async def _build_split_plan(session) -> dict:
                 "payee": sup.payee or "",
             }
         return {
-            "id": None, "name": "待定供应商",
+            "id": None, "code": "", "name": "待定供应商",
             "contact": "", "phone": "",
             "qq": "", "wechat": "",
             "bank_account": "", "bank_name": "", "payee": "",
         }
 
-    def _merge_items(group_items: list, material_label: str) -> tuple[list, float]:
+    def _merge_section_items(group_items: list, procurement_type_label: str) -> tuple[list, float]:
         """合并同一产品，返回(merged_items, total_amount)"""
         merged: dict = {}
         for it in group_items:
@@ -542,26 +654,47 @@ async def _build_split_plan(session) -> dict:
                     "unit_price": float(it.unit_price or 0),
                     "amount": float(it.amount or 0),
                     "specs": [spec] if spec else [],
-                    "material_type": material_label,
+                    "procurement_type": procurement_type_label,
                 }
         items = list(merged.values())
         total = sum(it["amount"] for it in items)
         return items, total
 
-    def _build_supplier_groups(items: list) -> dict:
-        """按 supplier_id 分组"""
-        groups: dict = {}
-        for it in items:
-            sid = it.supplier_id if it.supplier_id else "pending"
-            groups.setdefault(sid, []).append(it)
-        return groups
+    # 按 supplier_id 分组
+    supplier_groups: dict = {}
+    for it in all_items:
+        sid = it.supplier_id if it.supplier_id else "pending"
+        supplier_groups.setdefault(sid, []).append(it)
 
-    main_orders = []
-    for sid, group_items in _build_supplier_groups(main_items).items():
+    # 构建返回结果：相同 supplier 的所有 procurement_type 合并到一个 order
+    orders = []
+    PROCUREMENT_TYPES = ["物料", "成品", "辅料"]
+
+    for sid, group_items in supplier_groups.items():
         sinfo = await _resolve_supplier(sid)
-        merged_items, total_amt = _merge_items(group_items, "主料")
-        main_orders.append({
+
+        sections = {}
+        section_total = 0
+        section_count = 0
+
+        for pt in PROCUREMENT_TYPES:
+            pt_items = [it for it in group_items if it.procurement_type == pt]
+            if pt_items:
+                merged_items, total_amt = _merge_section_items(pt_items, pt)
+                sections[pt] = {
+                    "items": merged_items,
+                    "count": len(merged_items),
+                    "total_amount": total_amt,
+                }
+                section_total += total_amt
+                section_count += len(merged_items)
+
+        if not sections:
+            continue
+
+        orders.append({
             "supplier_id": sinfo["id"],
+            "supplier_code": sinfo["code"],
             "supplier_name": sinfo["name"],
             "contact": sinfo["contact"],
             "phone": sinfo["phone"],
@@ -570,33 +703,13 @@ async def _build_split_plan(session) -> dict:
             "bank_account": sinfo["bank_account"],
             "bank_name": sinfo["bank_name"],
             "payee": sinfo["payee"],
-            "items": merged_items,
-            "total_amount": total_amt,
-            "item_count": len(merged_items),
-        })
-
-    aux_orders = []
-    for sid, group_items in _build_supplier_groups(aux_items).items():
-        sinfo = await _resolve_supplier(sid)
-        merged_items, total_amt = _merge_items(group_items, "辅料")
-        aux_orders.append({
-            "supplier_id": sinfo["id"],
-            "supplier_name": sinfo["name"],
-            "contact": sinfo["contact"],
-            "phone": sinfo["phone"],
-            "qq": sinfo["qq"],
-            "wechat": sinfo["wechat"],
-            "bank_account": sinfo["bank_account"],
-            "bank_name": sinfo["bank_name"],
-            "payee": sinfo["payee"],
-            "items": merged_items,
-            "total_amount": total_amt,
-            "item_count": len(merged_items),
+            "sections": sections,
+            "total_amount": section_total,
+            "item_count": section_count,
         })
 
     return {
-        "main_orders": main_orders,
-        "aux_orders": aux_orders,
+        "orders": orders,
         "order_ids": order_ids,
         "order_nos": order_nos,
         "order_count": len(orders),
@@ -606,7 +719,7 @@ async def _build_split_plan(session) -> dict:
 async def _auto_split_purchase(session) -> list[str]:
     """执行拆分：根据拆分计划创建采购单，更新订单状态"""
     plan = await _build_split_plan(session)
-    if not plan["order_ids"]:
+    if not plan["order_ids"] or not plan["orders"]:
         return []
 
     order_ids = plan["order_ids"]
@@ -614,7 +727,7 @@ async def _auto_split_purchase(session) -> list[str]:
     today_str = datetime.now(timezone.utc).strftime("%Y%m%d")
     po_nos = []
 
-    async def _create_po(supplier_order: dict, material_label: str, remark_label: str) -> str:
+    for supplier_order in plan["orders"]:
         seq_r = await session.execute(
             select(func.count(PurchaseOrder.id)).where(
                 PurchaseOrder.po_no.like(f"PO{today_str}%")
@@ -625,6 +738,10 @@ async def _auto_split_purchase(session) -> list[str]:
         po_nos.append(po_no)
 
         order_ids_str = ",".join(str(oid) for oid in sorted(order_ids))
+
+        # 构建备注：列出所有采购类型
+        section_types = list(supplier_order["sections"].keys())
+        remark_label = "+".join(section_types) + "采购"
 
         po = PurchaseOrder(
             po_no=po_no,
@@ -648,30 +765,25 @@ async def _auto_split_purchase(session) -> list[str]:
         session.add(po)
         await session.flush()
 
-        for m in supplier_order["items"]:
-            poi = PurchaseOrderItem(
-                purchase_order_id=po.id,
-                product_id=m["product_id"],
-                product_name=m["product_name"],
-                product_code=m["product_code"],
-                spec="；".join(m.get("specs", [])),
-                quantity=m["qty"],
-                unit=m["unit"],
-                unit_price=m["unit_price"],
-                subtotal=m["amount"],
-                material_type=material_label,
-            )
-            session.add(poi)
-
-        return po_no
-
-    # 创建主料采购单
-    for so in plan["main_orders"]:
-        await _create_po(so, "主料", "主料采购")
-
-    # 创建辅料采购单
-    for so in plan["aux_orders"]:
-        await _create_po(so, "辅料", "辅料集中采购")
+        # 遍历所有 section 合并明细到同一张采购单
+        procurement_to_material = {"物料": "主料", "成品": "成品", "辅料": "辅料"}
+        for pt_label, section in supplier_order["sections"].items():
+            material_label = procurement_to_material.get(pt_label, "主料")
+            for m in section["items"]:
+                poi = PurchaseOrderItem(
+                    purchase_order_id=po.id,
+                    product_id=m["product_id"],
+                    product_name=m["product_name"],
+                    product_code=m["product_code"],
+                    spec="；".join(m.get("specs", [])),
+                    quantity=m["qty"],
+                    unit=m["unit"],
+                    unit_price=m["unit_price"],
+                    subtotal=m["amount"],
+                    material_type=material_label,
+                    procurement_type=pt_label,
+                )
+                session.add(poi)
 
     # 将所有已处理订单状态更新为"已分单"
     now_ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
@@ -722,7 +834,10 @@ async def split_order_purchase(session: SessionDep, current_user: CurrentUserDep
 
 
 @router.post("/{order_id}/advance")
-async def advance_order(session: SessionDep, current_user: CurrentUserDep, order_id: int):
+async def advance_order(
+    session: SessionDep, current_user: CurrentUserDep,
+    order_id: int, _: None = require_permission("orders"),
+):
     """订单状态推进到下一阶段"""
     result = await session.execute(select(Order).where(Order.id == order_id))
     o = result.scalar_one_or_none()
@@ -837,7 +952,8 @@ async def advance_order(session: SessionDep, current_user: CurrentUserDep, order
 
 @router.put("/{order_id}/status")
 async def update_order_status(
-    session: SessionDep, current_user: CurrentUserDep, order_id: int, status_key: str = Query(...),
+    session: SessionDep, current_user: CurrentUserDep,
+    order_id: int, status_key: str = Query(...), _: None = require_permission("orders"),
 ):
     """直接跳转到指定状态"""
     result = await session.execute(select(Order).where(Order.id == order_id))
@@ -873,8 +989,7 @@ async def update_order_status(
 @router.get("/{order_id}/rollback-options")
 async def rollback_options(session: SessionDep, current_user: CurrentUserDep, order_id: int):
     """获取订单可回滚的状态列表（包含历史回退 + 异常处理）"""
-    if current_user.role not in ("admin", "manager"):
-        raise BusinessError("无权限执行状态回滚，仅管理员和店长可操作")
+    # 角色检查已移除 — 权限由 PO 安全检查和历史校验保障
 
     result = await session.execute(select(Order).where(Order.id == order_id))
     o = result.scalar_one_or_none()
@@ -882,6 +997,9 @@ async def rollback_options(session: SessionDep, current_user: CurrentUserDep, or
         raise NotFoundError("订单不存在")
 
     current = o.status_key
+
+    # 检查关联采购单的安全状态
+    po_allowed, po_block_reason, po_statuses = await _check_po_rollback_safety(session, o)
 
     # 1. 正常回滚：历史中经过的状态
     visited = set()
@@ -904,12 +1022,16 @@ async def rollback_options(session: SessionDep, current_user: CurrentUserDep, or
                 "key": key,
                 "label": info.get("label", key),
                 "color": info.get("color", "#909399"),
+                "allowed": po_allowed,
+                "block_reason": po_block_reason if not po_allowed else None,
             })
 
     step_order = {k: i for i, k in enumerate(STATUS_STEPS)}
     rollback_options.sort(key=lambda x: step_order.get(x["key"], 999))
 
-    # 2. 异常处理选项（从非终态可跳转）
+    # 2. 异常处理选项
+    exception_allowed = po_allowed  # 异常处理同样受 PO 状态限制
+    exception_block_reason = po_block_reason
     exception_options = []
     if current not in TERMINAL_STATUSES and current != "after_sale":
         exception_options.append({
@@ -917,6 +1039,8 @@ async def rollback_options(session: SessionDep, current_user: CurrentUserDep, or
             "label": "售后中",
             "color": "#ef4444",
             "description": "订单转入售后流程，适用于客户投诉、产品质量问题等异常情况",
+            "allowed": exception_allowed,
+            "block_reason": exception_block_reason if not exception_allowed else None,
         })
     if current not in TERMINAL_STATUSES and current != "cancelled":
         exception_options.append({
@@ -924,6 +1048,8 @@ async def rollback_options(session: SessionDep, current_user: CurrentUserDep, or
             "label": "已取消",
             "color": "#d9d9d9",
             "description": "取消该订单，适用于客户退款、无法履约等情况",
+            "allowed": exception_allowed,
+            "block_reason": exception_block_reason if not exception_allowed else None,
         })
 
     return success(data={
@@ -932,6 +1058,7 @@ async def rollback_options(session: SessionDep, current_user: CurrentUserDep, or
         "current_color": get_status_color(current),
         "rollback_options": rollback_options,
         "exception_options": exception_options,
+        "po_statuses": po_statuses,  # 前端可据此展示 PO 状态
     })
 
 
@@ -939,9 +1066,8 @@ async def rollback_options(session: SessionDep, current_user: CurrentUserDep, or
 async def rollback_order_status(
     session: SessionDep, current_user: CurrentUserDep, order_id: int, req: OrderRollbackRequest,
 ):
-    """【管理员/店长】订单状态回退（仅可回退到历史中经过的状态；异常处理可跳转到售后/取消）"""
-    if current_user.role not in ("admin", "manager"):
-        raise BusinessError("无权限执行状态回滚，仅管理员和店长可操作")
+    """订单状态回退（仅可回退到历史中经过的状态；异常处理可跳转到售后/取消）"""
+    # 角色检查已移除 — 权限由 PO 安全检查和历史校验保障
 
     result = await session.execute(select(Order).where(Order.id == order_id))
     o = result.scalar_one_or_none()
@@ -980,7 +1106,12 @@ async def rollback_order_status(
     new_label = get_status_label(status_key)
     new_color = get_status_color(status_key)
 
-    # 记录回滚/异常历史
+    # ── 采购单安全性校验：任何非"待采购"/"已取消"的 PO 都阻止回退 ──
+    po_allowed, po_block_reason, po_details = await _check_po_rollback_safety(session, o)
+    if not po_allowed:
+        raise BusinessError(po_block_reason)
+
+    # ── 记录回滚/异常历史 ──
     history = o.history or []
     detail_parts = [f"{current_user.name}({current_user.role})：从「{old_label}」跳转至「{new_label}」"]
     if req.remark:
@@ -993,38 +1124,221 @@ async def rollback_order_status(
         "detail": "；".join(detail_parts),
     })
 
-    # 异常跳转时：清除相关采购单和安装单
-    if is_exception:
-        # 清除采购单
-        from app.domain.purchase import PurchaseOrder as POModel
-        pos = await session.execute(
-            select(POModel).where(POModel.order_ids.contains(str(o.id)))
-        )
-        for po in pos.scalars().all():
-            await session.delete(po)
+    # ── 关联单据清理 ──
+    # 查找所有关联当前订单的采购单（order_ids 逗号分隔列表中包含此订单ID）
+    po_result = await session.execute(
+        select(PurchaseOrder).where(PurchaseOrder.order_ids != '')
+    )
+    all_pos = po_result.scalars().all()
+    oid_str = str(o.id)
+    related_pos = [po for po in all_pos if oid_str in (po.order_ids or '').split(',')]
 
+    if is_exception:
+        # 异常跳转：删除所有关联的采购单和安装单
+        for po in related_pos:
+            await session.delete(po)
         # 清除安装单
-        from app.domain.installation import InstallationOrder as IOModel
         ins_orders = await session.execute(
-            select(IOModel).where(IOModel.order_id == o.id)
+            select(InstallationOrder).where(InstallationOrder.order_id == o.id)
         )
         for ins in ins_orders.scalars().all():
             await session.delete(ins)
 
     else:
-        # 正常回滚：如果回滚到已确认之前，清除采购拆分相关数据
+        # 正常回退：只要当前状态 ≥ split（已有采购单生成），删除所有"待采购"状态的采购单
         status_order_map = {k: i for i, k in enumerate(STATUS_STEPS)}
         if status_key in status_order_map and o.status_key in status_order_map:
-            if status_order_map.get(status_key, 0) < status_order_map.get("confirmed", 99) and status_order_map.get(o.status_key, 0) >= status_order_map.get("confirmed", 99):
-                o.order_ids = ""
+            current_at_or_after_split = status_order_map.get(o.status_key, 0) >= status_order_map.get("split", 99)
+
+            if current_at_or_after_split:
+                for po in related_pos:
+                    if po.status == "待采购":
+                        await session.delete(po)
 
     o.status_key = status_key
     o.status_label = new_label
     o.status_color = new_color
     o.history = history
 
+    # ── 异常处理 → 售后：自动创建售后单 ──
+    if status_key == "after_sale":
+        now = datetime.now(timezone.utc).astimezone()
+        today_str = now.strftime("%Y%m%d")
+        seq_result = await session.execute(
+            select(func.count(AfterSaleService.id)).where(
+                AfterSaleService.service_no.like(f"AS{today_str}%")
+            )
+        )
+        seq = (seq_result.scalar() or 0) + 1
+        service_no = f"AS{today_str}{seq:03d}"
+
+        session.add(AfterSaleService(
+            service_no=service_no,
+            order_id=o.id,
+            order_no=o.order_no or "",
+            customer_name=o.customer_name or "",
+            customer_phone=o.customer_phone or "",
+            service_type="other_issue",
+            service_type_label="其他售后",
+            description=req.remark or f"订单异常处理转入售后（原状态: {old_label}）",
+            status="待处理",
+            remark=req.remark or "",
+        ))
+
     await session.flush()
     return success(data={"id": order_id, "status_key": status_key}, message=f"状态已跳转至「{new_label}」")
+
+
+# ─── 订单费用管理 ──────────────────────────────────────────────
+
+
+@router.get("/{order_id}/fees")
+async def list_order_fees(session: SessionDep, current_user: CurrentUserDep, order_id: int):
+    """获取订单费用列表"""
+    result = await session.execute(
+        select(OrderFee).where(OrderFee.order_id == order_id).order_by(OrderFee.id.desc())
+    )
+    fees = result.scalars().all()
+    return success(data=[
+        {
+            "id": f.id,
+            "order_id": f.order_id,
+            "fee_type": f.fee_type,
+            "fee_type_label": f.fee_type_label,
+            "amount": float(f.amount),
+            "remark": f.remark,
+            "operator_name": f.operator_name,
+            "created_at": str(f.created_at)[:19] if f.created_at else "",
+            "updated_at": str(f.updated_at)[:19] if f.updated_at else "",
+        }
+        for f in fees
+    ])
+
+
+@router.post("/{order_id}/fees")
+async def create_order_fee(session: SessionDep, current_user: CurrentUserDep, order_id: int, req: OrderFeeCreate):
+    """添加一笔订单费用"""
+    # 验证订单存在
+    result = await session.execute(select(Order).where(Order.id == order_id))
+    order = result.scalar_one_or_none()
+    if not order:
+        raise NotFoundError("订单不存在")
+
+    fee = OrderFee(
+        order_id=order_id,
+        fee_type=req.fee_type,
+        fee_type_label=req.fee_type_label or req.fee_type,
+        amount=req.amount,
+        remark=req.remark,
+        operator_name=current_user.name,
+    )
+    session.add(fee)
+    await session.flush()
+
+    return success(data={"id": fee.id}, message="费用添加成功")
+
+
+@router.put("/{order_id}/fees/{fee_id}")
+async def update_order_fee(session: SessionDep, current_user: CurrentUserDep, order_id: int, fee_id: int, req: OrderFeeUpdate):
+    """修改订单费用"""
+    result = await session.execute(
+        select(OrderFee).where(OrderFee.id == fee_id, OrderFee.order_id == order_id)
+    )
+    fee = result.scalar_one_or_none()
+    if not fee:
+        raise NotFoundError("费用记录不存在")
+
+    update_data = req.model_dump(exclude_none=True)
+    for field, value in update_data.items():
+        setattr(fee, field, value)
+    await session.flush()
+
+    return success(data={"id": fee_id}, message="费用更新成功")
+
+
+@router.delete("/{order_id}/fees/{fee_id}")
+async def delete_order_fee(session: SessionDep, current_user: CurrentUserDep, order_id: int, fee_id: int):
+    """删除订单费用"""
+    result = await session.execute(
+        select(OrderFee).where(OrderFee.id == fee_id, OrderFee.order_id == order_id)
+    )
+    fee = result.scalar_one_or_none()
+    if not fee:
+        raise NotFoundError("费用记录不存在")
+
+    await session.delete(fee)
+    await session.flush()
+    return success(message="费用已删除")
+
+
+# ─── 补单管理 ─────────────────────────────────────────────────
+
+
+@router.post("/{order_id}/create-supplementary")
+async def create_supplementary_order(session: SessionDep, current_user: CurrentUserDep, order_id: int):
+    """基于现有订单创建补单（BZ-单号），用于原订单无法修改/回退时补充新增内容"""
+    result = await session.execute(select(Order).where(Order.id == order_id))
+    o = result.scalar_one_or_none()
+    if not o:
+        raise NotFoundError("订单不存在")
+
+    # 生成补单号
+    now = datetime.now(timezone.utc)
+    today_str = now.strftime("%Y%m%d")
+    seq_result = await session.execute(
+        select(func.count(Order.id)).where(Order.order_no.like(f"BZ-{today_str}%"))
+    )
+    seq = (seq_result.scalar() or 0) + 1
+    bz_no = f"BZ-{today_str}{seq:03d}"
+
+    new_order = Order(
+        order_no=bz_no,
+        order_type=o.order_type,
+        customer_id=o.customer_id,
+        customer_name=o.customer_name,
+        customer_phone=o.customer_phone,
+        salesperson_id=o.salesperson_id,
+        salesperson_name=o.salesperson_name,
+        install_address=o.install_address,
+        delivery_method=o.delivery_method,
+        parent_order_id=o.id,
+        orig_order_no=o.order_no,
+        status_key="initial",
+        status_label="待量尺",
+        status_color="#909399",
+        order_date=today_str,
+        history=_build_order_history("initial"),
+    )
+    session.add(new_order)
+    await session.flush()
+
+    return success(
+        data={"id": new_order.id, "order_no": new_order.order_no},
+        message=f"补单「{bz_no}」创建成功",
+    )
+
+
+@router.get("/{order_id}/supplementary-orders")
+async def list_supplementary_orders(session: SessionDep, current_user: CurrentUserDep, order_id: int):
+    """获取指定订单的所有补单列表"""
+    result = await session.execute(
+        select(Order).where(Order.parent_order_id == order_id).order_by(Order.id.desc())
+    )
+    orders = result.scalars().all()
+    return success(data=[
+        {
+            "id": o.id,
+            "order_no": o.order_no,
+            "order_type": o.order_type or "",
+            "amount": float(o.amount or 0),
+            "status_key": o.status_key,
+            "status_label": o.status_label,
+            "status_color": o.status_color,
+            "order_date": o.order_date or "",
+            "created_at": str(o.created_at)[:19] if o.created_at else "",
+        }
+        for o in orders
+    ])
 
 
 # ─── 删除订单 ─────────────────────────────────────────────────

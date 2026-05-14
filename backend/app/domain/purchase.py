@@ -50,6 +50,9 @@ class PurchaseOrder(Base, TimestampMixin):
     # 内容
     remark: Mapped[str] = mapped_column(String(500), default="", comment="备注")
 
+    # QR码
+    qrcode_base64: Mapped[str | None] = mapped_column(Text, nullable=True, comment="QR码(base64)")
+
     # 明细（JSON冗余）
     items: Mapped[list | None] = mapped_column(JSON, default=list, comment="采购明细列表")
 
@@ -82,7 +85,9 @@ class PurchaseOrderItem(Base, TimestampMixin):
 
     # 到货
     arrived_qty: Mapped[float] = mapped_column(DECIMAL(10, 2), default=0, comment="已到货数量")
-    material_type: Mapped[str] = mapped_column(String(20), default="主料", comment="主料/辅料")
+    material_type: Mapped[str] = mapped_column(String(20), default="主料", comment="主料/辅料/成品")
+    procurement_type: Mapped[str] = mapped_column(String(10), default="物料", comment="采购类型: 物料/成品/辅料")
+    process_desc: Mapped[str] = mapped_column(String(200), default="", comment="工艺描述")
     remark: Mapped[str] = mapped_column(String(200), default="", comment="备注")
 
     # 关系

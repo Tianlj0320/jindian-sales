@@ -50,7 +50,7 @@ function applyTheme(themeId) {
  */
 function preloadTheme() {
   const id = localStorage.getItem(THEME_KEY)
-  if (id && ['theme1', 'theme2', 'theme3'].includes(id)) {
+  if (id && THEME_NAMES[id]) {
     document.write(`<link rel="stylesheet" id="theme-css" href="/themes/${id}.css">`)
     return id
   }

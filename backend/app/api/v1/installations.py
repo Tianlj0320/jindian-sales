@@ -19,6 +19,7 @@ from app.domain.installation import (
     Installer,
 )
 from app.domain.order import Order
+from app.services.status_engine import get_status_label, get_status_color
 from app.schemas.installation import (
     InstallationOrderCreate,
     InstallTeamCreate,
@@ -323,13 +324,37 @@ async def create_installation_order(
         remark=req.remark,
     )
     session.add(ins)
+
+    # ── Auto-advance: completed → install_scheduled ──
+    if order.status_key == "completed":
+        old_label = order.status_label
+        new_key = "install_scheduled"
+        new_label = get_status_label(new_key)
+        new_color = get_status_color(new_key)
+        history = order.history or []
+        history.append({
+            "s": old_label,
+            "s2": new_label,
+            "c": new_key,
+            "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
+            "detail": f"安装单「{ins_no}」已创建，自动推进到「已派工」",
+        })
+        order.status_key = new_key
+        order.status_label = new_label
+        order.status_color = new_color
+        order.history = history
+
     await session.flush()
     return success(data={"id": ins.id, "ins_no": ins_no}, message="安装单创建成功")
 
 
 @router.put("/orders/{ins_id}/status")
 async def update_installation_status(
-    session: SessionDep, current_user: CurrentUserDep, ins_id: int, status: str = Query(...),
+    session: SessionDep, current_user: CurrentUserDep, ins_id: int,
+    status: str = Query(...),
+    team_id: int | None = Query(None, description="安装队ID"),
+    scheduled_date: str | None = Query(None, description="预约日期 YYYY-MM-DD"),
+    install_time_slot: str | None = Query(None, description="安装时段"),
 ):
     """更新安装单状态"""
     result = await session.execute(select(InstallationOrder).where(InstallationOrder.id == ins_id))
@@ -337,11 +362,74 @@ async def update_installation_status(
     if not ins:
         raise NotFoundError("安装单不存在")
 
+    # 派工时保存安装队和排期信息
+    if team_id is not None:
+        ins.team_id = team_id
+    if scheduled_date is not None:
+        from datetime import date as date_type
+        ins.scheduled_date = date_type.fromisoformat(scheduled_date) if isinstance(scheduled_date, str) else scheduled_date
+    if install_time_slot is not None:
+        ins.install_time_slot = install_time_slot
+
     ins.status = status
     if status == "安装中":
         ins.actual_start_time = datetime.now(timezone.utc)
     elif status == "已完成":
         ins.actual_end_time = datetime.now(timezone.utc)
 
+        # ── Auto-advance order: install_scheduled → installed ──
+        order_result = await session.execute(select(Order).where(Order.id == ins.order_id))
+        o = order_result.scalar_one_or_none()
+        if o and o.status_key == "install_scheduled":
+            old_label = o.status_label
+            new_key = "installed"
+            new_label = get_status_label(new_key)
+            new_color = get_status_color(new_key)
+            history = o.history or []
+            history.append({
+                "s": old_label,
+                "s2": new_label,
+                "c": new_key,
+                "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
+                "detail": f"安装单「{ins.ins_no or ''}」已完成，自动推进到「已安装」",
+            })
+            o.status_key = new_key
+            o.status_label = new_label
+            o.status_color = new_color
+            o.history = history
+
     await session.flush()
     return success(data={"id": ins_id, "status": status}, message="安装单状态已更新")
+
+
+# ─── 安装统计 ──────────────────────────────────────────
+
+
+@router.get("/stats")
+async def get_installation_stats(session: SessionDep, current_user: CurrentUserDep):
+    """安装单统计数据（待安装/安装中/已完成数量）"""
+    pending = (await session.execute(
+        select(func.count()).select_from(InstallationOrder).where(
+            InstallationOrder.status.in_(["pending", "scheduled"])
+        )
+    )).scalar() or 0
+    installing = (await session.execute(
+        select(func.count()).select_from(InstallationOrder).where(
+            InstallationOrder.status == "installing"
+        )
+    )).scalar() or 0
+    completed = (await session.execute(
+        select(func.count()).select_from(InstallationOrder).where(
+            InstallationOrder.status == "completed"
+        )
+    )).scalar() or 0
+    all_count = (await session.execute(
+        select(func.count()).select_from(InstallationOrder)
+    )).scalar() or 0
+
+    return success(data={
+        "pending": pending,
+        "installing": installing,
+        "completed": completed,
+        "total": all_count,
+    })

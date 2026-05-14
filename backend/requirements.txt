@@ -28,3 +28,4 @@ ruff>=0.3.0
 
 # Other
 python-dateutil>=2.9.0
+qrcode[pil]>=7.4.0

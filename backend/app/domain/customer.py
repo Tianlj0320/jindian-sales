@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from sqlalchemy import JSON, Column, Date, DateTime, Integer, String, Text
+from sqlalchemy import JSON, Column, Date, DateTime, DECIMAL, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.domain.base import Base, SoftDeleteMixin, TimestampMixin
@@ -33,6 +33,7 @@ class Customer(Base, TimestampMixin, SoftDeleteMixin):
     total_orders: Mapped[int] = mapped_column(Integer, default=0, comment="累计订单数")
     total_amount: Mapped[float] = mapped_column(default=0.0, comment="累计金额")
     debt: Mapped[float] = mapped_column(default=0.0, comment="当前欠款")
+    deposit_balance: Mapped[float] = mapped_column(DECIMAL(12, 2), default=0, comment="定金余额")
 
     # 跟进
     next_followup_date: Mapped[date | None] = mapped_column(Date, nullable=True, comment="下次跟进日期")

@@ -25,6 +25,23 @@ class ProductCategory(Base, TimestampMixin):
     children = relationship("ProductCategory", backref="parent", remote_side=[id])
 
 
+class ProductSeries(Base, TimestampMixin):
+    """产品系列/木板（二级分类，隶属于供应商）"""
+
+    __tablename__ = "product_series"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False, comment="系列名称")
+    code: Mapped[str] = mapped_column(String(30), default="", comment="系列编码")
+    supplier_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("suppliers.id"), nullable=False, comment="所属供应商ID"
+    )
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, comment="排序")
+    remark: Mapped[str | None] = mapped_column(Text, nullable=True, comment="备注")
+
+    supplier = relationship("Supplier", lazy="joined")
+
+
 class Supplier(Base, TimestampMixin):
     """供应商"""
 
@@ -62,6 +79,7 @@ class Product(Base, TimestampMixin):
     # 分类关联
     category_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("product_categories.id"), nullable=True, comment="分类ID")
     supplier_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("suppliers.id"), nullable=True, comment="供应商ID")
+    series_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("product_series.id"), nullable=True, comment="系列/木板ID")
 
     # 规格
     model: Mapped[str] = mapped_column(String(50), default="", comment="型号")
@@ -89,6 +107,9 @@ class Product(Base, TimestampMixin):
     stock: Mapped[int] = mapped_column(Integer, default=0, comment="当前库存")
     safety_stock: Mapped[int] = mapped_column(Integer, default=0, comment="安全库存预警值")
 
+    # 采购控制
+    is_purchase: Mapped[bool] = mapped_column(Boolean, default=True, comment="True=需采购, False=外加工单位负责")
+
     # 状态
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, comment="是否上架")
     series: Mapped[str] = mapped_column(String(100), default="", comment="系列")
@@ -97,4 +118,5 @@ class Product(Base, TimestampMixin):
     # 关系
     supplier = relationship("Supplier", lazy="joined")
     category = relationship("ProductCategory", lazy="joined")
+    series_rel = relationship("ProductSeries", lazy="joined")
     processing_type = relationship("ProcessingType", lazy="selectin")

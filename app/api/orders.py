@@ -485,8 +485,6 @@ async def update_order_status(order_id: int, new_status_key: str = Body(..., emb
         if new_status_key == "completed":
             o.debt = 0
 
-        await session.commit()
-
         # ─── V3.0 订单流程联动 ───────────────────────────────────────────
         auto_action_msg = None
 
@@ -527,9 +525,7 @@ async def update_order_status(order_id: int, new_status_key: str = Body(..., emb
                         unpaid_amount=o.debt,
                     )
                     session.add(ins)
-                    await session.flush()
-
-                    # ⚠️ P1-5 Fix: 状态已在上面 commit，此处改为追加历史（不回写数据库）
+                    # 追加历史记录
                     history = o.history or []
                     history.append(
                         {
@@ -539,10 +535,12 @@ async def update_order_status(order_id: int, new_status_key: str = Body(..., emb
                             "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
                         }
                     )
-                    o.history = history  # 仅内存修改，不重新 commit
+                    o.history = history
                     auto_action_msg = f"已自动生成安装单 {ins_no}"
             except Exception as e:
                 auto_action_msg = f"生成安装单失败：{e!s}"
+
+        await session.commit()
 
         return CommonResponse(
             success=True,
@@ -628,21 +626,6 @@ async def advance_order(order_id: int):
                     )
                     session.add(ins)
                     await session.flush()
-                    
-                    # P1-5: 必须追加历史记录再更新状态，否则 history 丢失
-                    history = o.history or []
-                    history.append(
-                        {
-                            "s": "已完成",
-                            "s2": "安装单已生成",
-                            "c": "install_order_generated",
-                            "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                        }
-                    )
-                    o.history = history
-                    o.status_key = "install_order_generated"
-                    o.status = "安装单已生成"
-                    o.status_color = ORDER_STATUS_MAP["install_order_generated"]["color"]
                     new_status_key = "install_order_generated"
                     auto_action_msg = f"已自动生成安装单 {ins_no}"
                 else:

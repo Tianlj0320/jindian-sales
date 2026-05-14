@@ -228,7 +228,9 @@ class TestFullChainIntegration:
         assert "广州辅料批发" in sup_names
         for s in groups:
             assert s["total_amount"] > 0
-            assert len(s["items"]) > 0
+            assert s["item_count"] > 0
+            for sec in s["sections"].values():
+                assert len(sec["items"]) > 0
 
         # 生成采购单
         supplier_ids = [s["supplier_id"] for s in groups]
@@ -382,13 +384,6 @@ class TestFullChainIntegration:
         assert ins_data["success"]
         _SHARED["ins_id"] = ins_data["data"]["id"]
 
-        # 推进到 install_scheduled（已有安装单，不会重复创建）
-        resp = await async_client.post(
-            f"/api/v1/orders/{oid}/advance",
-            headers={"Authorization": f"Bearer {admin_token}"},
-        )
-        assert resp.json()["data"]["status_key"] == "install_scheduled"
-
         # 推进安装状态
         for status in ["安装中", "已完成"]:
             resp = await async_client.put(
@@ -398,8 +393,8 @@ class TestFullChainIntegration:
             )
             assert resp.status_code == 200
 
-        # 订单状态推进到 accepted
-        for expected in ["installed", "accepted"]:
+        # 订单状态推进到 accepted（安装已完成时自动从 install_scheduled 推进到 installed）
+        for expected in ["accepted"]:
             resp = await async_client.post(
                 f"/api/v1/orders/{oid}/advance",
                 headers={"Authorization": f"Bearer {admin_token}"},

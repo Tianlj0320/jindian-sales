@@ -7,9 +7,29 @@
       </div>
     </div>
 
-    <el-table :data="list" v-loading="loading" stripe style="width:100%">
-      <el-table-column prop="code" label="编码" width="80" />
-      <el-table-column prop="name" label="名称" min-width="130" />
+    <!-- 筛选栏 -->
+    <el-form :inline="true" size="small" style="margin-bottom:10px">
+      <el-form-item label="搜索">
+        <el-input v-model="query.keyword" placeholder="名称/联系人/手机号" clearable style="width:180px" @clear="loadData" @keyup.enter="loadData" />
+      </el-form-item>
+      <el-form-item label="类型">
+        <el-select v-model="query.type" clearable placeholder="全部" style="width:100px" @change="loadData">
+          <el-option label="布艺" value="布艺" />
+          <el-option label="成品" value="成品" />
+          <el-option label="配件" value="配件" />
+          <el-option label="其他" value="其他" />
+        </el-select>
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" @click="loadData">查询</el-button>
+        <el-button @click="resetQuery">重置</el-button>
+      </el-form-item>
+    </el-form>
+
+    <el-table :data="list" v-loading="loading" stripe style="width:100%;cursor:pointer" highlight-current-row @row-dblclick="handleRowDblClick" @row-click="handleRowClick">
+      <el-table-column type="index" label="序号" width="50" />
+      <el-table-column prop="code" label="编码" width="100" />
+      <el-table-column prop="name" label="名称" min-width="140" />
       <el-table-column prop="type" label="类型" width="70" />
       <el-table-column prop="contact" label="联系人" width="90" />
       <el-table-column prop="phone" label="电话" width="110" />
@@ -35,8 +55,9 @@
       </el-table-column>
     </el-table>
 
-    <div style="margin-top:16px;text-align:right">
-      <el-pagination v-model:current-page="query.page" :page-size="query.page_size" :total="total" layout="total, prev, pager, next" @current-change="loadData" />
+    <div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:12px;color:#999">双击供应商行编辑 / 共 {{ total }} 条</span>
+      <el-pagination v-model:current-page="query.page" :page-size="query.page_size" :total="total" layout="total, prev, pager, next" size="small" @current-change="loadData" />
     </div>
   </el-card>
 
@@ -92,7 +113,7 @@ const saving = ref(false)
 const showDialog = ref(false)
 const dialogMode = ref('create')
 
-const query = reactive({ page: 1, page_size: 20 })
+const query = reactive({ keyword: '', type: '', page: 1, page_size: 20 })
 const form = reactive({
   name: '', code: '', type: '布艺', contact: '', phone: '',
   qq: '', wechat: '', bank_account: '', bank_name: '', payee: '',
@@ -111,10 +132,28 @@ function resetForm() {
 async function loadData() {
   loading.value = true
   try {
-    const res = await productApi.listSuppliers({ page: query.page, page_size: query.page_size })
+    const params = { page: query.page, page_size: query.page_size }
+    if (query.keyword) params.keyword = query.keyword
+    if (query.type) params.type = query.type
+    const res = await productApi.listSuppliers(params)
     list.value = res.items || []
     total.value = res.total || 0
   } catch {} finally { loading.value = false }
+}
+
+function resetQuery() {
+  query.keyword = ''
+  query.type = ''
+  query.page = 1
+  loadData()
+}
+
+function handleRowClick(row) {
+  handleEdit(row)
+}
+
+function handleRowDblClick(row) {
+  handleEdit(row)
 }
 
 function handleEdit(row) {

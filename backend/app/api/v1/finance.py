@@ -383,3 +383,70 @@ async def get_finance_summary(session: SessionDep, current_user: CurrentUserDep)
         "month_paid": 0,
         "month_expense": float(month_expense),
     })
+
+
+@router.get("/monthly-report")
+async def get_monthly_report(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    year: int | None = Query(None, description="年份，默认当前年份"),
+):
+    """月度财务报表：按月统计收入/支出/利润"""
+    target_year = year or date.today().year
+
+    # 月度收款统计（按 created_at 月份分组）
+    recv_rows = (await session.execute(
+        select(
+            func.strftime("%m", FinanceReceivable.created_at).label("mon"),
+            func.coalesce(func.sum(FinanceReceivable.received_amount), 0),
+            func.count(FinanceReceivable.id),
+        )
+        .where(
+            func.strftime("%Y", FinanceReceivable.created_at) == str(target_year),
+        )
+        .group_by("mon")
+        .order_by("mon")
+    )).all()
+
+    # 月度费用统计（按 expense_date 月份分组）
+    exp_rows = (await session.execute(
+        select(
+            func.strftime("%m", FinanceExpense.expense_date).label("mon"),
+            func.coalesce(func.sum(FinanceExpense.amount), 0),
+            func.count(FinanceExpense.id),
+        )
+        .where(
+            func.strftime("%Y", FinanceExpense.expense_date) == str(target_year),
+        )
+        .group_by("mon")
+        .order_by("mon")
+    )).all()
+
+    recv_map = {r.mon: {"amount": float(r[1]), "count": r[2]} for r in recv_rows}
+    exp_map = {e.mon: {"amount": float(e[1]), "count": e[2]} for e in exp_rows}
+
+    months = []
+    for m in range(1, 13):
+        mon = f"{m:02d}"
+        revenue = recv_map.get(mon, {}).get("amount", 0)
+        expense = exp_map.get(mon, {}).get("amount", 0)
+        months.append({
+            "month": f"{target_year}-{mon}",
+            "revenue": revenue,
+            "expense": expense,
+            "net_profit": round(revenue - expense, 2),
+            "revenue_count": recv_map.get(mon, {}).get("count", 0),
+            "expense_count": exp_map.get(mon, {}).get("count", 0),
+        })
+
+    # 汇总
+    total_revenue = sum(m["revenue"] for m in months)
+    total_expense = sum(m["expense"] for m in months)
+
+    return success(data={
+        "year": target_year,
+        "months": months,
+        "total_revenue": total_revenue,
+        "total_expense": total_expense,
+        "total_net_profit": round(total_revenue - total_expense, 2),
+    })

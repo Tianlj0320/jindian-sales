@@ -12,6 +12,7 @@ from sqlalchemy import and_, func, or_, select
 from app.api.deps import CurrentUserDep, PageDep, SessionDep
 from app.core.exceptions import NotFoundError
 from app.core.response import paginated, success
+from app.domain.order import Order, OrderItem
 from app.domain.production import ProductionFeedback
 from app.schemas.production import ProductionFeedbackCreate, ProductionFeedbackUpdate
 
@@ -154,7 +155,7 @@ async def update_feedback(
 
 @router.get("/stats")
 async def get_production_stats(session: SessionDep, current_user: CurrentUserDep):
-    """生产统计（待处理数量等）"""
+    """生产统计（含类型分布）"""
     total = (await session.execute(select(func.count(ProductionFeedback.id)))).scalar() or 0
     pending = (await session.execute(
         select(func.count(ProductionFeedback.id)).where(ProductionFeedback.status == "待处理")
@@ -163,9 +164,76 @@ async def get_production_stats(session: SessionDep, current_user: CurrentUserDep
         select(func.count(ProductionFeedback.id)).where(ProductionFeedback.status == "处理中")
     )).scalar() or 0
 
+    # 类型分布
+    quality = (await session.execute(
+        select(func.count(ProductionFeedback.id)).where(ProductionFeedback.feedback_type == "quality")
+    )).scalar() or 0
+    defect = (await session.execute(
+        select(func.count(ProductionFeedback.id)).where(ProductionFeedback.feedback_type == "defect")
+    )).scalar() or 0
+    shortage = (await session.execute(
+        select(func.count(ProductionFeedback.id)).where(ProductionFeedback.feedback_type == "shortage")
+    )).scalar() or 0
+
     return success(data={
         "total": total,
         "pending": pending,
         "processing": processing,
         "resolved": total - pending - processing,
+        "by_type": {
+            "quality": quality,
+            "defect": defect,
+            "shortage": shortage,
+        },
     })
+
+
+# ─── 加工流转（加工中订单视图） ─────────────────────────
+
+
+@router.get("/processing-orders")
+async def get_processing_orders(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    keyword: str | None = Query(None, description="搜索订单号/客户"),
+    status_key: str | None = Query(None, description="状态: processing/completed"),
+):
+    """加工流转：查看生产中的订单"""
+    conditions = []
+    sk = status_key or "processing"
+    conditions.append(Order.status_key == sk)
+    if keyword:
+        kw = f"%{keyword}%"
+        conditions.append(or_(Order.order_no.ilike(kw), Order.customer_name.ilike(kw)))
+
+    where = and_(*conditions) if conditions else True
+    result = await session.execute(
+        select(Order).where(where).order_by(Order.created_at.desc())
+    )
+    orders = result.scalars().all()
+
+    items = []
+    for o in orders:
+        # Count items and feedbacks
+        item_count = (await session.execute(
+            select(func.count(OrderItem.id)).where(OrderItem.order_id == o.id)
+        )).scalar() or 0
+        fb_count = (await session.execute(
+            select(func.count(ProductionFeedback.id)).where(ProductionFeedback.order_id == o.id)
+        )).scalar() or 0
+
+        items.append({
+            "id": o.id,
+            "order_no": o.order_no,
+            "customer_name": o.customer_name or "",
+            "customer_phone": o.customer_phone or "",
+            "order_date": o.order_date or "",
+            "content": o.content or "",
+            "status_label": o.status_label,
+            "status_color": o.status_color,
+            "item_count": item_count,
+            "feedback_count": fb_count,
+            "amount": float(o.amount or 0),
+        })
+
+    return success(data=items)

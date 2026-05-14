@@ -52,6 +52,7 @@ http.interceptors.response.use(
 export const authApi = {
   login: (data) => http.post('/auth/login', data),
   me: () => http.get('/auth/me'),
+  permissions: () => http.get('/auth/permissions'),
   listUsers: () => http.get('/auth/users'),
   createUser: (data) => http.post('/auth/users', data),
   updateUser: (id, data) => http.put(`/auth/users/${id}`, data),
@@ -81,9 +82,14 @@ export const productApi = {
   updateCategory: (id, data) => http.put(`/products/categories/${id}`, data),
   deleteCategory: (id) => http.delete(`/products/categories/${id}`),
   listSuppliers: (params) => http.get('/products/suppliers', { params }),
+  listAllSuppliers: () => http.get('/products/suppliers/all'),
   createSupplier: (data) => http.post('/products/suppliers', data),
   updateSupplier: (id, data) => http.put(`/products/suppliers/${id}`, data),
   deleteSupplier: (id) => http.delete(`/products/suppliers/${id}`),
+  listSeries: (params) => http.get('/products/series', { params }),
+  createSeries: (data) => http.post('/products/series', data),
+  updateSeries: (id, data) => http.put(`/products/series/${id}`, data),
+  deleteSeries: (id) => http.delete(`/products/series/${id}`),
 }
 
 export const processingApi = {
@@ -108,6 +114,14 @@ export const orderApi = {
   rollbackOptions: (id) => http.get(`/orders/${id}/rollback-options`),
   rollbackStatus: (id, data) => http.post(`/orders/${id}/rollback`, data),
   statusOptions: () => http.get('/orders/meta/status-options'),
+  // 补单
+  createSupplementary: (id) => http.post(`/orders/${id}/create-supplementary`),
+  listSupplementary: (id) => http.get(`/orders/${id}/supplementary-orders`),
+  // 订单费用
+  listFees: (id) => http.get(`/orders/${id}/fees`),
+  createFee: (id, data) => http.post(`/orders/${id}/fees`, data),
+  updateFee: (id, feeId, data) => http.put(`/orders/${id}/fees/${feeId}`, data),
+  deleteFee: (id, feeId) => http.delete(`/orders/${id}/fees/${feeId}`),
 }
 
 export const purchaseApi = {
@@ -122,16 +136,35 @@ export const purchaseApi = {
   preview: (data) => http.post('/purchases/preview', data),
   generate: (data) => http.post('/purchases/generate', data),
   tracking: (params) => http.get('/purchases/tracking', { params }),
+  // 新增 - 发送采购单给供应商
+  share: (id) => http.post(`/purchases/${id}/share`),
+  // 新增 - 供应商列表（采购中用）
+  suppliers: () => http.get('/purchases/suppliers/list'),
+  // 新增 - 合并生成采购单
+  generateMerged: (data) => http.post('/purchases/generate-merged', data),
+  // 收货回退
+  receiveRollback: (id, data) => http.post(`/purchases/${id}/receive-rollback`, data),
+  batchReceive: (data) => http.post('/purchases/batch-receive', data),
+  // QR码 & 扫码
+  qrcode: (id) => http.get(`/purchases/${id}/qrcode`, { responseType: 'blob' }),
+  scan: (code) => http.get(`/purchases/scan/${encodeURIComponent(code)}`),
 }
 
 export const warehouseApi = {
-  list: () => http.get('/warehouses'),
+  list: (params) => http.get('/warehouses', { params }),
   create: (data) => http.post('/warehouses', data),
   update: (id, data) => http.put(`/warehouses/${id}`, data),
   delete: (id) => http.delete(`/warehouses/${id}`),
   inventory: (params) => http.get('/warehouses/inventory', { params }),
   flows: (params) => http.get('/warehouses/flows', { params }),
   adjustInventory: (data) => http.post('/warehouses/inventory/adjust', data),
+  // 三级分类管理
+  listStorage: (params) => http.get('/warehouses/storage', { params }),
+  createStorage: (data) => http.post('/warehouses/storage', data),
+  updateStorage: (id, data) => http.put(`/warehouses/storage/${id}`, data),
+  deleteStorage: (id) => http.delete(`/warehouses/storage/${id}`),
+  // 库存位置设置
+  setLocation: (productId, warehouseId, data) => http.put(`/warehouses/inventory/${productId}/location`, data, { params: { warehouse_id: warehouseId } }),
 }
 
 export const installationApi = {
@@ -146,7 +179,8 @@ export const installationApi = {
   listOrders: (params) => http.get('/installations/orders', { params }),
   getOrder: (id) => http.get(`/installations/orders/${id}`),
   createOrder: (data) => http.post('/installations/orders', data),
-  updateStatus: (id, status) => http.put(`/installations/orders/${id}/status`, null, { params: { status } }),
+  updateStatus: (id, status, extraParams = {}) => http.put(`/installations/orders/${id}/status`, null, { params: { status, ...extraParams } }),
+  stats: () => http.get('/installations/stats'),
 }
 
 export const financeApi = {
@@ -159,6 +193,7 @@ export const financeApi = {
   updateExpense: (id, data) => http.put(`/finance/expenses/${id}`, data),
   deleteExpense: (id) => http.delete(`/finance/expenses/${id}`),
   summary: () => http.get('/finance/summary'),
+  monthlyReport: (params) => http.get('/finance/monthly-report', { params }),
 }
 
 export const productionApi = {
@@ -167,6 +202,7 @@ export const productionApi = {
   createFeedback: (data) => http.post('/production/feedbacks', data),
   updateFeedback: (id, data) => http.put(`/production/feedbacks/${id}`, data),
   stats: () => http.get('/production/stats'),
+  processingOrders: (params) => http.get('/production/processing-orders', { params }),
 }
 
 export const dashboardApi = {
@@ -193,12 +229,45 @@ export const systemApi = {
   updateStoreInfo: (data) => http.put('/system/store-info', data),
 }
 
+export const afterSaleApi = {
+  list: (params) => http.get('/after-sales', { params }),
+  get: (id) => http.get(`/after-sales/${id}`),
+  create: (data) => http.post('/after-sales', data),
+  update: (id, data) => http.put(`/after-sales/${id}`, data),
+  delete: (id) => http.delete(`/after-sales/${id}`),
+  stats: () => http.get('/after-sales/stats'),
+}
+
 export const roleApi = {
   list: () => http.get('/roles'),
   create: (data) => http.post('/roles', data),
   update: (id, data) => http.put(`/roles/${id}`, data),
   delete: (id) => http.delete(`/roles/${id}`),
   updatePermissions: (id, data) => http.put(`/roles/${id}/permissions`, data),
+}
+
+export const depositApi = {
+  list(params) { return http.get('/deposits', { params }) },
+  create(data) { return http.post('/deposits', data) },
+  get(id) { return http.get(`/deposits/${id}`) },
+  customerBalance(customerId) { return http.get(`/deposits/customer/${customerId}/balance`) },
+}
+
+export const processingOrderApi = {
+  list(params) { return http.get('/processing', { params }) },
+  get(id) { return http.get(`/processing/${id}`) },
+  generateFromOrder(orderId) { return http.post(`/processing/generate-from-order/${orderId}`) },
+  updateItem(poId, itemId, data) { return http.put(`/processing/${poId}/items/${itemId}`, data) },
+  updateStatus(poId, data) { return http.put(`/processing/${poId}/status`, data) },
+  markPrinted(poId) { return http.put(`/processing/${poId}/mark-printed`) },
+  getPrintData(poId) { return http.get(`/processing/${poId}/print`) },
+  settle(poId) { return http.post(`/processing/${poId}/settle`) },
+}
+
+export const dailyReportApi = {
+  getToday() { return http.get('/daily-report') },
+  getHistory(params) { return http.get('/daily-report/history', { params }) },
+  getUnlinkedDeposits() { return http.get('/daily-report/deposits/unlinked') },
 }
 
 export default http

@@ -9,7 +9,7 @@ import json
 from fastapi import APIRouter
 from sqlalchemy import select
 
-from app.api.deps import CurrentUserDep, SessionDep
+from app.api.deps import CurrentUserDep, SessionDep, require_permission
 from app.core.exceptions import BusinessError, NotFoundError
 from app.core.response import success
 from app.domain.role import Role
@@ -40,7 +40,10 @@ async def list_roles(session: SessionDep, current_user: CurrentUserDep):
 
 
 @router.post("")
-async def create_role(session: SessionDep, current_user: CurrentUserDep, req: RoleCreate):
+async def create_role(
+    session: SessionDep, current_user: CurrentUserDep,
+    req: RoleCreate, _: None = require_permission("admin"),
+):
     """创建角色"""
     # 检查编码重复
     result = await session.execute(select(Role).where(Role.code == req.code))
@@ -60,7 +63,10 @@ async def create_role(session: SessionDep, current_user: CurrentUserDep, req: Ro
 
 
 @router.put("/{role_id}")
-async def update_role(session: SessionDep, current_user: CurrentUserDep, role_id: int, req: RoleUpdate):
+async def update_role(
+    session: SessionDep, current_user: CurrentUserDep,
+    role_id: int, req: RoleUpdate, _: None = require_permission("admin"),
+):
     """更新角色"""
     result = await session.execute(select(Role).where(Role.id == role_id))
     role = result.scalar_one_or_none()
@@ -84,7 +90,8 @@ async def update_role(session: SessionDep, current_user: CurrentUserDep, role_id
 
 @router.put("/{role_id}/permissions")
 async def update_role_permissions(
-    session: SessionDep, current_user: CurrentUserDep, role_id: int, req: RolePermissionUpdate
+    session: SessionDep, current_user: CurrentUserDep,
+    role_id: int, req: RolePermissionUpdate, _: None = require_permission("admin"),
 ):
     """更新角色权限"""
     result = await session.execute(select(Role).where(Role.id == role_id))
@@ -98,7 +105,10 @@ async def update_role_permissions(
 
 
 @router.delete("/{role_id}")
-async def delete_role(session: SessionDep, current_user: CurrentUserDep, role_id: int):
+async def delete_role(
+    session: SessionDep, current_user: CurrentUserDep,
+    role_id: int, _: None = require_permission("admin"),
+):
     """删除角色（软禁用）"""
     result = await session.execute(select(Role).where(Role.id == role_id))
     role = result.scalar_one_or_none()

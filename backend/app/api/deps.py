@@ -11,10 +11,11 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import UnauthorizedError
+from app.core.exceptions import ForbiddenError, UnauthorizedError
 from app.core.security import decode_access_token
 from app.database import get_session
 from app.domain.auth import User
+from app.domain.role import Role
 
 # ── 数据库会话依赖 ────────────────────────────────────────────
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -46,6 +47,33 @@ async def get_current_user(
 
 
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
+
+
+# ── 权限校验依赖 ──────────────────────────────────────────────
+async def check_permission(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    permission: str,
+) -> None:
+    """校验当前用户是否拥有指定权限
+
+    如果用户角色在 roles 表中未配置，则默认放行（向后兼容）。
+    """
+    result = await session.execute(select(Role).where(Role.code == current_user.role, Role.is_active == True))
+    role = result.scalar_one_or_none()
+    if not role:
+        return  # 角色未配置时默认放行
+    perms = role.permissions or []
+    if "*" not in perms and permission not in perms:
+        raise ForbiddenError(f"无权执行此操作（需要权限：{permission}）")
+
+
+def require_permission(permission: str):
+    """返回依赖注入，用于校验权限"""
+    async def _perm_checker(session: SessionDep, current_user: CurrentUserDep):
+        await check_permission(session, current_user, permission)
+    return Depends(_perm_checker)
+
 
 
 # ── 分页参数依赖 ──────────────────────────────────────────────

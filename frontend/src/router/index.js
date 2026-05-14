@@ -24,18 +24,25 @@ const routes = [
       { path: 'suppliers', name: 'Suppliers', component: () => import('@/views/products/SupplierList.vue'), meta: { title: '供应商管理', module: 'basic' } },
       { path: 'staff', name: 'Staff', component: () => import('@/views/system/StaffList.vue'), meta: { title: '员工管理', module: 'basic' } },
       { path: 'roles', name: 'Roles', component: () => import('@/views/system/RoleList.vue'), meta: { title: '角色权限', module: 'basic' } },
-      { path: 'processing-types', name: 'ProcessingTypes', component: () => import('@/views/processing/ProcessingTypeList.vue'), meta: { title: '加工类型', module: 'basic' } },
 
       // ── 采购/仓库 ──
       { path: 'purchases', name: 'Purchases', component: () => import('@/views/purchases/PurchaseList.vue'), meta: { title: '采购管理' } },
       { path: 'warehouse', name: 'Warehouse', component: () => import('@/views/warehouse/InventoryView.vue'), meta: { title: '仓库管理' } },
 
-      // ── 安装/生产 ──
+      // ── 加工管理 ──
+      { path: 'processing', name: 'ProcessingOrders', component: () => import('@/views/processing/ProcessingOrderList.vue'), meta: { title: '加工单管理' } },
+
+      // ── 安装/生产/售后 ──
       { path: 'installations', name: 'Installations', component: () => import('@/views/installation/InstallationView.vue'), meta: { title: '安装管理' } },
       { path: 'production', name: 'Production', component: () => import('@/views/production/ProductionFeedback.vue'), meta: { title: '生产反馈' } },
+      { path: 'after-sales', name: 'AfterSales', component: () => import('@/views/after_sales/AfterSaleList.vue'), meta: { title: '售后管理' } },
 
       // ── 财务 ──
       { path: 'finance', name: 'Finance', component: () => import('@/views/finance/FinanceView.vue'), meta: { title: '财务管理' } },
+      { path: 'deposits', name: 'Deposits', component: () => import('@/views/finance/DepositPanel.vue'), meta: { title: '定金管理' } },
+
+      // ── 日报 ──
+      { path: 'daily-report', name: 'DailyReport', component: () => import('@/views/DailyReport.vue'), meta: { title: '日报' } },
 
       // ── 系统设置 ──
       { path: 'store-settings', name: 'StoreSettings', component: () => import('@/views/system/StoreInfoForm.vue'), meta: { title: '店铺信息', module: 'system' } },
@@ -54,13 +61,43 @@ const router = createRouter({
   routes,
 })
 
+// 路由 → 权限映射表
+const ROUTE_PERM = {
+  '/dashboard': 'dashboard',
+  '/orders': 'orders',
+  '/purchases': 'purchases',
+  '/warehouse': 'warehouse',
+  '/processing': 'production',
+  '/production': 'production',
+  '/installations': 'installations',
+  '/after-sales': 'orders',
+  '/finance': 'finance',
+  '/deposits': 'finance',
+  '/daily-report': 'reports',
+  '/products': 'products',
+  '/customers': 'customers',
+  '/suppliers': 'purchases',
+  '/staff': 'system',
+  '/roles': 'admin',
+  '/store-settings': 'system',
+  '/dicts': 'system',
+  '/logs': 'system',
+  '/theme-settings': 'system',
+}
+
 router.beforeEach((to, from, next) => {
   const auth = useAuthStore()
   if (!to.meta.public && !auth.isLoggedIn) {
     next('/login')
-  } else {
-    next()
+    return
   }
+  // 权限校验：检查用户是否有权访问该路由
+  const needed = ROUTE_PERM[to.path]
+  if (needed && !auth.hasPermission(needed)) {
+    next('/dashboard')
+    return
+  }
+  next()
 })
 
 export default router

@@ -83,6 +83,29 @@ class SupplierResponse(BaseModel):
     is_active: bool
 
 
+class SeriesCreate(BaseModel):
+    """创建系列/木板"""
+    name: str = Field(..., description="系列名称")
+    code: str = Field(default="")
+    supplier_id: int = Field(..., description="所属供应商ID")
+    sort_order: int = 0
+
+
+class SeriesUpdate(BaseModel):
+    name: str | None = None
+    code: str | None = None
+    supplier_id: int | None = None
+    sort_order: int | None = None
+
+
+class SeriesResponse(BaseModel):
+    id: int
+    name: str
+    code: str = ""
+    supplier_id: int
+    sort_order: int = 0
+
+
 class ProductCreate(BaseModel):
     """创建产品"""
     code: str = Field(default="")
@@ -91,6 +114,7 @@ class ProductCreate(BaseModel):
     classification: str = Field(default="")
     category_id: int | None = None
     supplier_id: int | None = None
+    series_id: int | None = None
     processing_type_id: int | None = None
     model: str = Field(default="")
     material: str = Field(default="")
@@ -108,6 +132,7 @@ class ProductCreate(BaseModel):
     stock: int = Field(default=0)
     safety_stock: int = Field(default=0)
     series: str = Field(default="")
+    is_purchase: bool = Field(default=True, description="True=需采购生成采购单, False=外加工单位负责不生成采购单")
     remark: str | None = None
 
 
@@ -118,6 +143,7 @@ class ProductUpdate(BaseModel):
     classification: str | None = None
     category_id: int | None = None
     supplier_id: int | None = None
+    series_id: int | None = None
     processing_type_id: int | None = None
     model: str | None = None
     material: str | None = None
@@ -134,7 +160,7 @@ class ProductUpdate(BaseModel):
     selling_price: float | None = None
     stock: int | None = None
     safety_stock: int | None = None
-    is_active: bool | None = None
+    is_purchase: bool | None = None
     series: str | None = None
     remark: str | None = None
 
@@ -149,6 +175,8 @@ class ProductResponse(BaseModel):
     category_name: str = ""
     supplier_id: int | None
     supplier_name: str = ""
+    series_id: int | None = None
+    series_name: str = ""
     processing_type_id: int | None = None
     processing_type_name: str = ""
     model: str
@@ -166,6 +194,7 @@ class ProductResponse(BaseModel):
     selling_price: float
     stock: int
     safety_stock: int
+    is_purchase: bool = True
     series: str
     is_active: bool
     remark: str | None
