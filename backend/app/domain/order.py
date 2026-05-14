@@ -37,6 +37,7 @@ class Order(Base, TimestampMixin):
     amount: Mapped[float] = mapped_column(DECIMAL(12, 2), default=0, comment="实付金额")
     received: Mapped[float] = mapped_column(DECIMAL(12, 2), default=0, comment="已收款")
     debt: Mapped[float] = mapped_column(DECIMAL(12, 2), default=0, comment="欠款")
+    deposit: Mapped[float] = mapped_column(DECIMAL(12, 2), default=0, comment="定金金额")
     discount_reason: Mapped[str] = mapped_column(String(200), default="", comment="折扣原因")
 
     # 日期

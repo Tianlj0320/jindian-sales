@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from sqlalchemy import DECIMAL, Column, Date, Integer, String, Text
+from sqlalchemy import DECIMAL, Column, Date, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.domain.base import Base, TimestampMixin
@@ -19,6 +19,7 @@ class Deposit(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     customer_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True, comment="客户ID")
+    order_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("orders.id"), nullable=True, comment="关联订单ID")
     amount: Mapped[float] = mapped_column(DECIMAL(10, 2), nullable=False, default=0, comment="金额（正=收定金，负=抵扣）")
     balance: Mapped[float] = mapped_column(DECIMAL(10, 2), nullable=False, default=0, comment="余额")
     payment_method: Mapped[str] = mapped_column(String(20), default="", comment="收款方式")

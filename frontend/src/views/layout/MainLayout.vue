@@ -63,10 +63,10 @@
           <template #title>售后管理</template>
         </el-menu-item>
 
-        <!-- 财务管理（含定金） -->
+        <!-- 收款管理（原财务管理） -->
         <el-menu-item v-if="auth.hasPermission('finance')" index="/finance">
           <el-icon><Money /></el-icon>
-          <template #title>财务管理</template>
+          <template #title>收款管理</template>
         </el-menu-item>
 
         <!-- 基础资料（分组） -->

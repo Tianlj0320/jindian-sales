@@ -3,211 +3,187 @@
     <div class="page-header">
       <h3>加工单管理</h3>
       <div>
-        <el-button type="primary" size="small" @click="openGenerateDialog">生成加工单</el-button>
         <el-button size="small" @click="loadData">刷新</el-button>
       </div>
     </div>
 
-    <!-- 筛选栏 -->
-    <el-form :inline="true" size="small" style="margin-bottom:8px">
-      <el-form-item label="搜索">
-        <el-input v-model="query.keyword" placeholder="加工单号/客户" clearable style="width:160px" @clear="loadData" @keyup.enter="loadData" />
-      </el-form-item>
-      <el-form-item label="状态">
-        <el-select v-model="query.status" clearable placeholder="加工单状态" style="width:120px" @change="loadData">
-          <el-option label="待加工" value="pending" />
-          <el-option label="加工中" value="processing" />
-          <el-option label="已完成" value="completed" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="订单状态">
-        <el-select v-model="query.order_status" clearable placeholder="订单状态" style="width:130px" @change="loadData">
-          <el-option label="已确认" value="confirmed" />
-          <el-option label="已分单" value="split" />
-          <el-option label="采购中" value="purchasing" />
-          <el-option label="已入库" value="stocked" />
-          <el-option label="加工中" value="processing" />
-          <el-option label="已完成" value="completed" />
-          <el-option label="已验收" value="accepted" />
-        </el-select>
-      </el-form-item>
-      <el-form-item>
-        <el-button type="primary" @click="loadData">查询</el-button>
-        <el-button @click="resetQuery">重置</el-button>
-      </el-form-item>
-    </el-form>
+    <el-tabs v-model="activeTab" @tab-change="handleTabChange" style="margin-top:4px">
 
-    <!-- 主表：加工单列表 -->
-    <el-table
-      :data="list"
-      v-loading="loading"
-      stripe
-      style="width:100%"
-      size="small"
-      class="compact-table"
-      highlight-current-row
-      @row-click="handleRowClick"
-    >
-      <template #empty>
-        <div style="padding:30px 0;color:#999;font-size:13px">
-          <p style="margin:0 0 6px">暂无加工单</p>
-          <p style="margin:0;font-size:12px;color:#bbb">订单采购收货完成后，系统会自动生成加工单</p>
-          <p style="margin:0;font-size:12px;color:#bbb">也可点击上方「生成加工单」按钮手动从订单创建</p>
+      <!-- 待生成加工单 -->
+      <el-tab-pane label="待生成加工单" name="pending">
+        <el-table :data="pendingList" v-loading="loadingPending" stripe size="small" style="width:100%" class="compact-table" @row-click="handlePendingRowClick">
+          <template #empty>
+            <div style="padding:30px 0;color:#999;font-size:13px">
+              所有已入库订单均已完成加工单生成
+            </div>
+          </template>
+          <el-table-column type="index" label="序号" width="50" />
+          <el-table-column prop="order_no" label="订单号" width="160" />
+          <el-table-column prop="customer_name" label="客户名" width="120" show-overflow-tooltip />
+          <el-table-column prop="material_count" label="物料数量" width="80" align="center" />
+          <el-table-column prop="order_date" label="下单日期" width="100" />
+          <el-table-column label="操作" width="130" fixed="right">
+            <template #default="{ row }">
+              <el-button type="primary" size="small" :loading="generatingPendingId === row.order_id" @click.stop="generateFromPending(row)">
+                生成加工单
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-tab-pane>
+
+      <!-- 加工单列表 -->
+      <el-tab-pane label="加工单列表" name="list">
+        <!-- 筛选栏 -->
+        <el-form :inline="true" size="small" style="margin-bottom:8px">
+          <el-form-item label="搜索">
+            <el-input v-model="query.keyword" placeholder="加工单号/客户" clearable style="width:160px" @clear="loadData" @keyup.enter="loadData" />
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-select v-model="query.status" clearable placeholder="加工单状态" style="width:120px" @change="loadData">
+              <el-option label="待加工" value="pending" />
+              <el-option label="加工中" value="processing" />
+              <el-option label="已完成" value="completed" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="订单状态">
+            <el-select v-model="query.order_status" clearable placeholder="订单状态" style="width:130px" @change="loadData">
+              <el-option label="已确认" value="confirmed" />
+              <el-option label="已分单" value="split" />
+              <el-option label="采购中" value="purchasing" />
+              <el-option label="已入库" value="stocked" />
+              <el-option label="加工中" value="processing" />
+              <el-option label="已完成" value="completed" />
+              <el-option label="已验收" value="accepted" />
+            </el-select>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="loadData">查询</el-button>
+            <el-button @click="resetQuery">重置</el-button>
+          </el-form-item>
+        </el-form>
+
+        <!-- 主表：加工单列表 -->
+        <el-table
+          :data="list"
+          v-loading="loading"
+          stripe
+          style="width:100%"
+          size="small"
+          class="compact-table"
+          highlight-current-row
+          @row-click="handleRowClick"
+        >
+          <template #empty>
+            <div style="padding:30px 0;color:#999;font-size:13px">
+              <p style="margin:0 0 6px">暂无加工单</p>
+              <p style="margin:0;font-size:12px;color:#bbb">订单采购收货完成后，在待生成页面生成加工单</p>
+            </div>
+          </template>
+          <el-table-column type="index" label="序号" width="50" />
+          <el-table-column prop="po_no" label="加工单号" width="160" />
+          <el-table-column prop="order_no" label="订单号" width="140" />
+          <el-table-column prop="customer_name" label="客户名" width="100" show-overflow-tooltip />
+          <el-table-column prop="processor_name" label="加工厂" width="120" show-overflow-tooltip />
+          <el-table-column prop="item_count" label="明细条数" width="70" align="center" />
+          <el-table-column label="加工费总额" width="110" align="right">
+            <template #default="{ row }">¥{{ (row.total_process_fee || 0).toFixed(2) }}</template>
+          </el-table-column>
+          <el-table-column label="状态" width="80" align="center">
+            <template #default="{ row }">
+              <el-tag :color="statusColorMap[row.status]" style="color:#fff;border:0;font-size:11px">
+                {{ statusLabelMap[row.status] }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="打印" width="60" align="center">
+            <template #default="{ row }">
+              <el-tag :type="row.printed ? 'success' : 'info'" size="small">{{ row.printed ? '是' : '否' }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="created_at" label="创建日期" width="95" />
+        </el-table>
+
+        <!-- 分页 -->
+        <div style="margin-top:8px;text-align:right">
+          <el-pagination
+            v-model:current-page="query.page"
+            :page-size="query.page_size"
+            :total="total"
+            layout="total, prev, pager, next"
+            size="small"
+            @current-change="loadData"
+          />
         </div>
-      </template>
-      <el-table-column type="index" label="序号" width="50" />
-      <el-table-column prop="po_no" label="加工单号" width="160" />
-      <el-table-column prop="order_no" label="订单号" width="140" />
-      <el-table-column prop="customer_name" label="客户名" width="100" show-overflow-tooltip />
-      <el-table-column prop="processor_name" label="加工厂" width="120" show-overflow-tooltip />
-      <el-table-column prop="item_count" label="明细条数" width="70" align="center" />
-      <el-table-column label="加工费总额" width="110" align="right">
-        <template #default="{ row }">¥{{ (row.total_process_fee || 0).toFixed(2) }}</template>
-      </el-table-column>
-      <el-table-column label="状态" width="80" align="center">
-        <template #default="{ row }">
-          <el-tag :color="statusColorMap[row.status]" style="color:#fff;border:0;font-size:11px">
-            {{ statusLabelMap[row.status] }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="打印" width="60" align="center">
-        <template #default="{ row }">
-          <el-tag :type="row.printed ? 'success' : 'info'" size="small">{{ row.printed ? '是' : '否' }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="created_at" label="创建日期" width="95" />
-    </el-table>
 
-    <!-- 分页 -->
-    <div style="margin-top:8px;text-align:right">
-      <el-pagination
-        v-model:current-page="query.page"
-        :page-size="query.page_size"
-        :total="total"
-        layout="total, prev, pager, next"
-        size="small"
-        @current-change="loadData"
-      />
-    </div>
+        <!-- 从表：选中加工单明细 -->
+        <div v-if="selectedOrder" class="detail-panel">
+          <div class="detail-header">
+            <span>
+              加工单 <strong>{{ selectedOrder.po_no }}</strong>
+              <el-tag :color="statusColorMap[selectedOrder.status]" style="color:#fff;border:0;margin-left:8px" size="small">{{ statusLabelMap[selectedOrder.status] }}</el-tag>
+              <el-tag v-if="selectedOrder.printed" type="success" size="small" style="margin-left:4px">已打印</el-tag>
+            </span>
+            <span>
+              订单: {{ selectedOrder.order_no }}
+              <span v-if="selectedOrder.customer_name"> | 客户: {{ selectedOrder.customer_name }}</span>
+              <span v-if="selectedOrder.processor_name"> | 加工厂: {{ selectedOrder.processor_name }}</span>
+              <span> | 加工费: ¥{{ (selectedOrder.total_process_fee || 0).toFixed(2) }}</span>
+            </span>
+            <span class="detail-actions">
+              <el-button text size="small" :loading="itemsSaving" :disabled="itemsSaving" @click="handleUpdateItems">更新单价</el-button>
+              <el-button text size="small" :disabled="!canAdvance(selectedOrder.status) || advancing" @click="handleAdvanceStatus">
+                {{ nextStatusLabel(selectedOrder.status) }}
+              </el-button>
+              <el-button text size="small" @click="handlePrint(selectedOrder)">打印</el-button>
+              <el-button v-if="selectedOrder.status === 'completed'" text size="small" type="warning" @click="handleSettle(selectedOrder)">结算</el-button>
+            </span>
+          </div>
 
-    <!-- 从表：选中加工单明细 -->
-    <div v-if="selectedOrder" class="detail-panel">
-      <div class="detail-header">
-        <span>
-          加工单 <strong>{{ selectedOrder.po_no }}</strong>
-          <el-tag :color="statusColorMap[selectedOrder.status]" style="color:#fff;border:0;margin-left:8px" size="small">{{ statusLabelMap[selectedOrder.status] }}</el-tag>
-          <el-tag v-if="selectedOrder.printed" type="success" size="small" style="margin-left:4px">已打印</el-tag>
-        </span>
-        <span>
-          订单: {{ selectedOrder.order_no }}
-          <span v-if="selectedOrder.customer_name"> | 客户: {{ selectedOrder.customer_name }}</span>
-          <span v-if="selectedOrder.processor_name"> | 加工厂: {{ selectedOrder.processor_name }}</span>
-          <span> | 加工费: ¥{{ (selectedOrder.total_process_fee || 0).toFixed(2) }}</span>
-        </span>
-        <span class="detail-actions">
-          <el-button text size="small" :loading="itemsSaving" :disabled="itemsSaving" @click="handleUpdateItems">更新单价</el-button>
-          <el-button text size="small" :disabled="!canAdvance(selectedOrder.status) || advancing" @click="handleAdvanceStatus">
-            {{ nextStatusLabel(selectedOrder.status) }}
-          </el-button>
-          <el-button text size="small" @click="handlePrint(selectedOrder)">打印</el-button>
-          <el-button v-if="selectedOrder.status === 'completed'" text size="small" type="warning" @click="handleSettle(selectedOrder)">结算</el-button>
-        </span>
-      </div>
+          <el-table :data="orderItems" v-loading="itemsLoading" stripe style="width:100%" size="small" class="compact-detail-table">
+            <el-table-column type="index" label="序号" width="45" />
+            <el-table-column prop="product_code" label="产品编码" width="100" />
+            <el-table-column prop="product_name" label="产品名称" width="120" show-overflow-tooltip />
+            <el-table-column label="宽" width="50" align="center">
+              <template #default="{ row }">{{ row.width || '-' }}</template>
+            </el-table-column>
+            <el-table-column label="高" width="50" align="center">
+              <template #default="{ row }">{{ row.height || '-' }}</template>
+            </el-table-column>
+            <el-table-column prop="qty" label="数量" width="55" align="center" />
+            <el-table-column prop="unit" label="单位" width="45" align="center" />
+            <el-table-column prop="process_desc" label="工艺描述" width="100" show-overflow-tooltip />
+            <el-table-column label="加工单价" width="90" align="right">
+              <template #default="{ row }">
+                <el-input-number v-model="row._edit_fee" size="small" :min="0" :precision="2" :controls="false" style="width:75px" />
+              </template>
+            </el-table-column>
+            <el-table-column label="加工费小计" width="90" align="right">
+              <template #default="{ row }">¥{{ ((row._edit_fee || 0) * (row.qty || 0)).toFixed(2) }}</template>
+            </el-table-column>
+            <el-table-column label="验收" width="55" align="center">
+              <template #default="{ row }">
+                <el-checkbox v-model="row._edit_checked" />
+              </template>
+            </el-table-column>
+            <el-table-column prop="remark" label="备注" width="100" show-overflow-tooltip />
+          </el-table>
+        </div>
 
-      <el-table :data="orderItems" v-loading="itemsLoading" stripe style="width:100%" size="small" class="compact-detail-table">
-        <el-table-column type="index" label="序号" width="45" />
-        <el-table-column prop="product_code" label="产品编码" width="100" />
-        <el-table-column prop="product_name" label="产品名称" width="120" show-overflow-tooltip />
-        <el-table-column label="宽" width="50" align="center">
-          <template #default="{ row }">{{ row.width || '-' }}</template>
-        </el-table-column>
-        <el-table-column label="高" width="50" align="center">
-          <template #default="{ row }">{{ row.height || '-' }}</template>
-        </el-table-column>
-        <el-table-column prop="qty" label="数量" width="55" align="center" />
-        <el-table-column prop="unit" label="单位" width="45" align="center" />
-        <el-table-column prop="process_desc" label="工艺描述" width="100" show-overflow-tooltip />
-        <el-table-column label="加工单价" width="90" align="right">
-          <template #default="{ row }">
-            <el-input-number v-model="row._edit_fee" size="small" :min="0" :precision="2" :controls="false" style="width:75px" />
-          </template>
-        </el-table-column>
-        <el-table-column label="加工费小计" width="90" align="right">
-          <template #default="{ row }">¥{{ ((row._edit_fee || 0) * (row.qty || 0)).toFixed(2) }}</template>
-        </el-table-column>
-        <el-table-column label="验收" width="55" align="center">
-          <template #default="{ row }">
-            <el-checkbox v-model="row._edit_checked" />
-          </template>
-        </el-table-column>
-        <el-table-column prop="remark" label="备注" width="100" show-overflow-tooltip />
-      </el-table>
-    </div>
-
-    <!-- 空状态提示 -->
-    <div v-else-if="!loading && list.length > 0" class="detail-panel empty-detail">
-      点击上方加工单行查看明细
-    </div>
+        <!-- 空状态提示 -->
+        <div v-else-if="!loading && list.length > 0" class="detail-panel empty-detail">
+          点击上方加工单行查看明细
+        </div>
+      </el-tab-pane>
+    </el-tabs>
   </el-card>
 
-  <!-- 生成加工单对话框 -->
-  <el-dialog v-model="showGenerateDialog" title="生成加工单" width="800px" top="5vh" :close-on-click-modal="false" @closed="resetGenerateDialog">
-    <el-form :inline="true" size="small" style="margin-bottom:12px">
-      <el-form-item label="订单号">
-        <el-input v-model="searchOrderNo" placeholder="输入订单号搜索" style="width:200px" @keyup.enter="handleSearchOrder" />
-      </el-form-item>
-      <el-form-item>
-        <el-button type="primary" @click="handleSearchOrder" :loading="searchingOrder">搜索</el-button>
-        <el-button @click="resetGenerateDialog">清空</el-button>
-      </el-form-item>
-    </el-form>
-
-    <template v-if="foundOrder">
-      <el-alert :closable="false" type="success" style="margin-bottom:12px">
-        <template #title>
-          已找到订单 <strong>{{ foundOrder.order_no }}</strong>
-          <span v-if="foundOrder.customer_name"> — {{ foundOrder.customer_name }}</span>
-          <el-tag :color="foundOrder.status_color" style="color:#fff;border:0;margin-left:8px" size="small">{{ foundOrder.status_label }}</el-tag>
-        </template>
-      </el-alert>
-
-      <div class="generate-section-title">
-        <span>可生成的物料明细（{{ generateItems.length }} 项）</span>
-        <span v-if="generateItems.length === 0" style="color:#909399;font-size:12px">该订单没有物料类型的明细</span>
-      </div>
-      <el-table v-if="generateItems.length > 0" :data="generateItems" size="small" stripe style="width:100%" class="compact-table">
-        <el-table-column type="index" label="序号" width="45" />
-        <el-table-column prop="product_code" label="编码" width="100" />
-        <el-table-column prop="product_name" label="产品名称" width="130" show-overflow-tooltip />
-        <el-table-column label="规格" width="90">
-          <template #default="{ row }">
-            {{ row.width ? row.width : '-' }}×{{ row.height ? row.height : '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="qty" label="数量" width="60" align="center" />
-        <el-table-column prop="unit" label="单位" width="50" align="center" />
-        <el-table-column prop="process_desc" label="工艺描述" width="120" show-overflow-tooltip />
-        <el-table-column prop="remark" label="备注" width="100" show-overflow-tooltip />
-      </el-table>
-    </template>
-
-    <div v-if="searchNoResult" style="text-align:center;padding:32px;color:#909399;font-size:13px">
-      未找到匹配的订单，请确认订单号是否正确
-    </div>
-
-    <template #footer>
-      <el-button @click="showGenerateDialog = false">取消</el-button>
-      <el-button type="primary" :loading="generating" :disabled="!foundOrder || generateItems.length === 0" @click="handleConfirmGenerate">
-        确认生成
-      </el-button>
-    </template>
-  </el-dialog>
+  <!-- 生成加工单对话框 → 已合并到「待生成加工单」标签页内，每行有生成按钮 -->
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { orderApi, processingOrderApi } from '@/api'
+import { processingOrderApi } from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 // ── 常量 ──
@@ -235,14 +211,11 @@ const itemsLoading = ref(false)
 const itemsSaving = ref(false)
 const advancing = ref(false)
 
-// ── 生成加工单对话框 ──
-const showGenerateDialog = ref(false)
-const searchOrderNo = ref('')
-const searchingOrder = ref(false)
-const foundOrder = ref(null)
-const generateItems = ref([])
-const searchNoResult = ref(false)
-const generating = ref(false)
+// ── 待生成加工单 ──
+const activeTab = ref('pending')
+const pendingList = ref([])
+const loadingPending = ref(false)
+const generatingPendingId = ref(null)
 
 // =============================================================================
 // 数据加载
@@ -269,6 +242,23 @@ async function loadData() {
       }
     }
   } catch {} finally { loading.value = false }
+}
+
+// =============================================================================
+// 待生成加工单
+// =============================================================================
+
+async function loadPendingOrders() {
+  loadingPending.value = true
+  try {
+    const res = await processingOrderApi.pendingOrders()
+    pendingList.value = res.data || []
+  } catch {} finally { loadingPending.value = false }
+}
+
+function handleTabChange(tab) {
+  if (tab === 'pending') loadPendingOrders()
+  else if (tab === 'list') loadData()
 }
 
 // =============================================================================
@@ -422,74 +412,28 @@ async function handleSettle(po) {
 }
 
 // =============================================================================
-// 生成加工单
+// 从待生成列表一键生成
 // =============================================================================
 
-function openGenerateDialog() {
-  showGenerateDialog.value = true
-  searchOrderNo.value = ''
-  foundOrder.value = null
-  generateItems.value = []
-  searchNoResult.value = false
-}
-
-function resetGenerateDialog() {
-  searchOrderNo.value = ''
-  foundOrder.value = null
-  generateItems.value = []
-  searchNoResult.value = false
-}
-
-async function handleSearchOrder() {
-  const keyword = searchOrderNo.value.trim()
-  if (!keyword) { ElMessage.warning('请输入订单号'); return }
-
-  searchingOrder.value = true
-  searchNoResult.value = false
-  foundOrder.value = null
-  generateItems.value = []
+async function generateFromPending(row) {
+  generatingPendingId.value = row.order_id
   try {
-    const res = await orderApi.list({ keyword, page_size: 10 })
-    const orders = res.items || []
-    // 精确匹配优先，否则取第一条
-    const match = orders.find(o => o.order_no === keyword) || orders[0]
-
-    if (!match) {
-      searchNoResult.value = true
-      return
-    }
-
-    const detail = await orderApi.get(match.id)
-    const orderDetail = detail.data || detail
-    foundOrder.value = orderDetail
-    generateItems.value = (orderDetail.items || []).filter(
-      i => i.procurement_type === '物料'
-    )
-    if (generateItems.value.length === 0) {
-      ElMessage.warning('该订单没有物料类型的明细，无法生成加工单')
-    }
-  } catch {
-    searchNoResult.value = true
-  } finally {
-    searchingOrder.value = false
-  }
-}
-
-async function handleConfirmGenerate() {
-  if (!foundOrder.value) return
-  if (generateItems.value.length === 0) { ElMessage.warning('该订单没有可生成的物料明细'); return }
-
-  generating.value = true
-  try {
-    const res = await processingOrderApi.generateFromOrder(foundOrder.value.id)
+    const res = await processingOrderApi.generateFromOrder(row.order_id)
     ElMessage.success(`加工单已生成${res.data?.po_no ? '：' + res.data.po_no : ''}`)
-    showGenerateDialog.value = false
-    await loadData()
+    // 刷新待生成列表和加工单列表
+    await Promise.all([loadPendingOrders(), loadData()])
+    // 自动切换到加工单列表查看
+    activeTab.value = 'list'
   } catch {
     ElMessage.error('生成加工单失败')
   } finally {
-    generating.value = false
+    generatingPendingId.value = null
   }
+}
+
+function handlePendingRowClick(row) {
+  // 点击行跳转到订单详情（可在订单管理页面查看）
+  // 当前只做简单交互，无额外操作
 }
 
 // =============================================================================
@@ -503,7 +447,10 @@ function resetQuery() {
   loadData()
 }
 
-onMounted(loadData)
+onMounted(() => {
+  loadPendingOrders()
+  loadData()
+})
 </script>
 
 <style scoped>

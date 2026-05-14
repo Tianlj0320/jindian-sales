@@ -2,8 +2,6 @@
 认证相关 Pydantic 模型
 """
 
-from __future__ import annotations
-
 from pydantic import BaseModel, Field
 
 
@@ -48,3 +46,8 @@ class UserUpdate(BaseModel):
     position: str | None = None
     is_active: bool | None = None
     password: str | None = None
+
+
+# Pydantic v2 + from __future__ import annotations requires explicit rebuild
+UserUpdate.model_rebuild()
+LoginResponse.model_rebuild()

@@ -44,6 +44,7 @@
         <div class="mobile-card-body">
           <div class="mobile-card-row"><label>客户</label><span>{{ row.customer_name }}</span></div>
           <div class="mobile-card-row"><label>金额</label><span>¥{{ row.amount?.toFixed(2) }}</span></div>
+          <div class="mobile-card-row"><label>定金</label><span>¥{{ (row.deposit || 0).toFixed(2) }}</span></div>
           <div class="mobile-card-row"><label>欠款</label><span :style="{color: row.debt > 0 ? '#f56c6c' : '#67c23a'}">¥{{ row.debt?.toFixed(2) }}</span></div>
           <div class="mobile-card-row"><label>日期</label><span>{{ row.order_date }}</span></div>
         </div>
@@ -84,6 +85,9 @@
       </el-table-column>
       <el-table-column prop="received" label="已收" width="90" align="right">
         <template #default="{ row }">¥{{ row.received?.toFixed(2) }}</template>
+      </el-table-column>
+      <el-table-column prop="deposit" label="定金" width="90" align="right">
+        <template #default="{ row }">¥{{ (row.deposit || 0).toFixed(2) }}</template>
       </el-table-column>
       <el-table-column prop="debt" label="欠款" width="90" align="right">
         <template #default="{ row }">

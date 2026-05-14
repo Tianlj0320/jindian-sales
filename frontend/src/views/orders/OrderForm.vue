@@ -334,6 +334,11 @@
             </el-form-item>
           </el-col>
           <el-col :span="6">
+            <el-form-item label="定金(账户)">
+              <el-input v-model.number="form.deposit" placeholder="0" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="6">
             <el-form-item label="欠款">
               <el-input :model-value="computedDebt" disabled placeholder="自动计算" />
             </el-form-item>
@@ -465,6 +470,7 @@ const form = reactive({
   round_amount: 0,
   discount_reason: '',
   received: 0,
+  deposit: 0,
   content: '',
   remark: '',
   install_address: '',
@@ -835,6 +841,7 @@ onMounted(async () => {
         round_amount: data.round_amount || 0,
         discount_reason: data.discount_reason || '',
         received: data.received || 0,
+        deposit: data.deposit || 0,
         content: data.content || '',
         remark: data.remark || '',
         install_address: data.install_address || '',

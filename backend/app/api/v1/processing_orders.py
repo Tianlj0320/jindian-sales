@@ -11,6 +11,7 @@ from app.core.exceptions import BusinessError, NotFoundError
 from app.core.response import paginated, success
 from app.domain.order import Order, OrderItem
 from app.domain.processing_order import ProcessingOrder, ProcessingOrderItem
+from app.domain.warehouse import Inventory
 from app.services.status_engine import get_status_label, get_status_color
 from app.schemas.processing_order import (
     ProcessingOrderItemUpdate,
@@ -91,7 +92,7 @@ async def generate_from_order(
     session.add(processing_order)
     await session.flush()
 
-    # 创建加工单明细
+    # 创建加工单明细 + 自动减库存
     for oi in order_items:
         item = ProcessingOrderItem(
             processing_order_id=processing_order.id,
@@ -105,6 +106,19 @@ async def generate_from_order(
             process_desc=oi.process_desc or "",
         )
         session.add(item)
+
+        # 自动减库存：扣减主仓库（warehouse_id=1）的对应产品库存
+        inv_result = await session.execute(
+            select(Inventory).where(
+                Inventory.product_id == oi.product_id,
+                Inventory.warehouse_id == 1,
+            )
+        )
+        inv = inv_result.scalar_one_or_none()
+        deduct_qty = float(oi.qty or 0)
+        if inv:
+            inv.qty = max(0, float(inv.qty or 0) - deduct_qty)
+        # 如果没有库存记录，跳过（无需创建负库存）
 
     await session.flush()
 
@@ -131,6 +145,52 @@ async def generate_from_order(
         data={"id": processing_order.id, "po_no": po_no},
         message=f"加工单「{po_no}」生成成功",
     )
+
+
+# ─── 待生成加工单列表 ─────────────────────────────────────
+
+
+@router.get("/pending-orders")
+async def list_pending_processing_orders(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+):
+    """查询已入库但尚未生成加工单的订单（即有物料待加工的订单）"""
+    # 查询所有 stocked 状态的订单，且有关联的物料明细
+    result = await session.execute(
+        select(Order).where(
+            Order.status_key == "stocked",
+        ).order_by(Order.id.desc())
+    )
+    all_orders = list(result.scalars().all())
+
+    pending = []
+    for o in all_orders:
+        # 检查是否有物料明细
+        mat_result = await session.execute(
+            select(OrderItem).where(
+                OrderItem.order_id == o.id,
+                OrderItem.procurement_type == "物料",
+            )
+        )
+        mat_items = list(mat_result.scalars().all())
+        if not mat_items:
+            continue
+        # 检查是否已有加工单
+        po_check = await session.execute(
+            select(ProcessingOrder.id).where(ProcessingOrder.order_id == o.id)
+        )
+        if po_check.scalar_one_or_none():
+            continue
+        pending.append({
+            "order_id": o.id,
+            "order_no": o.order_no or "",
+            "customer_name": o.customer_name or "",
+            "material_count": len(mat_items),
+            "order_date": str(o.order_date) if o.order_date else "",
+        })
+
+    return success(data=pending)
 
 
 # ─── 加工单列表 ───────────────────────────────────────────────

@@ -12,6 +12,8 @@ from sqlalchemy import and_, func, select
 from app.api.deps import CurrentUserDep, PageDep, SessionDep
 from app.core.exceptions import NotFoundError, BusinessError
 from app.core.response import paginated, success
+from app.domain.customer import Customer
+from app.domain.deposit import Deposit
 from app.domain.finance import FinanceExpense, FinancePayable, FinanceReceivable
 from app.domain.order import Order
 from app.domain.purchase import PurchaseOrder
@@ -90,6 +92,35 @@ async def receive_payment(session: SessionDep, current_user: CurrentUserDep, req
     order.received = float(order.received or 0) + req.amount
     order.debt = max(0, float(order.amount or 0) - float(order.received or 0))
 
+    # 如果收款类型为定金，同步更新订单定金和定金记录
+    if req.payment_type == "定金":
+        order.deposit = float(order.deposit or 0) + req.amount
+
+        # 客户定金余额更新
+        if order.customer_id:
+            c_result = await session.execute(
+                select(Customer).where(Customer.id == order.customer_id, Customer.is_deleted == 0)
+            )
+            customer = c_result.scalar_one_or_none()
+            if customer:
+                current_balance = float(getattr(customer, "deposit_balance", 0))
+                new_balance = current_balance + req.amount
+                customer.deposit_balance = new_balance
+
+                # 创建定金记录
+                deposit = Deposit(
+                    customer_id=order.customer_id,
+                    order_id=req.order_id,
+                    amount=req.amount,
+                    balance=new_balance,
+                    payment_method=req.method,
+                    received_at=date.today(),
+                    operator_id=current_user.id,
+                    operator_name=current_user.name,
+                    remark=req.remark or f"订单{order.order_no}定金",
+                )
+                session.add(deposit)
+
     # 查找或创建应收记录
     recv_result = await session.execute(
         select(FinanceReceivable).where(FinanceReceivable.order_id == req.order_id)
@@ -115,7 +146,93 @@ async def receive_payment(session: SessionDep, current_user: CurrentUserDep, req
         session.add(recv)
 
     await session.flush()
-    return success(data={"order_id": req.order_id, "amount": req.amount}, message="收款登记成功")
+    return success(data={
+        "order_id": req.order_id,
+        "amount": req.amount,
+        "payment_type": req.payment_type,
+    }, message="收款登记成功")
+
+
+@router.get("/receivables/{order_id}/payments")
+async def get_order_payments(session: SessionDep, current_user: CurrentUserDep, order_id: int):
+    """获取订单的全部收款明细（含定金）"""
+    result = await session.execute(select(Order).where(Order.id == order_id))
+    order = result.scalar_one_or_none()
+    if not order:
+        raise NotFoundError("订单不存在")
+
+    # 应收记录
+    recv_result = await session.execute(
+        select(FinanceReceivable).where(FinanceReceivable.order_id == order_id)
+    )
+    recv = recv_result.scalar_one_or_none()
+
+    # 定金记录（优先按订单关联，再按客户关联）
+    deposits = []
+    if order.customer_id:
+        dep_cond = [Deposit.customer_id == order.customer_id]
+        # 如果有order_id关联的定金，也包含进来
+        dep_result = await session.execute(
+            select(Deposit)
+            .where(*dep_cond)
+            .order_by(Deposit.created_at.desc())
+        )
+        deposits = [
+            {
+                "id": d.id,
+                "amount": float(d.amount),
+                "balance": float(d.balance),
+                "payment_method": d.payment_method,
+                "received_at": str(d.received_at) if d.received_at else None,
+                "operator_name": d.operator_name,
+                "remark": d.remark,
+                "created_at": str(d.created_at)[:19] if d.created_at else "",
+            }
+            for d in dep_result.scalars().all()
+            if d.order_id is None or d.order_id == order_id
+        ]
+
+    # 组装付款明细（基于订单收款变动记录）
+    # 由于当前系统未存储逐笔收款明细，从订单和应收记录推导
+    payments = []
+    total_received = float(order.received or 0)
+    if total_received > 0:
+        # 有定金记录时优先展示
+        for d in deposits:
+            if float(d["amount"]) > 0:
+                payments.append({
+                    "type": "定金",
+                    "amount": float(d["amount"]),
+                    "method": d["payment_method"],
+                    "date": d["received_at"],
+                    "remark": d["remark"],
+                    "source": "deposit",
+                })
+        # 如果定金总额小于已收，差额作为其他收款
+        deposit_total = sum(p["amount"] for p in payments if p["source"] == "deposit")
+        if total_received > deposit_total:
+            payments.append({
+                "type": "收款",
+                "amount": total_received - deposit_total,
+                "method": "",
+                "date": None,
+                "remark": "综合收款（含进度款/尾款）",
+                "source": "receivable",
+            })
+
+    return success(data={
+        "order_id": order.id,
+        "order_no": order.order_no or "",
+        "customer_name": order.customer_name or "",
+        "customer_id": order.customer_id,
+        "total_amount": float(order.amount or 0),
+        "received_amount": total_received,
+        "unpaid_amount": float(order.debt or 0),
+        "deposit_amount": float(order.deposit or 0),
+        "receivable_status": recv.status if recv else ("已结清" if total_received >= float(order.amount or 0) else "未收款"),
+        "payments": payments,
+        "deposits": deposits,
+    })
 
 
 # ══════════════════════════════════════════════════════════════

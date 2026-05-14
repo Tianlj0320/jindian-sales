@@ -2,8 +2,6 @@
 认证 API
 """
 
-from __future__ import annotations
-
 from fastapi import APIRouter
 from sqlalchemy import select
 
@@ -13,7 +11,7 @@ from app.core.response import success
 from app.core.security import create_access_token, hash_password, verify_password
 from app.domain.auth import User
 from app.domain.role import Role
-from app.schemas.auth import LoginRequest, LoginResponse, UserInfo, UserCreate
+from app.schemas.auth import LoginRequest, LoginResponse, UserInfo, UserCreate, UserUpdate
 
 router = APIRouter(prefix="/api/v1/auth", tags=["认证"])
 

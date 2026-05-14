@@ -194,6 +194,7 @@ export const financeApi = {
   deleteExpense: (id) => http.delete(`/finance/expenses/${id}`),
   summary: () => http.get('/finance/summary'),
   monthlyReport: (params) => http.get('/finance/monthly-report', { params }),
+  getOrderPayments: (orderId) => http.get(`/finance/receivables/${orderId}/payments`),
 }
 
 export const productionApi = {
@@ -262,6 +263,7 @@ export const processingOrderApi = {
   markPrinted(poId) { return http.put(`/processing/${poId}/mark-printed`) },
   getPrintData(poId) { return http.get(`/processing/${poId}/print`) },
   settle(poId) { return http.post(`/processing/${poId}/settle`) },
+  pendingOrders() { return http.get('/processing/pending-orders') },
 }
 
 export const dailyReportApi = {

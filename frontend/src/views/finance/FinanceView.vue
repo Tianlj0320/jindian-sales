@@ -5,7 +5,7 @@
         <div class="page-header">
           <h3>财务管理</h3>
           <div>
-            <el-button :type="tab === 'receivable' ? 'primary' : 'default'" size="small" @click="tab = 'receivable'">应收款</el-button>
+            <el-button :type="tab === 'receivable' ? 'primary' : 'default'" size="small" @click="tab = 'receivable'; if (!receivables.length) loadReceivables()">收款管理</el-button>
             <el-button :type="tab === 'payable' ? 'primary' : 'default'" size="small" @click="tab = 'payable'">应付款</el-button>
             <el-button :type="tab === 'expense' ? 'primary' : 'default'" size="small" @click="tab = 'expense'">费用</el-button>
             <el-button :type="tab === 'summary' ? 'primary' : 'default'" size="small" @click="tab = 'summary'">汇总</el-button>
@@ -16,50 +16,114 @@
         </div>
       </template>
 
-      <!-- 应收款 -->
+      <!-- 收款管理（按订单分组） -->
       <div v-show="tab === 'receivable'">
+        <!-- 筛选 -->
         <el-form :inline="true" style="margin-bottom:16px">
           <el-form-item label="搜索">
-            <el-input v-model="recQuery.keyword" placeholder="订单号/客户" clearable @clear="loadReceivables" @keyup.enter="loadReceivables" />
+            <el-input v-model="recQuery.keyword" placeholder="订单号/客户" clearable style="width:180px" @clear="loadReceivables" @keyup.enter="loadReceivables" />
           </el-form-item>
           <el-form-item label="状态">
-            <el-select v-model="recQuery.status" clearable style="width:100px" @change="loadReceivables">
-              <el-option label="未收" value="unpaid" />
-              <el-option label="部分" value="partial" />
-              <el-option label="已收" value="paid" />
+            <el-select v-model="recQuery.status" clearable style="width:120px" @change="loadReceivables">
+              <el-option label="待收款" value="待收款" />
+              <el-option label="部分收款" value="部分收款" />
+              <el-option label="已结清" value="已结清" />
             </el-select>
           </el-form-item>
           <el-form-item>
             <el-button type="primary" @click="loadReceivables">查询</el-button>
+            <el-button @click="recQuery.keyword=''; recQuery.status=''; recQuery.page=1; loadReceivables()">重置</el-button>
           </el-form-item>
         </el-form>
-        <el-table :data="receivables" v-loading="loadingRec" stripe style="width:100%">
-          <el-table-column prop="order_no" label="订单号" width="150" />
-          <el-table-column prop="customer_name" label="客户" width="120" />
-          <el-table-column prop="total_amount" label="应收总额" width="120" align="right">
-            <template #default="{ row }">¥{{ row.total_amount?.toFixed(2) }}</template>
-          </el-table-column>
-          <el-table-column prop="received_amount" label="已收金额" width="120" align="right">
-            <template #default="{ row }">¥{{ row.received_amount?.toFixed(2) }}</template>
-          </el-table-column>
-          <el-table-column prop="unpaid_amount" label="未收金额" width="120" align="right">
-            <template #default="{ row }">
-              <span :style="{ color: row.unpaid_amount > 0 ? '#f56c6c' : '#67c23a', fontWeight: 'bold' }">
-                ¥{{ row.unpaid_amount?.toFixed(2) }}
-              </span>
-            </template>
-          </el-table-column>
-          <el-table-column label="状态" width="80" align="center">
-            <template #default="{ row }">
-              <el-tag :type="recStatusTag(row.status)" size="small">{{ recStatusLabel(row.status) }}</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="100" fixed="right">
-            <template #default="{ row }">
-              <el-button v-if="row.unpaid_amount > 0" text size="small" type="primary" @click="showReceiveDialog(row)">收款</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
+
+        <!-- 订单分组列表 -->
+        <div v-loading="loadingRec">
+          <div v-for="ord in receivables" :key="ord.id" class="order-card">
+            <div class="order-card-header" @click="toggleOrder(ord)">
+              <div class="order-info">
+                <el-icon style="margin-right:6px">
+                  <component :is="ord._expanded ? 'ArrowDown' : 'ArrowRight'" />
+                </el-icon>
+                <strong>{{ ord.order_no || '#' + ord.order_id }}</strong>
+                <span style="margin-left:8px;color:#666">{{ ord.customer_name }}</span>
+                <el-tag :type="recvStatusTag(ord.status)" size="small" style="margin-left:8px">{{ recvStatusLabel(ord.status) }}</el-tag>
+              </div>
+              <div class="order-amounts">
+                <span>总额: <b>¥{{ ord.total_amount?.toFixed(2) }}</b></span>
+                <span style="margin-left:16px;color:#67c23a">已收: <b>¥{{ ord.received_amount?.toFixed(2) }}</b></span>
+                <span v-if="ord.unpaid_amount > 0" style="margin-left:16px;color:#f56c6c">欠款: <b>¥{{ ord.unpaid_amount?.toFixed(2) }}</b></span>
+                <el-button v-if="ord.unpaid_amount > 0" size="small" type="primary" text style="margin-left:12px" @click.stop="showReceiveDialog(ord)">收款</el-button>
+              </div>
+            </div>
+
+            <!-- 展开明细 -->
+            <div v-if="ord._expanded" class="order-detail">
+              <div v-if="ord._loadingPayments" style="text-align:center;padding:12px;color:#999">加载中...</div>
+              <template v-else-if="ord._paymentList && ord._paymentList.length > 0">
+                <el-table :data="ord._paymentList" stripe size="small" style="width:100%" :show-header="false">
+                  <el-table-column width="60">
+                    <template #default>
+                      <span style="color:#999;font-size:12px">●</span>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="类型" width="100">
+                    <template #default="{ row }">
+                      <el-tag v-if="row.source === 'deposit'" type="warning" size="small">定金</el-tag>
+                      <el-tag v-else type="success" size="small">{{ row.type }}</el-tag>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="金额" width="120" align="right">
+                    <template #default="{ row }">¥{{ row.amount?.toFixed(2) }}</template>
+                  </el-table-column>
+                  <el-table-column label="方式" width="80">
+                    <template #default="{ row }">{{ row.method || '-' }}</template>
+                  </el-table-column>
+                  <el-table-column label="日期" width="100">
+                    <template #default="{ row }">{{ row.date ? row.date.slice(0,10) : '-' }}</template>
+                  </el-table-column>
+                  <el-table-column label="备注" min-width="120" show-overflow-tooltip>
+                    <template #default="{ row }">{{ row.remark || '-' }}</template>
+                  </el-table-column>
+                </el-table>
+              </template>
+              <div v-else style="padding:12px;color:#999;text-align:center">暂无收款明细</div>
+
+              <!-- 内联收款 -->
+              <div v-if="ord.unpaid_amount > 0" class="inline-receive">
+                <el-select v-model="ord._paymentType" size="small" style="width:90px">
+                  <el-option label="定金" value="定金" />
+                  <el-option label="进度款" value="进度款" />
+                  <el-option label="尾款" value="尾款" />
+                  <el-option label="其他" value="其他" />
+                </el-select>
+                <el-input-number v-model="ord._receiveAmount" :precision="2" :min="0.01" :max="ord.unpaid_amount" size="small" style="width:130px;margin-left:8px" />
+                <el-select v-model="ord._receiveMethod" size="small" style="width:90px;margin-left:8px">
+                  <el-option label="转账" value="转账" />
+                  <el-option label="现金" value="现金" />
+                  <el-option label="微信" value="微信" />
+                  <el-option label="支付宝" value="支付宝" />
+                  <el-option label="刷卡" value="刷卡" />
+                </el-select>
+                <el-button size="small" type="primary" style="margin-left:8px" :loading="ord._receiving" @click="handleInlineReceive(ord)">确认收款</el-button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 空状态 -->
+          <el-empty v-if="receivables.length === 0" description="没有匹配的收款记录" />
+        </div>
+
+        <!-- 分页 -->
+        <div style="margin-top:12px;text-align:right">
+          <el-pagination
+            v-model:current-page="recQuery.page"
+            :page-size="20"
+            :total="recTotal"
+            layout="total, prev, pager, next"
+            size="small"
+            @current-change="loadReceivables"
+          />
+        </div>
       </div>
 
       <!-- 应付款 -->
@@ -97,7 +161,7 @@
           </el-table-column>
           <el-table-column label="状态" width="80" align="center">
             <template #default="{ row }">
-              <el-tag :type="recStatusTag(row.status)" size="small">{{ recStatusLabel(row.status) }}</el-tag>
+              <el-tag :type="payStatusTag(row.status)" size="small">{{ payStatusLabel(row.status) }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column label="操作" width="100" fixed="right">
@@ -110,16 +174,54 @@
 
       <!-- 费用 -->
       <div v-show="tab === 'expense'">
-        <el-button style="margin-bottom:12px" @click="showExpenseDialog = true">新增费用</el-button>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <el-form :inline="true" style="margin-bottom:0">
+            <el-form-item label="类别">
+              <el-select v-model="expQuery.category" clearable style="width:110px" @change="loadExpenses">
+                <el-option label="房租" value="房租" />
+                <el-option label="水电" value="水电" />
+                <el-option label="工资" value="工资" />
+                <el-option label="交通" value="交通" />
+                <el-option label="餐饮" value="餐饮" />
+                <el-option label="办公" value="办公" />
+                <el-option label="其他" value="其他" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="日期起">
+              <el-date-picker v-model="expQuery.start_date" type="date" placeholder="起" value-format="YYYY-MM-DD" style="width:130px" @change="loadExpenses" />
+            </el-form-item>
+            <el-form-item label="日期止">
+              <el-date-picker v-model="expQuery.end_date" type="date" placeholder="止" value-format="YYYY-MM-DD" style="width:130px" @change="loadExpenses" />
+            </el-form-item>
+            <el-form-item label="关键词">
+              <el-input v-model="expQuery.keyword" placeholder="备注搜索" clearable style="width:150px" @keyup.enter="loadExpenses" />
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" @click="loadExpenses">查询</el-button>
+              <el-button @click="expQuery.category='';expQuery.start_date='';expQuery.end_date='';expQuery.keyword='';expQuery.page=1;loadExpenses()">重置</el-button>
+            </el-form-item>
+          </el-form>
+          <el-button @click="showExpenseDialog = true">新增费用</el-button>
+        </div>
         <el-table :data="expenses" v-loading="loadingExp" stripe style="width:100%">
           <el-table-column prop="expense_date" label="日期" width="110" />
           <el-table-column prop="category" label="费用类型" width="120" />
           <el-table-column prop="amount" label="金额" width="120" align="right">
             <template #default="{ row }">¥{{ row.amount?.toFixed(2) }}</template>
           </el-table-column>
-          <el-table-column prop="remark" label="备注" min-width="200" />
+          <el-table-column prop="remark" label="备注" min-width="200" show-overflow-tooltip />
           <el-table-column prop="created_at" label="创建时间" width="160" />
         </el-table>
+        <div style="margin-top:12px;text-align:right">
+          <el-pagination
+            v-model:current-page="expQuery.page"
+            :page-size="20"
+            :total="expTotal"
+            layout="total, prev, pager, next"
+            size="small"
+            @current-change="loadExpenses"
+          />
+        </div>
       </div>
 
       <!-- 汇总 -->
@@ -231,7 +333,6 @@
           </el-table-column>
         </el-table>
 
-        <!-- 汇总行 -->
         <el-card v-if="monthlyReport" shadow="never" style="margin-top:16px">
           <el-row :gutter="24">
             <el-col :span="8" style="text-align:center">
@@ -256,12 +357,20 @@
     <!-- 定金管理 -->
     <DepositPanel v-show="tab === 'deposit'" />
 
-    <!-- 收款对话框 -->
+    <!-- 收款对话框（已内联到订单卡片中，保留做备选） -->
     <el-dialog v-model="showReceive" title="收款确认" width="450px">
       <template v-if="receiveTarget">
         <p style="margin-bottom:12px">订单：{{ receiveTarget.order_no }} — {{ receiveTarget.customer_name }}</p>
         <p style="margin-bottom:12px">未收金额：<span style="color:#f56c6c;font-weight:bold">¥{{ receiveTarget.unpaid_amount?.toFixed(2) }}</span></p>
         <el-form :model="receiveForm" label-width="80px">
+          <el-form-item label="收款类型">
+            <el-select v-model="receiveForm.payment_type" style="width:100%">
+              <el-option label="定金" value="定金" />
+              <el-option label="进度款" value="进度款" />
+              <el-option label="尾款" value="尾款" />
+              <el-option label="其他" value="其他" />
+            </el-select>
+          </el-form-item>
           <el-form-item label="收款金额">
             <el-input-number v-model="receiveForm.amount" :precision="2" :min="0.01" :max="receiveTarget.unpaid_amount" style="width:100%" />
           </el-form-item>
@@ -347,14 +456,16 @@
 
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'
-import { financeApi } from '@/api'
+import { financeApi, depositApi } from '@/api'
 import { ElMessage } from 'element-plus'
 import DepositPanel from './DepositPanel.vue'
 
 const tab = ref('receivable')
 const receivables = ref([])
+const recTotal = ref(0)
 const payables = ref([])
 const expenses = ref([])
+const expTotal = ref(0)
 const summary = ref(null)
 const loadingRec = ref(false)
 const loadingPay = ref(false)
@@ -373,21 +484,21 @@ const monthlyReport = ref(null)
 const loadingReport = ref(false)
 const reportYear = ref(new Date().getFullYear().toString())
 
-const recQuery = reactive({ keyword: '', status: '', page: 1, page_size: 100 })
+const recQuery = reactive({ keyword: '', status: '', page: 1, page_size: 20 })
 const payQuery = reactive({ keyword: '', status: '', page: 1, page_size: 100 })
-const receiveForm = reactive({ order_id: null, amount: 0, method: '转账', remark: '' })
+const expQuery = reactive({ category: '', start_date: '', end_date: '', keyword: '', page: 1, page_size: 20 })
+const receiveForm = reactive({ order_id: null, amount: 0, method: '转账', payment_type: '其他', remark: '' })
 const payForm = reactive({ ref_type: '', ref_id: null, amount: 0, method: '转账', remark: '' })
 const expenseForm = reactive({ category: '其他', amount: 0, expense_date: new Date().toISOString().slice(0, 10), remark: '' })
 
-function recStatusTag(status) {
-  const map = { unpaid: 'danger', partial: 'warning', paid: 'success' }
+function recvStatusTag(status) {
+  const map = { '待收款': 'danger', '部分收款': 'warning', '已结清': 'success' }
   return map[status] || 'info'
 }
-function recStatusLabel(status) {
-  const map = { unpaid: '未收', partial: '部分', paid: '已收' }
-  return map[status] || status
+function recvStatusLabel(status) {
+  const map = { '待收款': '待收款', '部分收款': '部分收款', '已结清': '已结清' }
+  return map[status] || status || '未收款'
 }
-
 function payStatusTag(status) {
   const map = { unpaid: 'danger', partial: 'warning', paid: 'success' }
   return map[status] || 'info'
@@ -400,9 +511,70 @@ function payStatusLabel(status) {
 async function loadReceivables() {
   loadingRec.value = true
   try {
-    const res = await financeApi.listReceivables(recQuery)
-    receivables.value = res.items || []
+    const params = { page: recQuery.page, page_size: recQuery.page_size }
+    if (recQuery.keyword) params.keyword = recQuery.keyword
+    if (recQuery.status) params.status = recQuery.status
+    const res = await financeApi.listReceivables(params)
+
+    // 如果没传状态筛选，默认排除已结清
+    const items = (res.items || []).filter(i => {
+      if (recQuery.status) return true
+      return i.unpaid_amount > 0
+    })
+
+    receivables.value = items.map(i => ({
+      ...i,
+      _expanded: false,
+      _loadingPayments: false,
+      _paymentList: [],
+      _receiveAmount: i.unpaid_amount || 0,
+      _receiveMethod: '转账',
+      _paymentType: '其他',
+      _receiving: false,
+    }))
+    recTotal.value = res.total || 0
   } catch {} finally { loadingRec.value = false }
+}
+
+async function loadOrderPayments(ord) {
+  if (ord._paymentList && ord._paymentList.length > 0) return
+  ord._loadingPayments = true
+  try {
+    const res = await financeApi.getOrderPayments(ord.order_id)
+    const data = res.data || {}
+    ord._paymentList = data.payments || []
+  } catch {
+    ord._paymentList = []
+  } finally {
+    ord._loadingPayments = false
+  }
+}
+
+function toggleOrder(ord) {
+  ord._expanded = !ord._expanded
+  if (ord._expanded) {
+    loadOrderPayments(ord)
+  }
+}
+
+async function handleInlineReceive(ord) {
+  ord._receiving = true
+  try {
+    const msg = await financeApi.receive({
+      order_id: ord.order_id,
+      amount: ord._receiveAmount,
+      method: ord._receiveMethod,
+      payment_type: ord._paymentType,
+      remark: '',
+    })
+    ElMessage.success(`${ord._paymentType} ¥${ord._receiveAmount.toFixed(2)} 成功`)
+    await loadReceivables()
+    loadSummary()
+  } catch {
+    ElMessage.error('收款失败')
+  } finally {
+    ord._receiving = false
+  }
 }
 
 async function loadPayables() {
@@ -416,8 +588,18 @@ async function loadPayables() {
 async function loadExpenses() {
   loadingExp.value = true
   try {
-    const res = await financeApi.listExpenses({ page: 1, page_size: 100 })
-    expenses.value = res.items || []
+    const params = { page: expQuery.page, page_size: expQuery.page_size }
+    if (expQuery.category) params.category = expQuery.category
+    if (expQuery.start_date) params.start_date = expQuery.start_date
+    if (expQuery.end_date) params.end_date = expQuery.end_date
+    // keyword filtering done client-side
+    const res = await financeApi.listExpenses(params)
+    let items = res.items || []
+    if (expQuery.keyword) {
+      items = items.filter(i => (i.remark || '').includes(expQuery.keyword))
+    }
+    expenses.value = items
+    expTotal.value = res.total || 0
   } catch {} finally { loadingExp.value = false }
 }
 
@@ -433,6 +615,7 @@ function showReceiveDialog(row) {
   receiveForm.order_id = row.order_id
   receiveForm.amount = row.unpaid_amount
   receiveForm.method = '转账'
+  receiveForm.payment_type = '其他'
   receiveForm.remark = ''
   showReceive.value = true
 }
@@ -478,35 +661,64 @@ async function handlePay() {
 }
 
 async function handleCreateExpense() {
-  if (!expenseForm.category || !expenseForm.amount) { ElMessage.warning('请填写完整'); return }
+  if (!expenseForm.amount) {
+    ElMessage.warning('请输入金额')
+    return
+  }
   saving.value = true
   try {
     await financeApi.createExpense(expenseForm)
-    ElMessage.success('费用已记录')
+    ElMessage.success('费用记录创建成功')
     showExpenseDialog.value = false
-    expenseForm.category = '其他'; expenseForm.amount = 0; expenseForm.remark = ''
     loadExpenses()
     loadSummary()
   } catch {} finally { saving.value = false }
 }
 
-watch(tab, (val) => {
-  if (val === 'receivable') loadReceivables()
-  else if (val === 'payable') loadPayables()
-  else if (val === 'expense') loadExpenses()
-  else if (val === 'summary') loadSummary()
-  else if (val === 'monthly') loadMonthlyReport()
-})
-
 onMounted(() => {
   loadReceivables()
+  loadPayables()
+  loadExpenses()
+  loadSummary()
 })
 </script>
 
 <style scoped>
 .page-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
-.page-header h3 { font-size: 18px; }
-.summary-card { text-align: center; padding: 8px 0; }
-.summary-label { font-size: 14px; color: #909399; margin-bottom: 8px; }
-.summary-value { font-size: 24px; font-weight: bold; }
+.page-header h3 { margin: 0; }
+.summary-card { padding: 4px 0; }
+.summary-label { font-size: 13px; color: #999; margin-bottom: 4px; }
+.summary-value { font-size: 20px; font-weight: bold; }
+
+/* 订单卡片 */
+.order-card {
+  border: 1px solid #ebeef5;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.order-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  cursor: pointer;
+  background: #fafafa;
+  transition: background 0.2s;
+}
+.order-card-header:hover { background: #f0f5f0; }
+.order-info { display: flex; align-items: center; }
+.order-amounts { display: flex; align-items: center; font-size: 13px; }
+.order-detail {
+  padding: 8px 14px 12px;
+  border-top: 1px solid #ebeef5;
+  background: #fff;
+}
+.inline-receive {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #e8e8e8;
+  display: flex;
+  align-items: center;
+}
 </style>

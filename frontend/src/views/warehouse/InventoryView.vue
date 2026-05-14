@@ -18,9 +18,7 @@
         <!-- 仓库选择 + 类型筛选 -->
         <div style="margin-bottom:12px;display:flex;align-items:center;gap:8px">
           <el-select v-model="filterWarehouseType" clearable placeholder="仓库类型" size="small" style="width:120px" @change="loadWarehouses">
-            <el-option label="主仓库" value="main" />
-            <el-option label="辅料仓" value="auxiliary" />
-            <el-option label="成品仓" value="finished" />
+            <el-option v-for="t in warehouseTypes" :key="t.code" :label="t.label" :value="t.code" />
           </el-select>
           <el-radio-group v-model="selectedWarehouseId" @change="onWarehouseChange">
             <el-radio-button v-for="w in warehouses" :key="w.id" :value="w.id">
@@ -318,7 +316,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
-import { warehouseApi, orderApi, productApi } from '@/api'
+import { warehouseApi, orderApi, productApi, systemApi } from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { generateProcessingHtml } from '@/utils/print'
 
@@ -328,6 +326,7 @@ const loadingInv = ref(false)
 const loadingFlows = ref(false)
 const savingLocation = ref(false)
 const filterWarehouseType = ref('')
+const warehouseTypes = ref([])
 
 // ── 库存分组视图 ──────────────────────────────────────────
 const selectedWarehouseId = ref(null)
@@ -569,6 +568,10 @@ function doPrint() {
 onMounted(() => {
   loadWarehouses()
   loadFlows()
+  // 加载仓库类型字典
+  systemApi.getDict('warehouse').then(res => {
+    warehouseTypes.value = res.data || []
+  }).catch(() => {})
 })
 </script>
 

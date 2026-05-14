@@ -19,7 +19,6 @@ from app.core.response import paginated, success
 from app.domain.order import Order, OrderItem
 from app.domain.product import Product, Supplier as SupModel
 from app.domain.purchase import PurchaseOrder, PurchaseOrderItem
-from app.domain.processing_order import ProcessingOrder, ProcessingOrderItem
 from app.domain.warehouse import Inventory, InventoryFlow, Warehouse
 from app.services.status_engine import get_status_label, get_status_color
 from app.schemas.purchase import (
@@ -707,55 +706,6 @@ async def _execute_receive(
             o.status_label = new_label
             o.status_color = new_color
             o.history = history
-
-            # ── 自动生成加工单（物料明细） ──
-            mat_result = await session.execute(
-                select(OrderItem).where(
-                    OrderItem.order_id == o.id,
-                    OrderItem.procurement_type == "物料",
-                )
-            )
-            material_items = list(mat_result.scalars().all())
-            if material_items:
-                now = datetime.now(timezone.utc)
-                today_str = now.strftime("%Y%m%d")
-                seq_result = await session.execute(
-                    select(func.count(ProcessingOrder.id)).where(
-                        ProcessingOrder.po_no.like(f"JG{today_str}%")
-                    )
-                )
-                seq = (seq_result.scalar() or 0) + 1
-                po_no = f"JG{today_str}{seq:03d}"
-                processing_order = ProcessingOrder(
-                    po_no=po_no, order_id=o.id, order_no=o.order_no or "",
-                    customer_name=o.customer_name or "",
-                    total_items=len(material_items), status="pending", printed=False,
-                )
-                session.add(processing_order)
-                await session.flush()
-                for oi in material_items:
-                    session.add(ProcessingOrderItem(
-                        processing_order_id=processing_order.id,
-                        order_item_id=oi.id, product_name=oi.product_name or "",
-                        product_code=oi.product_code or "",
-                        width=float(oi.width or 0), height=float(oi.height or 0),
-                        qty=float(oi.qty or 1), unit=oi.unit or "",
-                        process_desc=oi.process_desc or "",
-                    ))
-                await session.flush()
-                # 推进订单状态：stocked → processing
-                old_lbl2 = o.status_label
-                new_key2 = "processing"
-                new_lbl2 = get_status_label(new_key2)
-                new_clr2 = get_status_color(new_key2)
-                o.status_key = new_key2
-                o.status_label = new_lbl2
-                o.status_color = new_clr2
-                o.history.append({
-                    "s": old_lbl2, "s2": new_lbl2, "c": new_key2,
-                    "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
-                    "detail": f"系统自动生成加工单「{po_no}」，进入加工流程",
-                })
     else:
         po.status = "部分到货"
 

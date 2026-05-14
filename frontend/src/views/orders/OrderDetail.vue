@@ -97,12 +97,13 @@
         <el-descriptions-item label="抹零">¥{{ order.round_amount?.toFixed(2) }}</el-descriptions-item>
         <el-descriptions-item label="应收金额"><strong>¥{{ order.amount?.toFixed(2) }}</strong></el-descriptions-item>
         <el-descriptions-item label="已收金额">¥{{ order.received?.toFixed(2) }}</el-descriptions-item>
+        <el-descriptions-item label="定金">¥{{ (order.deposit || 0).toFixed(2) }}</el-descriptions-item>
         <el-descriptions-item label="欠款">
           <span :style="{ color: (order.debt || 0) > 0 ? '#f56c6c' : '#67c23a', fontWeight: 'bold' }">
             ¥{{ (order.debt || 0).toFixed(2) }}
           </span>
         </el-descriptions-item>
-        <el-descriptions-item label="优惠原因" :span="2">{{ order.discount_reason || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="优惠原因">{{ order.discount_reason || '-' }}</el-descriptions-item>
       </el-descriptions>
 
       <!-- 订单费用 -->

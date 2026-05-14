@@ -12,7 +12,7 @@ from sqlalchemy import and_, func, or_, select
 from app.api.deps import CurrentUserDep, PageDep, SessionDep, require_permission
 from app.core.exceptions import BusinessError, NotFoundError
 from app.core.response import paginated, success
-from app.domain.after_sale import AfterSaleService
+from app.domain.after_sale import AfterSaleService, TERMINAL_STATUSES as AFTER_SALE_TERMINAL
 from app.domain.customer import Customer
 from app.domain.deposit import Deposit
 from app.domain.order import Order, OrderItem
@@ -39,7 +39,6 @@ router = APIRouter(prefix="/api/v1/orders", tags=["订单管理"])
 def _generate_order_no(session, today_str: str, seq: int) -> str:
     """生成订单号：YYMMDD + 3位序号"""
     return f"{today_str}{seq:03d}"
-
 
 def _build_order_history(status_key: str) -> list[dict]:
     """创建订单时的初始历史记录"""
@@ -171,6 +170,7 @@ async def list_orders(
             "content": o.content or "",
             "amount": float(o.amount or 0),
             "received": float(o.received or 0),
+            "deposit": float(o.deposit or 0),
             "debt": float(o.debt or 0),
             "status_key": o.status_key,
             "status_label": o.status_label,
@@ -785,25 +785,31 @@ async def _auto_split_purchase(session) -> list[str]:
                 )
                 session.add(poi)
 
-    # 将所有已处理订单状态更新为"已分单"
+    # 将所有已处理订单状态更新为"已分单"→ 自动推进到"采购中"
     now_ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
     po_detail = f"生成采购单: {', '.join(po_nos)}"
     for oid in order_ids:
         o_result = await session.execute(select(Order).where(Order.id == oid))
         o = o_result.scalar_one_or_none()
         if o:
-            old_label = o.status_label
             history = o.history or []
             history.append({
-                "s": old_label,
+                "s": o.status_label,
                 "s2": "已分单",
                 "c": "split",
                 "time": now_ts,
                 "detail": po_detail,
             })
-            o.status_key = "split"
-            o.status_label = "已分单"
-            o.status_color = "#7c3aed"
+            history.append({
+                "s": "已分单",
+                "s2": "采购中",
+                "c": "purchasing",
+                "time": now_ts,
+                "detail": "拆分完成，自动进入采购环节",
+            })
+            o.status_key = "purchasing"
+            o.status_label = "采购中"
+            o.status_color = "#f59e0b"
             o.history = history
 
     await session.flush()
@@ -846,6 +852,18 @@ async def advance_order(
 
     if is_terminal(o.status_key):
         raise BusinessError(f"订单已在终态「{o.status_label}」，无法推进")
+
+    # ── 售后过程控制：检查是否有阻塞的售后单 ──
+    hold_result = await session.execute(
+        select(func.count(AfterSaleService.id)).where(
+            AfterSaleService.order_id == order_id,
+            AfterSaleService.order_hold == True,
+            ~AfterSaleService.status.in_(list(AFTER_SALE_TERMINAL)),
+        )
+    )
+    hold_count = hold_result.scalar() or 0
+    if hold_count > 0:
+        raise BusinessError("该订单存在待处理的售后单（已阻塞），请先处理完成后再推进")
 
     old_key = o.status_key
     old_label = o.status_label
@@ -930,9 +948,6 @@ async def advance_order(
     o.status_color = new_color
     o.history = history
 
-    if new_key == "completed":
-        o.debt = 0
-
     await session.flush()
 
     return success(
@@ -978,9 +993,6 @@ async def update_order_status(
     o.status_label = new_label
     o.status_color = new_color
     o.history = history
-
-    if status_key == "completed":
-        o.debt = 0
 
     await session.flush()
     return success(data={"id": order_id, "status_key": status_key}, message=f"状态已更新为「{new_label}」")
@@ -1073,6 +1085,18 @@ async def rollback_order_status(
     o = result.scalar_one_or_none()
     if not o:
         raise NotFoundError("订单不存在")
+
+    # ── 售后过程控制：检查是否有阻塞的售后单 ──
+    hold_result = await session.execute(
+        select(func.count(AfterSaleService.id)).where(
+            AfterSaleService.order_id == order_id,
+            AfterSaleService.order_hold == True,
+            ~AfterSaleService.status.in_(list(AFTER_SALE_TERMINAL)),
+        )
+    )
+    hold_count = hold_result.scalar() or 0
+    if hold_count > 0:
+        raise BusinessError("该订单存在待处理的售后单（已阻塞），请先处理完成后再操作")
 
     status_key = req.status_key
 

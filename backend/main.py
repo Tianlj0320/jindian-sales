@@ -345,6 +345,61 @@ async def startup():
                 ))
                 logger.info("迁移: warehouses 表添加了 warehouse_type 列（main/auxiliary/finished）")
 
+            # 迁移19: 清理冗余仓库
+            try:
+                wh_rows = sync_conn.execute(text("SELECT id, name FROM warehouses")).all()
+                for row in wh_rows:
+                    if row[1] in ("辅料仓", "成品仓"):
+                        sync_conn.execute(text("DELETE FROM warehouses WHERE id = :id"), [{"id": row[0]}])
+                        logger.info(f"迁移: 删除了冗余仓库「{row[1]}」(id={row[0]})")
+                    elif row[1] in ("主仓库",):
+                        sync_conn.execute(text("UPDATE warehouses SET name = '面料仓库' WHERE id = :id"), [{"id": row[0]}])
+                        logger.info(f"迁移: 仓库「{row[1]}」→「面料仓库」(id={row[0]})")
+                    elif row[1] in ("面料仓库", "辅料仓库", "成品仓库"):
+                        # 保留已正确命名的仓库，仅清理 warehouse_type
+                        pass
+            except Exception as exc:
+                logger.warning(f"迁移19: 仓库清理异常（可忽略）: {exc}")
+
+            # 迁移20: after_sale_services 新增列（售后模块重构 v2）
+            as_cols = {c["name"] for c in inspector.get_columns("after_sale_services")}
+            new_as_cols = {
+                "priority": "VARCHAR(10) DEFAULT 'normal'",
+                "source": "VARCHAR(20) DEFAULT 'manual'",
+                "reviewer_id": "INTEGER",
+                "reviewer_name": "VARCHAR(50) DEFAULT ''",
+                "review_remark": "TEXT DEFAULT ''",
+                "reviewed_at": "TIMESTAMP",
+                "rejected_at": "TIMESTAMP",
+                "closed_at": "TIMESTAMP",
+                "customer_confirmed": "INTEGER DEFAULT 0",
+                "customer_confirmed_at": "TIMESTAMP",
+                "order_hold": "INTEGER DEFAULT 0",
+                "resolved_type": "VARCHAR(20) DEFAULT ''",
+                "refund_amount": "DECIMAL(12,2) DEFAULT 0",
+                "compensation_amount": "DECIMAL(12,2) DEFAULT 0",
+                "rework_cost": "DECIMAL(12,2) DEFAULT 0",
+            }
+            for col_name, col_def in new_as_cols.items():
+                if col_name not in as_cols:
+                    sync_conn.execute(text(f"ALTER TABLE after_sale_services ADD COLUMN {col_name} {col_def}"))
+                    logger.info(f"迁移: after_sale_services 表添加了 {col_name} 列")
+            # 更新默认状态从「待处理」为「待审核」
+            sync_conn.execute(text(
+                "UPDATE after_sale_services SET status = '待审核' WHERE status = '待处理'"
+            ))
+            logger.info("迁移: after_sale_services 状态默认值更新为「待审核」")
+
+            # 迁移21: orders 增加 deposit 列 + deposits 增加 order_id 列
+            order_cols = {c["name"] for c in inspector.get_columns("orders")}
+            if "deposit" not in order_cols:
+                sync_conn.execute(text("ALTER TABLE orders ADD COLUMN deposit DECIMAL(12,2) DEFAULT 0"))
+                logger.info("迁移: orders 表添加了 deposit 列")
+            dep_cols = {c["name"] for c in inspector.get_columns("deposits")}
+            if "order_id" not in dep_cols:
+                sync_conn.execute(text("ALTER TABLE deposits ADD COLUMN order_id INTEGER REFERENCES orders(id)"))
+                logger.info("迁移: deposits 表添加了 order_id 列")
+
         await conn.run_sync(run_migration)
 
     # 检查是否需要初始化种子数据
@@ -389,7 +444,7 @@ async def _seed_data(session):
     ])
 
     # ── 仓库 ──
-    session.add(Warehouse(name="主仓库", code="WH-01", address="杭州古墩路欧亚达家居广场"))
+    session.add(Warehouse(name="面料仓库", code="WH-01", address="杭州古墩路欧亚达家居广场"))
 
     # ── 产品分类 ──
     session.add_all([
@@ -632,9 +687,7 @@ async def _ensure_dict_data(session):
         ("product_category", "hard_package", "硬包", 5),
         ("product_category", "rockboard", "岩板", 6),
         # 仓库
-        ("warehouse", "main", "主仓库", 1),
-        ("warehouse", "auxiliary", "辅料仓", 2),
-        ("warehouse", "finished", "成品仓", 3),
+        ("warehouse", "main", "面料仓库", 1),
         # 店铺信息（配置项）
         ("store_info", "store_name", "店铺名称", 1),
         ("store_info", "store_code", "店铺编号", 2),
@@ -726,7 +779,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8102,
+        port=8108,
         reload=True,
         log_level=settings.LOG_LEVEL.lower(),
     )

@@ -68,6 +68,7 @@ class ReceivePayment(BaseModel):
     order_id: int = Field(..., description="订单ID")
     amount: float = Field(..., gt=0, description="收款金额")
     method: str = Field(default="转账", description="收款方式")
+    payment_type: str = Field(default="收款", description="收款类型: 定金/进度款/尾款/其他")
     remark: str = Field(default="")
 
 

@@ -1,8 +1,10 @@
 @echo off
 chcp 65001 >nul
+title 金典软装ERP V4.0
 echo ====================================
-echo   金典软装ERP - 一键启动
+echo   金典软装ERP V4.0 - 一键启动
 echo ====================================
+echo.
 
 :: 检查前端是否已构建
 if not exist "frontend\dist\index.html" (
@@ -15,6 +17,6 @@ if not exist "frontend\dist\index.html" (
     echo [1/2] 前端已构建，跳过
 )
 
-echo [2/2] 启动后端服务...
+echo [2/2] 启动新后端服务（端口 8001）...
 cd backend
 python main.py
