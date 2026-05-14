@@ -1,0 +1,452 @@
+/**
+ * 新建订单表单模块
+ * API 规范：docs/API-FORMAT.md §3-4
+ */
+
+window.__orderFormModule__ = {
+  // ── 打开新建订单（自动初始化） ────────────────────────────────
+  openNewOrder(S) {
+    const today = new Date().toISOString().slice(0, 10);
+    // 生成订单号：JD-YYYYMMDD-NNN（当日序号）
+    const todayOrders = (S.orders || []).filter(o => o.orderDate === today).length;
+    const seq = String(todayOrders + 1).padStart(3, '0');
+    const orderNo = `JD-${today.replace(/-/g, '')}-${seq}`;
+
+    // 自动填当前登录人
+    const curUserId = S.currentUser?.id || S.currentUser?.employee_id || null;
+
+    S.orderF = {
+      orderNo,
+      customerId: null, customerName: '', customerPhone: '', customerSource: '',
+      orderType: '窗帘', orderDate: today, deliveryDate: '', installDate: '',
+      deliveryMethod: '上门安装', salespersonId: curUserId,
+      installAddress: '', items: [], materials: [],
+      itemsTotal: 0, materialsTotal: 0,
+      quoteAmount: 0, discountAmount: 0, roundAmount: 0, amount: 0, received: 0,
+    };
+    S.orderF.items.push({ productType: '窗帘', itemType: '帷幔', location: '客厅', style: '韩褶', productId: null, code: '', model: '', size: '', qty: 1, discount: 1, price: null, amount: null, classification: '', calc_by: 'height' });
+    S.orderF.materials.push({ itemType: '电动轨', productId: null, code: '', name: '', model: '', qty: 1, unit: '米', price: null, amount: null, remark: '' });
+    S.showNewOrder = true;
+    S.page = 'order';
+  },
+
+  // ── 客户选择后自动填手机和地址 ──────────────────────────────
+  onCustomerSelect(S, customerId) {
+    S.orderF.customerId = customerId;
+    const c = (S.customers || []).find(x => String(x.id) === String(customerId));
+    if (c) {
+      S.orderF.customerPhone = c.phone || '';
+      S.orderF.installAddress = c.address || '';
+      S.orderF.customerName = c.name || '';
+    } else {
+      S.orderF.customerPhone = '';
+      S.orderF.installAddress = '';
+      S.orderF.customerName = '';
+    }
+  },
+
+  // ── 主料产品选择后自动带出型号/单价 ────────────────────────
+  onItemProductSelect(S, idx, productId) {
+    const row = S.orderF.items[idx];
+    if (!row) return;
+    row.productId = productId;
+    if (productId) {
+      const p = (S.products || []).find(x => String(x.id) === String(productId));
+      if (p) {
+        row.model = p.model || '';
+        row.price = p.selling_price || p.unit_price || 0;
+        row.code = p.code || '';
+        row.productName = p.name || '';
+        // 记录产品分类（定高/定宽），用于金额计算
+        // 定高：面料按宽度下单（高度固定），用 width 算金额
+        // 定宽：面料按高度下单（宽度固定），用 height 算金额
+        row.classification = p.classification || '';
+        row.calc_by = row.classification === '定高' ? 'width' : (row.classification === '定宽' ? 'height' : '');
+        // 自动计算金额
+        const dim = this._parseDim(row);
+        if (dim > 0 && row.price && row.qty) {
+          row.amount = Math.round(dim * row.price * row.qty * (row.discount || 1) * 100) / 100;
+        } else if (row.price && row.qty) {
+          row.amount = Math.round(row.price * row.qty * (row.discount || 1) * 100) / 100;
+        }
+      }
+    } else {
+      row.model = ''; row.price = null; row.code = ''; row.productName = '';
+      row.classification = ''; row.calc_by = ''; row.amount = null;
+    }
+    __orderFormModule__.calcTotals(S);
+  },
+
+  // ── 辅料产品选择后自动带出型号/单价 ────────────────────────
+  onMatProductSelect(S, idx, productId) {
+    const row = S.orderF.materials[idx];
+    if (!row) return;
+    row.productId = productId;
+    if (productId) {
+      const p = (S.products || []).find(x => String(x.id) === String(productId));
+      if (p) {
+        row.model = p.model || '';
+        row.name = p.name || '';
+        row.code = p.code || '';
+        row.price = p.selling_price || p.unit_price || 0;
+        if (row.price && row.qty) {
+          row.amount = Math.round(row.price * row.qty * 100) / 100;
+        }
+      }
+    } else {
+      row.model = ''; row.name = ''; row.code = ''; row.price = null;
+      row.amount = null;
+    }
+    __orderFormModule__.calcTotals(S);
+  },
+
+  // 自动填交期（接单日+14天）
+  autoDelivery(S) {
+    if (!S.orderF.orderDate) return;
+    const d = new Date(S.orderF.orderDate);
+    d.setDate(d.getDate() + 14);
+    S.orderF.deliveryDate = d.toISOString().slice(0, 10);
+  },
+
+  addOrderItem(S) {
+    S.orderF.items.push({
+      productType: '窗帘', itemType: '帷幔', location: '客厅', style: '韩褶',
+      productId: null, code: '', model: '', productName: '',
+      size: '', qty: 1, discount: 1, price: null, amount: null,
+      classification: '', calc_by: 'height',
+    });
+  },
+
+  addOrderMaterial(S) {
+    S.orderF.materials.push({
+      itemType: '电动轨', productId: null, code: '', name: '', model: '',
+      qty: 1, unit: '米', price: null, amount: null, remark: '',
+    });
+  },
+
+  // ── 解析尺寸中的宽/高 ─────────────────────────────────
+  // 定高：用 width（宽度下单，高度固定）
+  // 定宽：用 height（高度下单，宽度固定）
+  _parseDim(row) {
+    if (!row || !row.size) return 0;
+    const parts = (row.size || '').split('×');
+    if (parts.length < 2) return 0;
+    const w = parseFloat(parts[0]) || 0;
+    const h = parseFloat(parts[1]) || 0;
+    if (row.calc_by === 'width') return w;
+    if (row.calc_by === 'height') return h;
+    return 0;
+  },
+
+  calcItem(row, S) {
+    try {
+      if (row && row.price && row.qty) {
+        const dim = this._parseDim(row);
+        if (dim > 0) {
+          row.amount = Math.round(dim * row.price * row.qty * (row.discount || 1) * 100) / 100;
+        } else {
+          row.amount = Math.round(row.price * row.qty * (row.discount || 1) * 100) / 100;
+        }
+      }
+      __orderFormModule__.calcTotals(S);
+    } catch (e) {
+      console.error('calcItem error', e);
+    }
+  },
+
+  calcMaterial(row, S) {
+    try {
+      if (row && row.price && row.qty) {
+        row.amount = Math.round(row.price * row.qty * 100) / 100;
+      }
+      const mats = S.orderF.materials || [];
+      S.orderF.materialsTotal = mats.reduce((s, r) => s + ((r && r.amount) || 0), 0);
+      __orderFormModule__.calcTotals(S);
+    } catch (e) {
+      console.error('calcMaterial error', e);
+    }
+  },
+
+  calcTotals(S) {
+    try {
+      const items = S.orderF.items || [];
+      const mats = S.orderF.materials || [];
+      const itemsTotal = items.reduce((s, r) => s + ((r && r.amount) || 0), 0);
+      const materialsTotal = mats.reduce((s, r) => s + ((r && r.amount) || 0), 0);
+      S.orderF.itemsTotal = itemsTotal;
+      S.orderF.materialsTotal = materialsTotal;
+      S.orderF.quoteAmount = itemsTotal + materialsTotal;
+      S.orderF.amount = Math.max(
+        0,
+        S.orderF.quoteAmount - (S.orderF.discountAmount || 0) - (S.orderF.roundAmount || 0)
+      );
+    } catch (e) {
+      console.error('calcTotals error', e);
+    }
+  },
+
+  // ── 编辑订单明细计算 ───────────────────────────────────────
+  calcEditItem(row, S2) {
+    const S = S2 || window.__STATE__;
+    if (row && row.price && row.qty) {
+      const dim = this._parseDim(row);
+      if (dim > 0) {
+        row.amount = Math.round(dim * row.price * row.qty * (row.discount || 1) * 100) / 100;
+      } else {
+        row.amount = Math.round(row.price * row.qty * (row.discount || 1) * 100) / 100;
+      }
+    }
+    this.calcEditTotals(S);
+  },
+
+  calcEditTotals(S) {
+    const f = S.editOrderF;
+    const items = f.items || [];
+    const mats = f.materials || [];
+    const itemsTotal = items.reduce((s, r) => s + ((r && r.amount) || 0), 0);
+    const materialsTotal = mats.reduce((s, r) => s + ((r && r.amount) || 0), 0);
+    f.itemsTotal = itemsTotal;
+    f.materialsTotal = materialsTotal;
+    f.quoteAmount = itemsTotal + materialsTotal;
+    f.amount = Math.max(0, f.quoteAmount - (f.discountAmount || 0) - (f.roundAmount || 0));
+  },
+
+  // ── 保存新建订单 ───────────────────────────────────────────
+  async saveNewOrder(S) {
+    if (!S.orderF.customerId) {
+      ElementPlus.ElMessage.warning('请选择客户');
+      return;
+    }
+    const customer = (S.customers || []).find(c => String(c.id) === String(S.orderF.customerId));
+    const today = new Date().toISOString().slice(0, 10);
+    const prods = S.products;
+    const emps = S.employees;
+
+
+    const amount = Math.max(
+      0,
+      (S.orderF.items || []).reduce((s, r) => s + ((r && r.amount) || 0), 0)
+        - (S.orderF.discountAmount || 0) - (S.orderF.roundAmount || 0)
+    );
+
+    const payload = {
+      customer_id: S.orderF.customerId,
+      customer_name: customer?.name || S.orderF.customerName || '',
+      customer_phone: customer?.phone || S.orderF.customerPhone || '',
+      order_type: S.orderF.orderType,
+      content: (S.orderF.items || [])
+        .map(i => i.productName || (prods.find(p => String(p.id) === String(i.productId)) || {}).name || '')
+        .filter(Boolean).join('+') || '窗帘',
+      quote_amount: S.orderF.quoteAmount,
+      discount_amount: S.orderF.discountAmount || 0,
+      round_amount: S.orderF.roundAmount || 0,
+      amount,
+      received: S.orderF.received || 0,
+      order_date: S.orderF.orderDate || today,
+      delivery_date: S.orderF.deliveryDate || '',
+      delivery_method: S.orderF.deliveryMethod,
+      salesperson_id: S.orderF.salespersonId || null,
+      install_address: S.orderF.installAddress || '',
+      install_date: S.orderF.installDate || '',
+      items: (S.orderF.items || [])
+        .filter(i => i.productId)
+        .map(i => ({
+          product_id: i.productId,
+          product_name: i.productName || (prods.find(p => String(p.id) === String(i.productId)) || {}).name || '',
+          item_type: i.itemType || '帷幔',
+          category: i.productType || '窗帘',
+          room: i.location || '',
+          style: i.style || '',
+          qty: i.qty || 1,
+          discount: i.discount || 1,
+          price: i.price || 0,
+          amount: i.amount || 0,
+          classification: i.classification || '',
+        })),
+      materials: (S.orderF.materials || [])
+        .filter(i => i.productId)
+        .map(i => ({
+          product_id: i.productId,
+          product_name: i.name || '',
+          product_code: i.code || '',
+          item_type: i.itemType || '电动轨',
+          model: i.model || '',
+          qty: i.qty || 1,
+          unit: i.unit || '米',
+          price: i.price || 0,
+          amount: i.amount || 0,
+          remark: i.remark || '',
+        })),
+    };
+
+    try {
+      const d = await apiOrders.create(payload);
+      S.orders.unshift({
+        id: d.id,
+        orderNo: d.order_no || S.orderF.orderNo || '',
+        customerName: customer?.name || S.orderF.customerName || '',
+        orderType: S.orderF.orderType,
+        salesperson: (emps.find(e => String(e.id) === String(S.orderF.salespersonId)) || {}).name || '',
+        orderDate: S.orderF.orderDate || today,
+        deliveryDate: S.orderF.deliveryDate || '',
+        deliveryMethod: S.orderF.deliveryMethod,
+        amount,
+        received: S.orderF.received || 0,
+        debt: amount - (S.orderF.received || 0),
+        items: payload.items,
+        status: '待确认',
+        statusKey: 'created',
+        history: [],
+      });
+      S.showNewOrder = false;
+      ElementPlus.ElMessage.success('订单已创建');
+    } catch (e) {
+      console.error('[saveNewOrder] error:', e);
+      const msg = e?.message || e?.err?.message || String(e) || '网络错误';
+      try { ElementPlus.ElMessage.error('创建失败：' + msg); } catch(e2) { alert('创建失败：' + msg); }
+    }
+  },
+
+  // ── 打开编辑订单弹窗 ──────────────────────────────────────
+  openEditOrder(S, order) {
+    const prods = S.products;
+    const items = (order.items || []).map(i => ({
+      productType: i.category || '窗帘',
+      itemType: i.item_type || '帷幔',
+      location: i.room || '',
+      style: i.style || '',
+      productId: i.product_id || null,
+      productName: i.product_name || '',
+      code: i.product_code || '',
+      model: i.model || '',
+      size: (i.width && i.height) ? `${i.width}×${i.height}` : '',
+      qty: i.qty || 1,
+      discount: i.discount || 1,
+      price: i.unit_price || i.price || 0,
+      amount: i.amount || 0,
+      classification: i.classification || '',
+      calc_by: i.calc_by || (i.classification === '定宽' ? 'width' : 'height'),
+      supplier_id: i.supplier_id || null,
+      material_type: i.material_type || '主料',
+      fold_ratio: i.fold_ratio || 2.0,
+      open_type: i.open_type || '',
+      style_code: i.style_code || '',
+      process_desc: i.process_desc || '',
+      is_custom: i.is_custom !== undefined ? i.is_custom : 1,
+      note: i.note || '',
+    }));
+    const materials = (order.items || [])
+      .filter(i => i.item_type === 'material' || i.item_type === 'accessory')
+      .map(i => ({
+        itemType: i.item_type === 'accessory' ? '配件' : (i.item_type || '电动轨'),
+        productId: i.product_id || null,
+        name: i.product_name || '',
+        code: i.product_code || '',
+        model: i.model || '',
+        qty: i.qty || 1,
+        unit: i.unit || '米',
+        price: i.unit_price || i.price || 0,
+        amount: i.amount || 0,
+        remark: '',
+      }));
+    S.editOrderF = {
+      orderId: order.id,
+      orderNo: order.orderNo || '',
+      customerId: order.customerId || null,
+      customerName: order.customerName || '',
+      customerPhone: order.customerPhone || '',
+      customerSource: order.customerSource || '',
+      orderType: order.orderType || '窗帘',
+      orderDate: order.orderDate || '',
+      deliveryDate: order.deliveryDate || '',
+      installDate: order.installDate || '',
+      installTimeSlot: order.installTimeSlot || '',
+      deliveryMethod: order.deliveryMethod || '上门安装',
+      salespersonId: order.salespersonId || null,
+      installAddress: order.installAddress || '',
+      items,
+      materials,
+      itemsTotal: (order.items || []).reduce((s, i) => s + ((i.amount) || 0), 0),
+      materialsTotal: 0,
+      quoteAmount: order.quoteAmount || order.amount || 0,
+      discountAmount: order.discountAmount || 0,
+      roundAmount: order.roundAmount || 0,
+      amount: order.amount || 0,
+      received: order.received || 0,
+    };
+    S.editingOrderId = order.id;
+    S.showEditOrder = true;
+  },
+
+  // ── 保存编辑订单 ──────────────────────────────────────────
+  async saveEditOrder(S) {
+    const f = S.editOrderF;
+    const prods = S.products;
+    if (!f.orderId) return;
+    const payload = {
+      customer_name: f.customerName || '',
+      customer_phone: f.customerPhone || '',
+      order_type: f.orderType || '窗帘',
+      content: (f.items || [])
+        .map(i => i.productName || (prods.find(p => String(p.id) === String(i.productId)) || {}).name || '')
+        .filter(Boolean).join('+') || '窗帘',
+      quote_amount: f.quoteAmount || 0,
+      discount_amount: f.discountAmount || 0,
+      round_amount: f.roundAmount || 0,
+      amount: f.amount || 0,
+      received: f.received || 0,
+      order_date: f.orderDate || '',
+      delivery_date: f.deliveryDate || '',
+      delivery_method: f.deliveryMethod || '上门安装',
+      salesperson: (S.employees.find(e => String(e.id) === String(f.salespersonId)) || {}).name || '',
+      install_address: f.installAddress || '',
+      install_date: f.installDate || '',
+      install_time_slot: f.installTimeSlot || '',
+      items: (f.items || []).map(i => ({
+        product_id: i.productId,
+        product_name: i.productName || '',
+        item_type: i.itemType || '帷幔',
+        category: i.productType || '窗帘',
+        room: i.location || '',
+        style: i.style || '',
+        qty: i.qty || 1,
+        discount: i.discount || 1,
+        price: i.price || 0,
+        amount: i.amount || 0,
+        unit_price: i.price || 0,
+        width: i.size ? parseFloat(i.size.split('×')[0]) : 0,
+        height: i.size ? parseFloat(i.size.split('×')[1]) : 0,
+        supplier_id: i.supplier_id || null,
+        material_type: i.material_type || '主料',
+        fold_ratio: i.fold_ratio || 2.0,
+        open_type: i.open_type || '',
+        style_code: i.style_code || '',
+        process_desc: i.process_desc || '',
+        is_custom: i.is_custom !== undefined ? i.is_custom : 1,
+        note: i.note || '',
+        classification: i.classification || '',
+      })),
+    };
+    try {
+      await apiOrders.update(f.orderId, payload);
+      // Update local state
+      const idx = S.orders.findIndex(o => o.id === f.orderId);
+      if (idx > -1) {
+        S.orders[idx] = {
+          ...S.orders[idx],
+          customerName: f.customerName || '',
+          orderType: f.orderType || '窗帘',
+          amount: f.amount || 0,
+          received: f.received || 0,
+          debt: (f.amount || 0) - (f.received || 0),
+          items: payload.items,
+        };
+      }
+      S.showEditOrder = false;
+      ElementPlus.ElMessage.success('订单已更新');
+    } catch (e) {
+      console.error('[saveEditOrder] error:', e);
+      ElementPlus.ElMessage.error('更新失败：' + (e.message || ''));
+    }
+  },
+};

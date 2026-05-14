@@ -1,12 +1,26 @@
 # app/models.py
-from sqlalchemy import Column, Integer, String, Boolean, Date, DateTime, Text, ForeignKey, DECIMAL, JSON
+# mypy: disable-error-code="valid-type, misc, var-annotated"
+from datetime import datetime
+
+from sqlalchemy import (
+    DECIMAL,
+    JSON,
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from datetime import datetime
 
 Base = declarative_base()
 
 # ─── 现有表（V2.1已有，此处简化建模） ─────────────────────────────────────────
+
 
 class Order(Base):
     __tablename__ = "orders"
@@ -39,6 +53,29 @@ class Order(Base):
     install_address = Column(String(300), nullable=True)
     install_date = Column(Date, nullable=True)
     install_time_slot = Column(String(20), nullable=True)
+    measure_data = Column(JSON)  # V3.0 测量数据 JSON
+    install_requires = Column(Text)  # V3.0 安装特殊要求
+
+    # V4.0 扩展字段（与数据库 orders 表对齐）
+    salesperson_id = Column(Integer, nullable=True)  # 导购ID
+    creator_id = Column(Integer, nullable=True)  # 创建人ID
+    reviewer_id = Column(Integer, nullable=True)  # 审核人ID
+    remark = Column(String(500), nullable=True)  # 订单备注
+    deleted_at = Column(DateTime, nullable=True)  # 软删除时间
+    order_type_ext = Column(String(20), nullable=True)  # 订单类型扩展 retail/project
+    price_locked_at = Column(String(30), nullable=True)  # 价格锁定时间
+    discount_reason = Column(String(200), nullable=True)  # 折扣原因
+    install_slot = Column(String(10), nullable=True)  # 安装时段
+    paid_amount = Column(DECIMAL(12, 2), default=0)  # 已付款金额
+    after_sale_reason = Column(String(500), nullable=True)  # 售后原因
+    after_sale_status = Column(String(30), nullable=True)  # 售后状态
+    last_contact_at = Column(String(30), nullable=True)  # 最近联系时间
+    measure_width = Column(DECIMAL(8, 2), nullable=True)  # 量尺宽度
+    measure_height = Column(DECIMAL(8, 2), nullable=True)  # 量尺高度
+    window_width = Column(DECIMAL(8, 2), nullable=True)  # 窗户宽度
+    window_height = Column(DECIMAL(8, 2), nullable=True)  # 窗户高度
+    measure_datetime = Column(String(30), nullable=True)  # 量尺时间
+    measure_operator_id = Column(Integer, nullable=True)  # 量尺操作员ID
 
     created_at = Column(DateTime, default=datetime.now)
 
@@ -49,12 +86,25 @@ class Customer(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(50), nullable=False)
     phone = Column(String(20), nullable=False)
+    customer_type = Column(String(20), default="retail")  # retail/project/designer
     type = Column(String(20), default="零售")
     address = Column(String(300))
     community = Column(String(100))
     source = Column(String(50))
     salesperson = Column(String(50))
+    salesperson_id = Column(Integer)  # V4.0 新增
+    level = Column(String(10), default="C")  # A/B/C 客户等级
+    tags = Column(JSON, default=list)  # 标签列表
+    next_followup_date = Column(Date, nullable=True)  # 下次跟进日期（V4.0）
+    followup_history = Column(JSON, default=list)  # 跟进历史摘要（V4.0）
+    measure_status = Column(String(20), default="pending")  # pending/measured/confirmed
+    credit_limit = Column(DECIMAL(12, 2), default=0)  # 信用额度
     debt = Column(DECIMAL(12, 2), default=0)
+    is_deleted = Column(Boolean, default=False)  # 软删除标记
+    deleted_at = Column(DateTime, nullable=True)  # 软删除时间（V4.0）
+    last_contact_at = Column(String(30), nullable=True)  # 最后联系时间（V4.0）
+    total_orders = Column(Integer, default=0)  # 累计订单数（V4.0）
+    total_amount = Column(DECIMAL(14, 2), default=0)  # 累计金额（V4.0）
     created_at = Column(DateTime, default=datetime.now)
 
 
@@ -72,9 +122,16 @@ class Product(Base):
     material = Column(String(50))
     width = Column(Integer)  # 门幅 cm
     weight = Column(Integer)  # 克重 g/㎡
+    cf = Column(Integer, default=0)       # 缩率/褶皱系数
     unit_price = Column(DECIMAL(10, 2))
     unit = Column(String(10), default="米")
     stock = Column(Integer, default=0)
+    cost_price = Column(DECIMAL(10, 2), default=0)   # 成本价（V4.0 价格三角）
+    min_price = Column(DECIMAL(10, 2), default=0)  # 最低售价（V4.0 价格三角）
+    selling_price = Column(DECIMAL(10, 2), default=0)  # 销售单价（V4.0 价格三角）
+    remark = Column(String(500), default="")
+    series = Column(String(100), default="")  # 布板系列（自由文本）
+    category = Column(String(50), default="")  # 自由文本类别（区别于 category_id 外键）
     created_at = Column(DateTime, default=datetime.now)
 
 
@@ -89,6 +146,7 @@ class Supplier(Base):
     phone = Column(String(20))
     delivery_days = Column(Integer, default=7)
     address = Column(String(300))
+    payment = Column(String(200), default="")
     created_at = Column(DateTime, default=datetime.now)
 
 
@@ -117,10 +175,12 @@ class Employee(Base):
     round_limit = Column(Integer, default=0)  # 抹零限制
     is_installer = Column(Boolean, default=False)  # V2.2 新增：标记安装工
     status = Column(String(20), default="启用")
+    password_hash = Column(String(200), nullable=True)  # 员工登录密码哈希
     created_at = Column(DateTime, default=datetime.now)
 
 
 # ─── V2.2 新增表 ─────────────────────────────────────────────────────────────
+
 
 class InstallerAccount(Base):
     __tablename__ = "installer_account"
@@ -152,7 +212,9 @@ class InstallTask(Base):
     raw_customer_phone = Column(String(20))  # 原始手机号，App端不展示
     order_content = Column(String(500))  # "客厅+书房+次卧 窗帘"
     priority = Column(String(20), default="normal")  # high/normal
-    status = Column(String(20), default="pending", index=True)  # pending/ongoing/completed/cancelled
+    status = Column(
+        String(20), default="pending", index=True
+    )  # pending/ongoing/completed/cancelled
     completed_at = Column(DateTime, nullable=True)
     completion_remark = Column(String(1000))
     navigate_url = Column(String(500))
@@ -235,6 +297,58 @@ class WarehouseRecord(Base):
     created_at = Column(DateTime, default=datetime.now)
 
 
+# ─── 订单明细（V2.4 独立表）────────────────────────────────────────────────────
+class OrderItem(Base):
+    __tablename__ = "order_items"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    order_id = Column(Integer, ForeignKey("orders.id"))
+    item_type = Column(String(20))  # 窗帘/窗纱/软包/硬包
+    room = Column(String(50))
+    category = Column(String(50))
+    product_name = Column(String(200))
+    product_code = Column(String(50))
+    width = Column(DECIMAL(8, 2))
+    height = Column(DECIMAL(8, 2))
+    fold_ratio = Column(DECIMAL(4, 2), default=2.0)  # 褶皱倍数
+    unit = Column(String(20), default="米")
+    unit_price = Column(DECIMAL(10, 2), default=0)
+    qty = Column(Integer, default=1)
+    discount = Column(DECIMAL(4, 2), default=1.0)
+    amount = Column(DECIMAL(12, 2), default=0)
+    final_amount = Column(DECIMAL(12, 2), default=0)
+    open_type = Column(String(20))  # 开合方式
+    style_code = Column(String(20))
+    process_desc = Column(String(200))
+    is_custom = Column(Integer, default=1)
+    note = Column(Text)
+    supplier_id = Column(Integer)  # V3.0 新增：关联供应商
+    material_type = Column(String(20), default="主料")  # V3.0 新增：主料/辅料
+    classification = Column(String(20), default="")  # 定高/定宽，影响金额计算维度
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class PurchaseOrderItem(Base):
+    """采购单明细（V3.0，独立表）"""
+
+    __tablename__ = "purchase_order_items"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    purchase_order_id = Column(Integer, ForeignKey("purchase_orders.id"))
+    order_item_id = Column(Integer)  # 原始订单明细ID
+    product_id = Column(Integer)
+    product_name = Column(String(200))
+    product_code = Column(String(50))
+    spec = Column(String(100))  # 规格描述
+    quantity = Column(DECIMAL(10, 2), default=1)
+    unit = Column(String(20), default="米")
+    unit_price = Column(DECIMAL(10, 2), default=0)
+    subtotal = Column(DECIMAL(12, 2), default=0)
+    material_type = Column(String(20), default="主料")  # 主料/辅料
+    arrived_qty = Column(DECIMAL(10, 2), default=0)  # 已到货数量
+    created_at = Column(DateTime, default=datetime.now)
+
+
 class FinanceRecord(Base):
     __tablename__ = "finance_records"
 
@@ -247,4 +361,138 @@ class FinanceRecord(Base):
     method = Column(String(30), default="转账")
     operator = Column(String(50))
     remark = Column(String(300))
+    purchase_order_id = Column(Integer, nullable=True)  # V3.0 P1-2：付款记录关联采购单
+    created_at = Column(DateTime, default=datetime.now)
+
+
+# ══════════════════════════════════════════════════════════════
+# V3.0 新增表
+# ══════════════════════════════════════════════════════════════
+
+
+class PurchaseOrder(Base):
+    """采购单（V3.0，区别于旧的 purchases 表）"""
+
+    __tablename__ = "purchase_orders"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    po_no = Column(String(30), unique=True, nullable=False)
+    supplier_id = Column(Integer)
+    supplier_name = Column(String(100))
+    contact = Column(String(50))
+    phone = Column(String(30))
+    total_amount = Column(DECIMAL(12, 2), default=0)
+    paid_amount = Column(DECIMAL(12, 2), default=0)
+    debt_amount = Column(DECIMAL(12, 2), default=0)
+    status = Column(String(30), default="待采购")  # 待采购/已下单/部分到货/全部到货/已取消
+    order_ids = Column(String(200))  # 逗号分隔，多订单合并时用
+    expected_date = Column(Date)
+    arrived_date = Column(Date)
+    items = Column(
+        JSON, default=list
+    )  # [{product_id, product_code, product_name, spec, qty, unit_price, amount}]
+    remark = Column(String(500))
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class ProductionFeedback(Base):
+    """生产反馈（V3.0）"""
+
+    __tablename__ = "production_feedback"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    feedback_no = Column(String(30), unique=True, nullable=False)
+    order_id = Column(Integer)
+    order_no = Column(String(30))
+    purchase_order_id = Column(Integer)
+    feedback_type = Column(String(20), nullable=False)  # quality / defect / shortage
+    description = Column(Text)
+    photos = Column(JSON, default=list)  # [url1, url2]
+    status = Column(String(20), default="待处理")  # 待处理/处理中/已解决
+    resolver = Column(String(50))
+    resolution = Column(Text)
+    resolved_at = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class InstallationOrder(Base):
+    """安装单（V3.0，区别于 install_task）"""
+
+    __tablename__ = "installation_orders"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ins_no = Column(String(30), unique=True, nullable=False)
+    order_id = Column(Integer)
+    order_no = Column(String(30))
+    customer_name = Column(String(50))
+    customer_phone = Column(String(20))
+    address = Column(String(300))
+    product_details = Column(JSON, default=dict)
+    measure_summary = Column(Text)
+    install_requirements = Column(Text)
+    scheduled_date = Column(Date)
+    installer_id = Column(Integer)
+    installer_name = Column(String(50))
+    install_time_slot = Column(String(20))
+    status = Column(String(20), default="待分配")
+    install_photo = Column(JSON, default=list)
+    customer_signature = Column(Text)
+    confirmed_at = Column(DateTime)
+    receivable_amount = Column(DECIMAL(12, 2), default=0)
+    received_amount = Column(DECIMAL(12, 2), default=0)
+    unpaid_amount = Column(DECIMAL(12, 2), default=0)
+    remark = Column(String(500))
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    # V4.0 扩展字段
+    team_id = Column(Integer, nullable=True)
+    actual_start_time = Column(DateTime, nullable=True)
+    actual_end_time = Column(DateTime, nullable=True)
+    quality_score = Column(Integer, nullable=True)  # 验收评分 1-5
+    contact_phone = Column(String(20), nullable=True)
+
+
+class InventoryFlow(Base):
+    """库存流水（V4.0）"""
+    __tablename__ = "inventory_flow"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    product_id = Column(Integer)
+    warehouse_id = Column(Integer)
+    flow_type = Column(String(10))  # IN/OUT/TRANSFER/ADJUST
+    qty_before = Column(Integer)
+    qty_change = Column(Integer)
+    qty_after = Column(Integer)
+    ref_type = Column(String(20))  # order/purchase/adjust
+    ref_id = Column(Integer)
+    operator_id = Column(Integer)
+    remark = Column(Text)
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class FollowupRecord(Base):
+    """客户跟进记录（V4.0）"""
+    __tablename__ = "followup_records"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    customer_id = Column(Integer)
+    type = Column(String(20))  # 电话/微信/上门
+    content = Column(Text)
+    next_date = Column(Date)
+    operator_id = Column(Integer)
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class OperationalLog(Base):
+    """操作日志（V4.0 审计追踪）"""
+    __tablename__ = "operational_logs"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    operator_id = Column(Integer)
+    operator_name = Column(String(50))
+    action = Column(String(20))  # CREATE/UPDATE/DELETE/RESTORE
+    resource = Column(String(50))  # order/customer/purchase/backup/system_settings
+    resource_id = Column(Integer)
+    before_state = Column(Text)
+    after_state = Column(Text)
+    ip_address = Column(String(50))
     created_at = Column(DateTime, default=datetime.now)

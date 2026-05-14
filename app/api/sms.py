@@ -1,16 +1,19 @@
 # app/api/sms.py
+from datetime import datetime, timedelta
+from typing import Any
+
 from fastapi import APIRouter
-from app.schemas import SmsSendRequest, SmsResponse, SmsResponseData
+from sqlalchemy import and_, select, text
+
 from app.database import async_session
 from app.models import SmsCode
-from sqlalchemy import select, and_, text
-from datetime import datetime, timedelta
+from app.schemas import SmsResponse, SmsResponseData, SmsSendRequest
 
 router = APIRouter(prefix="/api/sms", tags=["短信"])
 
 
 @router.post("/send", response_model=SmsResponse)
-async def send_sms(req: SmsSendRequest):
+async def send_sms(req: SmsSendRequest) -> SmsResponse:
     """
     发送短信验证码
     Demo模式：固定返回 888888，不真实发短信
@@ -21,8 +24,10 @@ async def send_sms(req: SmsSendRequest):
     async with async_session() as session:
         # 清理过期验证码
         await session.execute(
-            text("UPDATE sms_code SET used = 1 WHERE phone = :phone AND used = 0 AND expires_at < :now"),
-            {"phone": req.phone, "now": datetime.now()}
+            text(
+                "UPDATE sms_code SET used = 1 WHERE phone = :phone AND used = 0 AND expires_at < :now"
+            ),
+            {"phone": req.phone, "now": datetime.now()},
         )
 
         # 检查是否频繁发送（60秒内只能发一次）
@@ -31,7 +36,7 @@ async def send_sms(req: SmsSendRequest):
             .where(
                 and_(
                     SmsCode.phone == req.phone,
-                    SmsCode.created_at > datetime.now() - timedelta(seconds=60)
+                    SmsCode.created_at > datetime.now() - timedelta(seconds=60),
                 )
             )
             .order_by(SmsCode.created_at.desc())
@@ -47,12 +52,11 @@ async def send_sms(req: SmsSendRequest):
             code=DEMO_CODE,
             code_type=req.type,
             expires_at=datetime.now() + timedelta(minutes=EXPIRES_MINUTES),
-            used=False
+            used=False,
         )
         session.add(code_obj)
         await session.commit()
 
-        return SmsResponse(success=True, data=SmsResponseData(
-            code=DEMO_CODE,
-            expires_in=EXPIRES_MINUTES * 60
-        ))
+        return SmsResponse(
+            success=True, data=SmsResponseData(code=DEMO_CODE, expires_in=EXPIRES_MINUTES * 60)
+        )

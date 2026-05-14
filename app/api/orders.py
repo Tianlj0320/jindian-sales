@@ -1,58 +1,155 @@
 # app/api/orders.py
-from fastapi import APIRouter, Query, Path, Body
+from datetime import datetime
+
+from fastapi import APIRouter, Body, Path, Query
+from sqlalchemy import and_, func, select
+
 from app.database import async_session
-from app.models import Order, InstallTask, Customer, Employee, Product
-from app.schemas import (
-    OrderListResponse, OrderResponse,
-    OrderListItem, OrderDetailData, CommonResponse
+from app.models import (
+    Customer,
+    InstallationOrder,
+    InstallTask,
+    Order,
+    OrderItem,
+    Product,
 )
-from sqlalchemy import select, func, and_
-from datetime import datetime, date
-from typing import Optional
-import json
+from app.schemas import (
+    CommonResponse,
+    OrderListResponse,
+    OrderResponse,
+)
 
 router = APIRouter(prefix="/api/orders", tags=["订单管理"])
 
+# 终态（不可推进）
+TERMINAL_STATUSES = {"accepted", "cancelled", "after_sale"}
 
-# ─── 订单状态8态映射 ─────────────────────────────────────────────────────────
+
+# ─── 订单状态映射（V3.0 + V4.0 扩展）────────────────────────────────────────
 ORDER_STATUS_MAP = {
-    "created":     {"label": "待确认",    "color": "#909399"},
-    "confirmed":  {"label": "已核单",    "color": "#409eff"},
-    "measured":   {"label": "已测量",    "color": "#67c23a"},
-    "stocked":    {"label": "已备货",    "color": "#e6a23c"},
-    "processing": {"label": "加工中",    "color": "#f56c6c"},
-    "install":    {"label": "待安装",    "color": "#9c27b0"},
-    "installed":  {"label": "已安装",    "color": "#1a3a5c"},
-    "completed": {"label": "已完成",    "color": "#222222"},
-    "cancelled": {"label": "已取消",    "color": "#d9d9d9"},
+    # ── V4.0 扩展态（量尺前置）──────────────────────────────────────────────
+    "initial": {"label": "待量尺", "color": "#909399"},
+    "measured": {"label": "已量尺", "color": "#409eff"},
+    # ── V3.0 核心12态 ────────────────────────────────────────────────────────
+    "created": {"label": "待确认", "color": "#909399"},
+    "confirmed": {"label": "已确认", "color": "#409eff"},
+    "split": {"label": "已拆分", "color": "#7c3aed"},
+    "purchasing": {"label": "采购中", "color": "#f59e0b"},
+    "partial_in": {"label": "部分到货", "color": "#f97316"},
+    "stocked": {"label": "已到货", "color": "#10b981"},
+    "processing": {"label": "生产中", "color": "#f97316"},
+    "production_exception": {"label": "生产异常", "color": "#ef4444"},
+    "completed": {"label": "已完成", "color": "#6366f1"},
+    "install_order_generated": {"label": "安装单已生成", "color": "#8b5cf6"},
+    "shipped": {"label": "已发货", "color": "#06b6d4"},
+    "installed": {"label": "已安装", "color": "#1a3a5c"},
+    "accepted": {"label": "已验收", "color": "#059669"},
+    "after_sale": {"label": "售后中", "color": "#ef4444"},
+    "cancelled": {"label": "已取消", "color": "#d9d9d9"},
+}
+
+# 订单类型 key → label 转换
+ORDER_TYPE_LABEL_MAP = {
+    "curtain": "窗帘",
+    "wallpaper": "墙布",
+    "hardsheet": "硬包",
+    "rockboard": "岩板",
+    "wholehouse": "全屋",
+}
+
+def _norm_order_type(v):
+    return ORDER_TYPE_LABEL_MAP.get(v, v or "窗帘")
+
+# V3.0 → V4.0 状态 key 兼容映射
+V3_TO_V4_STATUS_MAP = {
+    "created": "initial",
+    "confirmed": "confirmed",
 }
 
 STATUS_STEPS = [
-    "created", "confirmed", "measured", "stocked",
-    "processing", "install", "installed", "completed"
+    # V4.0 量尺前置流程
+    "initial",
+    "measured",
+    # V3.0 核心流程
+    "confirmed",
+    "split",
+    "purchasing",
+    "partial_in",
+    "stocked",
+    "processing",
+    "completed",
+    "install_order_generated",
+    "shipped",
+    "installed",
+    "accepted",
 ]
 
+SKIP_STATUSES = frozenset(["partial_in", "production_exception", "after_sale"])
 
-def get_next_status(current_key: str) -> Optional[str]:
-    """获取下一个状态"""
+
+def get_status_info(status_key: str) -> dict:
+    """获取状态配置信息"""
+    return ORDER_STATUS_MAP.get(status_key, {})
+
+
+def get_next_status(current_key: str) -> str | None:
+    """获取下一个状态（跳过异常态）"""
     try:
         idx = STATUS_STEPS.index(current_key)
-        if idx < len(STATUS_STEPS) - 1:
-            return STATUS_STEPS[idx + 1]
     except ValueError:
-        pass
+        # 兼容 V3.0 key
+        mapped = V3_TO_V4_STATUS_MAP.get(current_key)
+        if mapped:
+            try:
+                idx = STATUS_STEPS.index(mapped)
+            except ValueError:
+                return None
+        else:
+            return None
+
+    for i in range(idx + 1, len(STATUS_STEPS)):
+        next_key = STATUS_STEPS[i]
+        if next_key not in SKIP_STATUSES:
+            return next_key
     return None
+
+
+def get_all_next_statuses(current_key: str) -> list[str]:
+    """获取当前状态所有可跳转的目标状态（用于状态机规则）"""
+    info = get_status_info(current_key)
+    if not info and current_key in V3_TO_V4_STATUS_MAP:
+        info = get_status_info(V3_TO_V4_STATUS_MAP[current_key])
+    return info.get("next", [])
+
+
+def can_transition(from_key: str, to_key: str) -> bool:
+    """判断状态转换是否合法"""
+    next_keys = get_all_next_statuses(from_key)
+    if next_keys:
+        return to_key in next_keys
+    return to_key == get_next_status(from_key)
+
+
+def is_terminal(status_key: str) -> bool:
+    """判断是否为终态（不可再推进）"""
+    return len(get_all_next_statuses(status_key)) == 0
+
+
+def normalize_status_key(key: str) -> str:
+    """将 V3.0 status_key 转换为 V4.0 key"""
+    return V3_TO_V4_STATUS_MAP.get(key, key)
 
 
 @router.get("", response_model=OrderListResponse)
 async def list_orders(
-    status_key: Optional[str] = Query(None, description="状态key筛选"),
-    order_type: Optional[str] = Query(None, description="订单类型"),
-    keyword: Optional[str] = Query(None, description="搜索：订单号/客户名"),
-    year: Optional[int] = Query(None, description="年筛选"),
-    month: Optional[int] = Query(None, description="月筛选"),
+    status_key: str | None = Query(None, description="状态key筛选"),
+    status: str | None = Query(None, description="状态筛选(别名,等同status_key)"),
+    order_type: str | None = Query(None, description="订单类型"),
+    keyword: str | None = Query(None, description="搜索：订单号/客户名"),
+    year: int | None = Query(None, description="年筛选"),
+    month: int | None = Query(None, description="月筛选"),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100)
+    page_size: int = Query(20, ge=1, le=100),
 ):
     """订单列表（支持筛选+分页+年月）"""
     async with async_session() as session:
@@ -61,32 +158,33 @@ async def list_orders(
 
         if status_key:
             conditions.append(Order.status_key == status_key)
+        if status:
+            conditions.append(Order.status_key == status)
         if order_type:
             conditions.append(Order.order_type == order_type)
         if keyword:
             kw = f"%{keyword}%"
-            conditions.append(
-                (Order.order_no.ilike(kw)) |
-                (Order.customer_name.ilike(kw))
-            )
+            conditions.append((Order.order_no.ilike(kw)) | (Order.customer_name.ilike(kw)))
         if year:
-            from datetime import date
-            conditions.append(func.date(Order.created_at) >= date(year, 1, 1))
-            conditions.append(func.date(Order.created_at) < date(year + 1, 1, 1))
+            conditions.append(Order.order_date >= f"{year}-01-01")
+            conditions.append(Order.order_date < f"{year + 1}-01-01")
         if month and year:
-            from datetime import date
-            m_start = date(year, month, 1)
+            m_start = f"{year}-{month:02d}-01"
             import calendar
-            m_end = date(year, month, calendar.monthrange(year, month)[1])
-            conditions.append(func.date(Order.created_at) >= m_start)
-            conditions.append(func.date(Order.created_at) <= m_end)
+
+            m_end_day = calendar.monthrange(year, month)[1]
+            m_end = f"{year}-{month:02d}-{m_end_day:02d}"
+            conditions.append(Order.order_date >= m_start)
+            conditions.append(Order.order_date <= m_end)
 
         if conditions:
             query = query.where(and_(*conditions))
 
         # 总数
         count_result = await session.execute(
-            select(func.count()).select_from(Order).where(and_(*conditions)) if conditions else select(func.count()).select_from(Order)
+            select(func.count()).select_from(Order).where(and_(*conditions))
+            if conditions
+            else select(func.count()).select_from(Order)
         )
         total = count_result.scalar() or 0
 
@@ -99,33 +197,31 @@ async def list_orders(
         items = []
         for o in orders:
             status_info = ORDER_STATUS_MAP.get(o.status_key, {})
-            items.append({
-                "id": o.id,
-                "order_no": o.order_no,
-                "customer_name": o.customer_name or "",
-                "customer_phone": o.customer_phone or "",
-                "order_type": o.order_type or "",
-                "content": o.content or "",
-                "amount": float(o.amount or 0),
-                "received": float(o.received or 0),
-                "debt": float(o.debt or 0),
-                "status_key": o.status_key or "created",
-                "status_label": status_info.get("label", o.status or ""),
-                "status_color": status_info.get("color", "#909399"),
-                "order_date": o.order_date or "",
-                "delivery_date": o.delivery_date or "",
-                "salesperson": o.salesperson or "",
-                "install_date": str(o.install_date) if o.install_date else "",
-                "items": o.items or []
-            })
+            items.append(
+                {
+                    "id": o.id,
+                    "order_no": o.order_no,
+                    "customer_name": o.customer_name or "",
+                    "customer_phone": o.customer_phone or "",
+                    "order_type": o.order_type or "",
+                    "content": o.content or "",
+                    "amount": float(o.amount or 0),
+                    "received": float(o.received or 0),
+                    "debt": float(o.debt or 0),
+                    "status_key": o.status_key or "created",
+                    "status_label": status_info.get("label", o.status or ""),
+                    "status_color": status_info.get("color", "#909399"),
+                    "order_date": o.order_date or "",
+                    "delivery_date": o.delivery_date or "",
+                    "salesperson": o.salesperson or "",
+                    "install_date": str(o.install_date) if o.install_date else "",
+                    "items": o.items or [],
+                }
+            )
 
         await session.commit()
         return OrderListResponse(
-            success=True,
-            total=total,
-            page=page,
-            page_size=page_size,
-            items=items
+            success=True, total=total, page=page, page_size=page_size, items=items
         )
 
 
@@ -133,43 +229,46 @@ async def list_orders(
 async def get_order(order_id: int = Path(..., description="订单ID")):
     """订单详情"""
     async with async_session() as session:
-        result = await session.execute(
-            select(Order).where(Order.id == order_id)
-        )
+        result = await session.execute(select(Order).where(Order.id == order_id))
         o = result.scalar_one_or_none()
         if not o:
             return OrderResponse(success=False, error="订单不存在")
 
         status_info = ORDER_STATUS_MAP.get(o.status_key, {})
-        return OrderResponse(success=True, data={
-            "id": o.id,
-            "order_no": o.order_no,
-            "customer_id": o.customer_id,
-            "customer_name": o.customer_name or "",
-            "customer_phone": o.customer_phone or "",
-            "order_type": o.order_type or "",
-            "status_key": o.status_key or "created",
-            "status_label": status_info.get("label", ""),
-            "status_color": status_info.get("color", "#909399"),
-            "amount": float(o.amount or 0),
-            "quote_amount": float(o.quote_amount or 0),
-            "discount_amount": float(o.discount_amount or 0),
-            "round_amount": float(o.round_amount or 0),
-            "received": float(o.received or 0),
-            "debt": float(o.debt or 0),
-            "order_date": o.order_date or "",
-            "delivery_date": o.delivery_date or "",
-            "delivery_method": o.delivery_method or "",
-            "content": o.content or "",
-            "salesperson": o.salesperson or "",
-            
-            "history": o.history or [],
-            "items": o.items or [],
-            "install_address": o.install_address or "",
-            "install_date": str(o.install_date) if o.install_date else "",
-            "install_time_slot": o.install_time_slot or "",
-            "created_at": str(o.created_at) if o.created_at else ""
-        })
+        return OrderResponse(
+            success=True,
+            data={
+                "id": o.id,
+                "order_no": o.order_no,
+                "customer_id": o.customer_id,
+                "customer_name": o.customer_name or "",
+                "customer_phone": o.customer_phone or "",
+                "order_type": o.order_type or "",
+                "status_key": o.status_key or "created",
+                "status_label": status_info.get("label", ""),
+                "status_color": status_info.get("color", "#909399"),
+                "amount": float(o.amount or 0),
+                "quote_amount": float(o.quote_amount or 0),
+                "discount_amount": float(o.discount_amount or 0),
+                "round_amount": float(o.round_amount or 0),
+                "received": float(o.received or 0),
+                "debt": float(o.debt or 0),
+                "order_date": o.order_date or "",
+                "delivery_date": o.delivery_date or "",
+                "delivery_method": o.delivery_method or "",
+                "content": o.content or "",
+                "salesperson": o.salesperson or "",
+                "history": o.history or [],
+                "items": o.items or [],
+                "install_address": o.install_address or "",
+                "install_date": str(o.install_date) if o.install_date else "",
+                "install_time_slot": o.install_time_slot or "",
+                "remark": o.remark or "",
+                "salesperson_id": o.salesperson_id,
+                "paid_amount": float(o.paid_amount or 0),
+                "created_at": str(o.created_at) if o.created_at else "",
+            },
+        )
 
 
 @router.post("", response_model=CommonResponse)
@@ -180,16 +279,20 @@ async def create_order(req: dict = Body(...)):
 
         # 查当日最大流水号
         seq_result = await session.execute(
-            select(func.count(Order.id))
-            .where(Order.order_no.like(f"{today}%"))
+            select(func.count(Order.id)).where(Order.order_no.like(f"{today}%"))
         )
         seq = (seq_result.scalar() or 0) + 1
         order_no = f"{today}{seq:03d}"
 
         items = req.get("items", [])
-        quote_amount = sum(
-            float(i.get("unit_price", i.get("price", 0))) * int(i.get("qty", 0))
-            for i in items
+        materials = req.get("materials", [])
+
+        # ⚠️ 防御：items 为空时拒绝创建（防止零金额订单）
+        if not items and not materials:
+            return CommonResponse(success=False, error="订单明细不能为空，请先添加商品")
+
+        quote_amount = sum(float(i.get("amount", 0)) for i in items) + sum(
+            float(m.get("amount", 0)) for m in materials
         )
         discount = float(req.get("discount_amount", 0))
         round_amt = float(req.get("round_amount", 0))
@@ -201,35 +304,44 @@ async def create_order(req: dict = Body(...)):
         customer_name = req.get("customer_name", "")
         customer_phone = req.get("customer_phone", "")
         if customer_id:
-            cr = await session.execute(
-                select(Customer).where(Customer.id == customer_id)
-            )
+            cr = await session.execute(select(Customer).where(Customer.id == customer_id))
             c = cr.scalar_one_or_none()
             if c:
                 customer_name = c.name
                 customer_phone = c.phone
 
-        # 交货日期缺省：接单日+14天
-        order_date = req.get("order_date") or datetime.now().strftime("%Y-%m-%d")
+        # 交货日期缺省：接单日+14天（支持多种日期格式）
+        order_date_raw = req.get("order_date") or datetime.now().strftime("%Y-%m-%d")
+        # 统一转换为 YYYY-MM-DD
+        for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%d/%m/%Y", "%m/%d/%Y", "%Y%m%d"):
+            try:
+                order_date = datetime.strptime(order_date_raw, fmt).strftime("%Y-%m-%d")
+                break
+            except ValueError:
+                continue
+        else:
+            order_date = datetime.now().strftime("%Y-%m-%d")
         delivery_date = req.get("delivery_date")
         if not delivery_date:
             d = datetime.strptime(order_date, "%Y-%m-%d")
             d = d.replace(day=min(d.day + 14, 28))
             delivery_date = d.strftime("%Y-%m-%d")
 
-        history = [{
-            "s": "创建订单",
-            "s2": "待确认",
-            "c": "pending",
-            "time": datetime.now().strftime("%Y-%m-%d %H:%M")
-        }]
+        history = [
+            {
+                "s": "创建订单",
+                "s2": "待确认",
+                "c": "pending",
+                "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            }
+        ]
 
         order = Order(
             order_no=order_no,
             customer_id=customer_id,
             customer_name=customer_name,
             customer_phone=customer_phone,
-            order_type=req.get("order_type", "窗帘"),
+            order_type=_norm_order_type(req.get("order_type")),
             status="待确认",
             status_key="created",
             status_color="#909399",
@@ -246,23 +358,79 @@ async def create_order(req: dict = Body(...)):
             salesperson=req.get("salesperson", ""),
             history=history,
             items=items,
-            install_address=req.get("install_address", ""),
-            install_date=req.get("install_date") or None,
-            install_time_slot=req.get("install_time_slot", ""),
         )
+
+        # 处理 install_date（转换为 Python date 对象）
+        install_date_val = None
+        install_date_raw = req.get("install_date")
+        if install_date_raw:
+            for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%d/%m/%Y", "%m/%d/%Y", "%Y%m%d"):
+                try:
+                    install_date_val = datetime.strptime(install_date_raw, fmt).date()
+                    break
+                except ValueError:
+                    continue
+        order.install_date = install_date_val
 
         session.add(order)
         await session.commit()
         await session.refresh(order)
 
+        # ── V3.0：为每个明细创建 OrderItem 记录（含供应商信息）───────────────
+        for item in items:
+            product_id = item.get("product_id")
+            supplier_id = None
+            material_type = item.get("material_type", "主料")
+            if product_id:
+                pr = await session.execute(select(Product).where(Product.id == product_id))
+                prod = pr.scalar_one_or_none()
+                if prod:
+                    supplier_id = prod.supplier_id
+            oi = OrderItem(
+                order_id=order.id,
+                item_type=item.get("product_type", "窗帘"),
+                room=item.get("room", ""),
+                category=item.get("category", ""),
+                product_name=item.get("product_name", ""),
+                product_code=item.get("product_code", ""),
+                width=item.get("width"),
+                height=item.get("height"),
+                fold_ratio=item.get("fold_ratio") or 2.0,
+                unit=item.get("unit", "米"),
+                unit_price=item.get("unit_price", item.get("price", 0)),
+                qty=item.get("qty", 1),
+                discount=item.get("discount", 1.0),
+                amount=item.get("amount", 0),
+                final_amount=item.get("final_amount", item.get("amount", 0)),
+                open_type=item.get("open_type", ""),
+                style_code=item.get("style_code", ""),
+                process_desc=item.get("process_desc", ""),
+                is_custom=item.get("is_custom", 1),
+                note=item.get("note", ""),
+                supplier_id=supplier_id,
+                material_type=material_type,
+                classification=item.get("classification", ""),
+            )
+            session.add(oi)
+        await session.commit()
+
         # 如果有安装日期，创建安装任务
-        if req.get("install_date") and req.get("install_date") != "":
+        _install_date = None
+        _id_raw = req.get("install_date")
+        if _id_raw:
+            for _fmt in ("%Y-%m-%d", "%Y/%m/%d", "%d/%m/%Y", "%m/%d/%Y", "%Y%m%d"):
+                try:
+                    _install_date = datetime.strptime(_id_raw, _fmt).date()
+                    break
+                except ValueError:
+                    continue
+        if _install_date:
             install_task = InstallTask(
                 order_id=order.id,
                 order_no=order_no,
                 installer_id=req.get("installer_id"),
-                install_date=datetime.strptime(req.get("install_date"), "%Y-%m-%d").date(),
-                install_time_slot=req.get("install_time_slot", ""),
+                install_date=_install_date,
+                install_time_slot=req.get("install_time_slot") or "",
                 address=req.get("install_address", ""),
                 customer_name=customer_name,
                 customer_phone=customer_phone,
@@ -270,7 +438,9 @@ async def create_order(req: dict = Body(...)):
                 order_content=req.get("content", ""),
                 priority="normal",
                 status="pending",
-                navigate_url=f"https://uri.amap.com/search?keyword={req.get('install_address','')}" if req.get("install_address") else None
+                navigate_url=f"https://uri.amap.com/search?keyword={req.get('install_address', '')}"
+                if req.get("install_address")
+                else None,
             )
             session.add(install_task)
             await session.commit()
@@ -279,15 +449,10 @@ async def create_order(req: dict = Body(...)):
 
 
 @router.put("/{order_id}/status", response_model=CommonResponse)
-async def update_order_status(
-    order_id: int,
-    new_status_key: str = Body(..., embed=True)
-):
+async def update_order_status(order_id: int, new_status_key: str = Body(..., embed=True)):
     """更新订单状态"""
     async with async_session() as session:
-        result = await session.execute(
-            select(Order).where(Order.id == order_id)
-        )
+        result = await session.execute(select(Order).where(Order.id == order_id))
         o = result.scalar_one_or_none()
         if not o:
             return CommonResponse(success=False, error="订单不存在")
@@ -306,51 +471,269 @@ async def update_order_status(
 
         # 追加历史
         history = o.history or []
-        history.append({
-            "s": old_label,
-            "s2": new_label,
-            "c": new_status_key,
-            "time": datetime.now().strftime("%Y-%m-%d %H:%M")
-        })
+        history.append(
+            {
+                "s": old_label,
+                "s2": new_label,
+                "c": new_status_key,
+                "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            }
+        )
         o.history = history
 
         # 如果变成已完成，同时更新欠款=0
         if new_status_key == "completed":
             o.debt = 0
 
+        # ─── V3.0 订单流程联动 ───────────────────────────────────────────
+        auto_action_msg = None
+
+        # 订单确认（confirmed）→ 仅记录状态，采购单由采购管理手动生成
+        if new_status_key == "confirmed":
+            auto_action_msg = "订单已确认，请在采购管理中生成采购单"
+
+        # 订单生产完成（completed）→ 自动生成安装单
+        if new_status_key == "completed":
+            try:
+                r = await session.execute(
+                    select(InstallationOrder).where(InstallationOrder.order_id == order_id)
+                )
+                existing_ins = r.scalar_one_or_none()
+                if not existing_ins:
+                    INS_NO_PREFIX = "INS"
+                    today_str = datetime.now().strftime("%Y%m%d")
+                    seq_r = await session.execute(
+                        select(func.count(InstallationOrder.id)).where(
+                            InstallationOrder.ins_no.like(f"{INS_NO_PREFIX}{today_str}%")
+                        )
+                    )
+                    seq = (seq_r.scalar() or 0) + 1
+                    ins_no = f"{INS_NO_PREFIX}{today_str}{seq:03d}"
+                    ins = InstallationOrder(
+                        ins_no=ins_no,
+                        order_id=o.id,
+                        order_no=o.order_no or "",
+                        customer_name=o.customer_name or "",
+                        customer_phone=o.customer_phone or "",
+                        address=o.install_address or "",
+                        product_details=o.items or {},
+                        measure_summary=str(getattr(o, "measure_data", "") or ""),
+                        install_requirements=getattr(o, "install_requires", "") or "",
+                        status="待分配",
+                        receivable_amount=o.amount,
+                        received_amount=o.received,
+                        unpaid_amount=o.debt,
+                    )
+                    session.add(ins)
+                    # 追加历史记录
+                    history = o.history or []
+                    history.append(
+                        {
+                            "s": "已完成",
+                            "s2": "安装单已生成",
+                            "c": "install_order_generated",
+                            "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                        }
+                    )
+                    o.history = history
+                    auto_action_msg = f"已自动生成安装单 {ins_no}"
+            except Exception as e:
+                auto_action_msg = f"生成安装单失败：{e!s}"
+
         await session.commit()
 
-        return CommonResponse(success=True, data={
-            "id": order_id,
-            "status_key": new_status_key,
-            "status_label": new_label,
-            "status_color": new_color
-        })
+        return CommonResponse(
+            success=True,
+            data={
+                "id": order_id,
+                "status_key": new_status_key,
+                "status_label": new_label,
+                "status_color": new_color,
+                "auto_action": auto_action_msg,
+            },
+        )
+
+
+# ─── P0-1：订单状态推进 ──────────────────────────────────────────────────────
+@router.post("/{order_id}/advance", response_model=CommonResponse)
+async def advance_order(order_id: int):
+    """
+    订单状态推进：自动识别当前状态，跳转到下一个合理状态。
+    规则：
+      created → confirmed
+      confirmed → split（触发采购单拆分）
+      split → purchasing（采购单已生成）
+      purchasing → stocked（采购单到货入库）
+      stocked → processing（生产中）
+      processing → completed（生产完成，自动生成安装单）
+      completed → install_order_generated（安装单已生成）
+      install_order_generated → shipped（已发货）
+      shipped → installed（已安装）
+      installed → accepted（已验收，同时更新安装单）
+    终态 accepted / cancelled 不可推进。
+    """
+    async with async_session() as session:
+        result = await session.execute(select(Order).where(Order.id == order_id))
+        o = result.scalar_one_or_none()
+        if not o:
+            return CommonResponse(success=False, error="订单不存在")
+
+        current_key = o.status_key
+
+        # 终态检查
+        if current_key in TERMINAL_STATUSES:
+            return CommonResponse(
+                success=False,
+                error=f"订单已在终态「{ORDER_STATUS_MAP.get(current_key, {}).get('label', current_key)}」，无法推进",
+            )
+
+        # special-order routes (not simply next in STATUS_STEPS)
+        auto_action_msg = None
+        new_status_key = None
+
+        if current_key == "completed":
+            # completed → 自动生成安装单（内部跳两级：completed→install_order_generated）
+            try:
+                r = await session.execute(
+                    select(InstallationOrder).where(InstallationOrder.order_id == order_id)
+                )
+                existing_ins = r.scalar_one_or_none()
+                if not existing_ins:
+                    INS_NO_PREFIX = "INS"
+                    today_str = datetime.now().strftime("%Y%m%d")
+                    seq_r = await session.execute(
+                        select(func.count(InstallationOrder.id)).where(
+                            InstallationOrder.ins_no.like(f"{INS_NO_PREFIX}{today_str}%")
+                        )
+                    )
+                    seq = (seq_r.scalar() or 0) + 1
+                    ins_no = f"{INS_NO_PREFIX}{today_str}{seq:03d}"
+                    ins = InstallationOrder(
+                        ins_no=ins_no,
+                        order_id=o.id,
+                        order_no=o.order_no or "",
+                        customer_name=o.customer_name or "",
+                        customer_phone=o.customer_phone or "",
+                        address=o.install_address or "",
+                        product_details=o.items or {},
+                        measure_summary=str(getattr(o, "measure_data", "") or ""),
+                        install_requirements=getattr(o, "install_requires", "") or "",
+                        status="待分配",
+                        # P1-4：自动带入订单应收信息
+                        receivable_amount=o.amount,
+                        received_amount=o.received,
+                        unpaid_amount=o.debt,
+                    )
+                    session.add(ins)
+                    await session.flush()
+                    new_status_key = "install_order_generated"
+                    auto_action_msg = f"已自动生成安装单 {ins_no}"
+                else:
+                    # 安装单已存在，直接推进到 shipped
+                    new_status_key = "shipped"
+            except Exception as e:
+                return CommonResponse(success=False, error=f"推进失败：{e!s}")
+
+        elif current_key == "installed":
+            # installed → accepted：同时更新 InstallationOrder 状态
+            new_status_key = "accepted"
+            try:
+                r = await session.execute(
+                    select(InstallationOrder).where(InstallationOrder.order_id == order_id)
+                )
+                ins = r.scalar_one_or_none()
+                if ins:
+                    ins.status = "已验收"
+                    ins.confirmed_at = datetime.now()
+            except Exception:
+                pass  # 安装单更新失败不影响主流程
+
+        else:
+            # 标准线性推进
+            next_key = get_next_status(current_key)
+            if not next_key:
+                return CommonResponse(success=False, error="无法确定下一状态")
+            new_status_key = next_key
+
+        # 执行状态更新
+        old_key = o.status_key
+        old_label = ORDER_STATUS_MAP.get(old_key, {}).get("label", o.status)
+        new_label = ORDER_STATUS_MAP[new_status_key]["label"]
+        new_color = ORDER_STATUS_MAP[new_status_key]["color"]
+
+        o.status_key = new_status_key
+        o.status = new_label
+        o.status_color = new_color
+
+        history = o.history or []
+        history.append(
+            {
+                "s": old_label,
+                "s2": new_label,
+                "c": new_status_key,
+                "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            }
+        )
+        o.history = history
+
+        # completed 推进时债务清零
+        if new_status_key == "completed":
+            o.debt = 0
+
+        await session.commit()
+
+        return CommonResponse(
+            success=True,
+            data={
+                "id": order_id,
+                "status_key": new_status_key,
+                "status_label": new_label,
+                "status_color": new_color,
+                "auto_action": auto_action_msg,
+            },
+            message=f"已从「{old_label}」推进至「{new_label}」",
+        )
 
 
 @router.put("/{order_id}", response_model=CommonResponse)
-async def update_order(
-    order_id: int,
-    req: dict = Body(...)
-):
+async def update_order(order_id: int, req: dict = Body(...)):
     """编辑订单"""
     async with async_session() as session:
-        result = await session.execute(
-            select(Order).where(Order.id == order_id)
-        )
+        result = await session.execute(select(Order).where(Order.id == order_id))
         o = result.scalar_one_or_none()
         if not o:
             return CommonResponse(success=False, error="订单不存在")
 
         # 更新字段
-        for field in ["customer_name", "customer_phone", "order_type",
-                       "delivery_method", "content", "salesperson",
-                       "install_address", "install_time_slot"]:
+        for field in [
+            "customer_name",
+            "customer_phone",
+            "order_type",
+            "delivery_method",
+            "content",
+            "salesperson",
+            "install_address",
+            "install_time_slot",
+        ]:
             if field in req:
-                setattr(o, field, req[field])
+                val = req[field]
+                if field == "order_type":
+                    val = _norm_order_type(val)
+                setattr(o, field, val)
 
         if "install_date" in req:
-            o.install_date = datetime.strptime(req["install_date"], "%Y-%m-%d").date() if req["install_date"] else None
+            install_date_raw = req.get("install_date")
+            if install_date_raw:
+                for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%d/%m/%Y", "%m/%d/%Y", "%Y%m%d"):
+                    try:
+                        o.install_date = datetime.strptime(install_date_raw, fmt).date()
+                        break
+                    except ValueError:
+                        continue
+                else:
+                    o.install_date = None
+            else:
+                o.install_date = None
 
         if "received" in req:
             o.received = float(req["received"])
@@ -360,10 +743,72 @@ async def update_order(
         items = req.get("items")
         if items is not None:
             o.items = items
-            quote = sum(float(i.get("unit_price", i.get("price", 0))) * int(i.get("qty", 0)) for i in items)
+            quote = sum(
+                float(i.get("unit_price", i.get("price", 0))) * int(i.get("qty", 0)) for i in items
+            )
             o.quote_amount = quote
             o.amount = max(0, quote - float(o.discount_amount or 0) - float(o.round_amount or 0))
             o.debt = max(0, float(o.amount or 0) - float(o.received or 0))
+            # ── 同步更新 OrderItem 记录 ─────────────────────────────────────
+            # 删除旧的
+            del_r = await session.execute(select(OrderItem).where(OrderItem.order_id == order_id))
+            old_items = del_r.scalars().all()
+            for oi in old_items:
+                await session.delete(oi)
+            # 创建新的
+            for item in items:
+                product_id = item.get("product_id")
+                supplier_id = None
+                if product_id:
+                    pr = await session.execute(select(Product).where(Product.id == product_id))
+                    prod = pr.scalar_one_or_none()
+                    if prod:
+                        supplier_id = prod.supplier_id
+                oi = OrderItem(
+                    order_id=order_id,
+                    item_type=item.get("product_type", "窗帘"),
+                    room=item.get("room", ""),
+                    category=item.get("category", ""),
+                    product_name=item.get("product_name", ""),
+                    product_code=item.get("product_code", ""),
+                    width=item.get("width"),
+                    height=item.get("height"),
+                    fold_ratio=item.get("fold_ratio") or 2.0,
+                    unit=item.get("unit", "米"),
+                    unit_price=item.get("unit_price", item.get("price", 0)),
+                    qty=item.get("qty", 1),
+                    discount=item.get("discount", 1.0),
+                    amount=item.get("amount", 0),
+                    final_amount=item.get("final_amount", item.get("amount", 0)),
+                    open_type=item.get("open_type", ""),
+                    style_code=item.get("style_code", ""),
+                    process_desc=item.get("process_desc", ""),
+                    is_custom=item.get("is_custom", 1),
+                    note=item.get("note", ""),
+                    supplier_id=supplier_id,
+                    material_type=item.get("material_type", "主料"),
+                    classification=item.get("classification", ""),
+                )
+                session.add(oi)
 
+        await session.commit()
+        return CommonResponse(success=True, data={"id": order_id})
+
+
+@router.delete("/{order_id}", response_model=CommonResponse)
+async def delete_order(order_id: int = Path(...)):
+    """删除订单"""
+    async with async_session() as session:
+        result = await session.execute(select(Order).where(Order.id == order_id))
+        o = result.scalar_one_or_none()
+        if not o:
+            return CommonResponse(success=False, error="订单不存在")
+        # 删除关联的 OrderItem 记录
+        items_result = await session.execute(
+            select(OrderItem).where(OrderItem.order_id == order_id)
+        )
+        for item in items_result.scalars().all():
+            await session.delete(item)
+        await session.delete(o)
         await session.commit()
         return CommonResponse(success=True, data={"id": order_id})

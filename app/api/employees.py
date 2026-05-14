@@ -1,18 +1,34 @@
 # app/api/employees.py
-from fastapi import APIRouter, Query, Body, Path
+
+from fastapi import APIRouter, Body, Query
+from sqlalchemy import func, select
+
 from app.database import async_session
 from app.models import Employee
-from app.schemas import EmployeeListResponse, EmployeeListItem, CommonResponse
-from sqlalchemy import select, func
-from typing import Optional
+from app.schemas import CommonResponse, EmployeeListItem, EmployeeListResponse
 
 router = APIRouter(prefix="/api/employees", tags=["员工管理"])
+
+# 职务 key → label
+POSITION_LABEL_MAP = {
+    "boss": "老板",
+    "manager": "经理",
+    "sales": "导购",
+    "店长": "店长",
+    "installer": "安装工",
+    "高级导购": "高级导购",
+    "finance": "财务",
+}
+
+def _norm_position(v):
+    return POSITION_LABEL_MAP.get(v, v or "导购")
+
 
 
 @router.get("", response_model=EmployeeListResponse)
 async def list_employees(
-    position: Optional[str] = Query(None, description="职务筛选"),
-    is_installer: Optional[bool] = Query(None)
+    position: str | None = Query(None, description="职务筛选"),
+    is_installer: bool | None = Query(None),
 ):
     async with async_session() as session:
         query = select(Employee)
@@ -26,7 +42,9 @@ async def list_employees(
 
         items = [
             EmployeeListItem(
-                id=e.id, code=e.code or "", name=e.name or "",
+                id=e.id,
+                code=e.code or "",
+                name=e.name or "",
                 gender=e.gender or "男",
                 phone=e.phone or "",
                 position=e.position or "",
@@ -34,7 +52,7 @@ async def list_employees(
                 max_discount=float(e.max_discount or 1.0),
                 round_limit=e.round_limit or 0,
                 is_installer=e.is_installer or False,
-                status=e.status or "启用"
+                status=e.status or "启用",
             )
             for e in employees
         ]
@@ -55,12 +73,12 @@ async def create_employee(req: dict = Body(...)):
             name=req.get("name", ""),
             gender=req.get("gender", "男"),
             phone=req.get("phone", ""),
-            position=req.get("position", "导购"),
+            position=_norm_position(req.get("position")),
             department=req.get("department", ""),
             max_discount=req.get("max_discount", 1.0),
             round_limit=req.get("round_limit", 0),
             is_installer=req.get("is_installer", False),
-            status="启用"
+            status="启用",
         )
         session.add(employee)
         await session.commit()
@@ -71,17 +89,39 @@ async def create_employee(req: dict = Body(...)):
 @router.put("/{employee_id}", response_model=CommonResponse)
 async def update_employee(employee_id: int, req: dict = Body(...)):
     async with async_session() as session:
-        result = await session.execute(
-            select(Employee).where(Employee.id == employee_id)
-        )
+        result = await session.execute(select(Employee).where(Employee.id == employee_id))
         e = result.scalar_one_or_none()
         if not e:
             return CommonResponse(success=False, error="员工不存在")
 
-        for field in ["name", "gender", "phone", "position", "department",
-                       "max_discount", "round_limit", "is_installer", "status"]:
+        for field in [
+            "name",
+            "gender",
+            "phone",
+            "position",
+            "department",
+            "max_discount",
+            "round_limit",
+            "is_installer",
+            "status",
+        ]:
             if field in req:
-                setattr(e, field, req[field])
+                val = req[field]
+                if field == "position":
+                    val = _norm_position(val)
+                setattr(e, field, val)
 
         await session.commit()
         return CommonResponse(success=True, data={"id": employee_id})
+
+
+@router.delete("/{employee_id}", response_model=CommonResponse)
+async def delete_employee(employee_id: int):
+    async with async_session() as session:
+        result = await session.execute(select(Employee).where(Employee.id == employee_id))
+        e = result.scalar_one_or_none()
+        if not e:
+            return CommonResponse(success=False, error="员工不存在")
+        await session.delete(e)
+        await session.commit()
+        return CommonResponse(success=True, message="删除成功")

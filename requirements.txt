@@ -5,3 +5,4 @@ pydantic==2.6.3
 python-multipart==0.0.9
 aiosqlite==0.20.0
 python-jose[cryptography]==3.3.0
+bcrypt>=4.0.0

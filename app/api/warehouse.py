@@ -1,22 +1,25 @@
 # app/api/warehouse.py
-from fastapi import APIRouter, Query, Body
+
+from typing import Any
+
+from fastapi import APIRouter, Body, Header, Path, Query
+from sqlalchemy import func, or_, select
+
+from app.core.response import success_response, error_response
 from app.database import async_session
-from app.models import WarehouseRecord, Product
+from app.models import Product, WarehouseRecord, InventoryFlow
 from app.schemas import CommonResponse
-from sqlalchemy import select, func, or_
-from datetime import datetime
-from typing import Optional
 
 router = APIRouter(prefix="/api/warehouse", tags=["仓库管理"])
 
 
 @router.get("/records", response_model=dict)
 async def list_records(
-    record_type: Optional[str] = Query(None, description="in/out"),
-    keyword: Optional[str] = Query(None),
+    record_type: str | None = Query(None, description="in/out"),
+    keyword: str | None = Query(None),
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=200)
-):
+    page_size: int = Query(50, ge=1, le=200),
+) -> dict:
     async with async_session() as session:
         conditions = []
         if record_type:
@@ -29,7 +32,11 @@ async def list_records(
         if conditions:
             query = query.where(*conditions)
 
-        r = await session.execute(select(func.count()).select_from(WarehouseRecord).where(*conditions) if conditions else select(func.count()).select_from(WarehouseRecord))
+        r = await session.execute(
+            select(func.count()).select_from(WarehouseRecord).where(*conditions)
+            if conditions
+            else select(func.count()).select_from(WarehouseRecord)
+        )
         total = r.scalar() or 0
 
         offset = (page - 1) * page_size
@@ -38,21 +45,31 @@ async def list_records(
         records = result.scalars().all()
 
         await session.commit()
-        return {
-            "success": True, "total": total, "page": page, "page_size": page_size,
-            "items": [{
-                "id": r.id, "record_type": r.record_type or "",
-                "product_id": r.product_id, "product_name": r.product_name or "",
-                "qty": float(r.qty or 0), "unit": r.unit or "米",
-                "remark": r.remark or "",
-                "operator": r.operator or "",
-                "created_at": str(r.created_at)[:19] if r.created_at else ""
-            } for r in records]
-        }
+        return success_response(
+            data={
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "items": [
+                    {
+                        "id": r.id,
+                        "record_type": r.record_type or "",
+                        "product_id": r.product_id,
+                        "product_name": r.product_name or "",
+                        "qty": float(r.qty or 0),
+                        "unit": r.unit or "米",
+                        "remark": r.remark or "",
+                        "operator": r.operator or "",
+                        "created_at": str(r.created_at)[:19] if r.created_at else "",
+                    }
+                    for r in records
+                ],
+            }
+        )
 
 
 @router.get("/stock", response_model=dict)
-async def get_stock(keyword: Optional[str] = Query(None)):
+async def get_stock(keyword: str | None = Query(None)) -> dict:
     async with async_session() as session:
         query = select(Product)
         if keyword:
@@ -63,62 +80,143 @@ async def get_stock(keyword: Optional[str] = Query(None)):
         products = result.scalars().all()
 
         await session.commit()
-        return {
-            "success": True,
-            "items": [{
-                "id": p.id, "code": p.code or "", "name": p.name or "",
-                "supplier_name": "",  # 简化
-                "unit_price": float(p.unit_price or 0),
-                "stock": float(p.stock or 0),
-                "unit": p.unit or "米"
-            } for p in products if p.stock is not None and p.stock > 0]
-        }
+        return success_response(
+            data={
+                "items": [
+                    {
+                        "id": p.id,
+                        "code": p.code or "",
+                        "name": p.name or "",
+                        "supplier_name": "",  # 简化
+                        "unit_price": float(p.unit_price or 0),
+                        "stock": float(p.stock or 0),
+                        "unit": p.unit or "米",
+                    }
+                    for p in products
+                    if p.stock is not None and p.stock > 0
+                ],
+            }
+        )
 
 
 @router.post("/in", response_model=CommonResponse)
-async def stock_in(req: dict = Body(...)):
+async def stock_in(req: dict[str, Any] = Body(...)) -> dict:
     async with async_session() as session:
+        product_id = req.get("product_id")
+        qty = float(req.get("qty", 0))
+
+        # 读取入库前库存
+        qty_before = 0
+        if product_id:
+            pr = await session.execute(select(Product).where(Product.id == product_id))
+            prod = pr.scalar_one_or_none()
+            if prod:
+                qty_before = prod.stock or 0
+                prod.stock = qty_before + qty
+
         record = WarehouseRecord(
             record_type="in",
-            product_id=req.get("product_id"),
+            product_id=product_id,
             product_name=req.get("product_name", ""),
-            qty=float(req.get("qty", 0)),
+            qty=qty,
             unit=req.get("unit", "米"),
             remark=req.get("remark", ""),
-            operator=req.get("operator", "系统")
+            operator=req.get("operator", "系统"),
         )
         session.add(record)
 
-        # 同时更新库存
-        if req.get("product_id"):
-            pr = await session.execute(select(Product).where(Product.id == req.get("product_id")))
-            prod = pr.scalar_one_or_none()
-            if prod:
-                prod.stock = (prod.stock or 0) + float(req.get("qty", 0))
+        # 写入库存流水
+        if product_id and qty:
+            flow = InventoryFlow(
+                product_id=product_id,
+                warehouse_id=1,
+                flow_type="IN",
+                qty_before=int(qty_before),
+                qty_change=int(qty),
+                qty_after=int(qty_before + qty),
+                ref_type="warehouse",
+                ref_id=0,
+                operator_id=None,
+                remark=req.get("remark", "仓库入库"),
+            )
+            session.add(flow)
 
         await session.commit()
-        return CommonResponse(success=True, data={"id": record.id})
+        return success_response(data={"id": record.id})
 
 
 @router.post("/out", response_model=CommonResponse)
-async def stock_out(req: dict = Body(...)):
+async def stock_out(req: dict[str, Any] = Body(...)) -> dict:
     async with async_session() as session:
+        product_id = req.get("product_id")
+        qty = float(req.get("qty", 0))
+
+        # 读取出库前库存
+        qty_before = 0
+        if product_id:
+            pr = await session.execute(select(Product).where(Product.id == product_id))
+            prod = pr.scalar_one_or_none()
+            if prod:
+                qty_before = prod.stock or 0
+                prod.stock = max(0, qty_before - qty)
+
         record = WarehouseRecord(
             record_type="out",
-            product_id=req.get("product_id"),
+            product_id=product_id,
             product_name=req.get("product_name", ""),
-            qty=float(req.get("qty", 0)),
+            qty=qty,
             unit=req.get("unit", "米"),
             remark=req.get("remark", ""),
-            operator=req.get("operator", "系统")
+            operator=req.get("operator", "系统"),
         )
         session.add(record)
 
-        if req.get("product_id"):
-            pr = await session.execute(select(Product).where(Product.id == req.get("product_id")))
-            prod = pr.scalar_one_or_none()
-            if prod:
-                prod.stock = max(0, (prod.stock or 0) - float(req.get("qty", 0)))
+        # 写入库存流水
+        if product_id and qty:
+            flow = InventoryFlow(
+                product_id=product_id,
+                warehouse_id=1,
+                flow_type="OUT",
+                qty_before=int(qty_before),
+                qty_change=-int(qty),
+                qty_after=int(max(0, qty_before - qty)),
+                ref_type="warehouse",
+                ref_id=0,
+                operator_id=None,
+                remark=req.get("remark", "仓库出库"),
+            )
+            session.add(flow)
 
         await session.commit()
-        return CommonResponse(success=True, data={"id": record.id})
+        return success_response(data={"id": record.id})
+
+
+@router.delete("/records/{record_id}", response_model=CommonResponse)
+async def delete_warehouse_record(
+    record_id: int = Path(...),
+    authorization: str | None = Header(None),
+) -> dict:
+    """删除仓库记录"""
+    async with async_session() as session:
+        r = await session.execute(select(WarehouseRecord).where(WarehouseRecord.id == record_id))
+        record = r.scalar_one_or_none()
+        if not record:
+            return error_response(error="记录不存在")
+        await session.delete(record)
+        await session.commit()
+        return success_response()
+
+
+@router.put("/records/{record_id}", response_model=CommonResponse)
+async def update_warehouse_record(record_id: int, req: dict[str, Any] = Body(...)) -> dict:
+    """更新仓库记录"""
+    async with async_session() as session:
+        r = await session.execute(select(WarehouseRecord).where(WarehouseRecord.id == record_id))
+        record = r.scalar_one_or_none()
+        if not record:
+            return error_response(error="记录不存在")
+        for field in ["product_name", "qty", "unit", "remark", "operator"]:
+            if field in req:
+                setattr(record, field, req[field])
+        await session.commit()
+        return success_response(data={"id": record_id})

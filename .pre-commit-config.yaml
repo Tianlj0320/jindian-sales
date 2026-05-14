@@ -1,0 +1,27 @@
+# pre-commit hook 配置
+# 安装：pip install pre-commit && pre-commit install
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: Ruff Check
+        entry: ruff check
+        language: system
+        types: [python]
+        pass_filenames: true
+        args: ["--fix"]
+
+      - id: ruff-format
+        name: Ruff Format
+        entry: ruff format
+        language: system
+        types: [python]
+        pass_filenames: true
+
+      - id: mypy
+        name: Type Check (mypy)
+        entry: mypy
+        language: system
+        types: [python]
+        pass_filenames: false
+        args: ["app/"]

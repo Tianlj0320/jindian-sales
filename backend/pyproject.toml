@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jindian-erp"
+version = "4.0.0"
+description = "金典软装ERP - 销售管理系统"
+requires-python = ">=3.10"
+
+# ── Ruff: Python 代码检查/格式化 ──────────────────────
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+exclude = ["venv", "__pycache__", "migrations"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "UP", "B", "SIM", "ARG", "RUF100"]
+ignore = ["E501", "B008", "C901", "SIM117"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+# ── MyPy: Python 类型检查 ────────────────────────────
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+disallow_untyped_defs = false  # 逐步采用：设为 true 后需全项目标注类型
+ignore_missing_imports = true
+exclude = ["venv", "migrations"]
+
+[[tool.mypy.overrides]]
+module = ["sqlalchemy.*"]
+ignore_missing_imports = true
+
+# ── Pytest: 单元测试 ─────────────────────────────────
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "tests/integration"]
+asyncio_mode = "auto"
+testprefix = "test_"
+python_files = ["test_*.py"]
+filterwarnings = ["ignore::DeprecationWarning"]
+markers = [
+    "integration: 全链路整合测试（依赖完整种子数据和全流程执行）",
+    "slow: 运行时间较长的测试",
+]
+
+# ── Coverage: 测试覆盖率 ─────────────────────────────
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["*/migrations/*", "*/tests/*"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.",
+    "except Exception",
+    "except:",
+]
